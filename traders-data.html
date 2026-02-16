@@ -1,1234 +1,1233 @@
-  1	<!DOCTYPE html>
-     2	<html lang="ko">
-     3	<head>
-     4	    <meta charset="UTF-8">
-     5	    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-     6	    <title>매매사업자 데이터 - 아톰세무회계</title>
-     7	    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-     8	    
-     9	    <!-- Preconnect to CDNs for faster loading -->
-    10	    <link rel="preconnect" href="https://fonts.googleapis.com">
-    11	    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    12	    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    13	    
-    14	    <!-- Font Awesome (최소화: solid 아이콘만) -->
-    15	    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/fontawesome.min.css">
-    16	    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/solid.min.css">
-    17	    
-    18	    <!-- Google Fonts (최적화: 필요한 웨이트만) -->
-    19	    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    20	    
-    21	    <!-- Preload critical CSS -->
-    22	    <link rel="preload" href="css/style.css" as="style">
-    23	    <link rel="preload" href="css/traders-performance.css" as="style">
-    24	    
-    25	    <!-- Preload JavaScript -->
-    26	    <link rel="preload" href="js/common.js" as="script">
-    27	    
-    28	    <link rel="stylesheet" href="css/style.css">
-    29	    <link rel="stylesheet" href="css/traders-performance.css">
-    30	    
-    31	    <!-- Supabase SDK -->
-    32	    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    33	</head>
-    34	<body class="trader-performance">
-    35	    <div class="app-container">
-    36	        <!-- Sidebar -->
-    37	        <div class="sidebar">
-    38	            <div class="sidebar-header">
-    39	                <div class="logo">
-    40	                    <span>아톰세무회계</span>
-    41	                </div>
-    42	            </div>
-    43	            
-    44	            <nav class="sidebar-nav">
-    45	                <a href="dashboard.html" class="nav-item">
-    46	                    <i class="fas fa-home"></i>
-    47	                    <span>대시보드</span>
-    48	                </a>
-    49	                
-    50	                <!-- 고객사 관리 (드롭다운) -->
-    51	                <div class="nav-dropdown">
-    52	                    <a href="#" class="nav-item" onclick="toggleDropdown(event)">
-    53	                        <i class="fas fa-building"></i>
-    54	                        <span>고객사 관리</span>
-    55	                        <i class="fas fa-chevron-down dropdown-arrow"></i>
-    56	                    </a>
-    57	                    <div class="dropdown-content">
-    58	                        <a href="clients.html" class="dropdown-item">
-    59	                            <i class="fas fa-briefcase"></i>
-    60	                            <span>기장고객 관리</span>
-    61	                        </a>
-    62	                        <a href="clients-terminated.html" class="dropdown-item">
-    63	                            <i class="fas fa-user-times"></i>
-    64	                            <span>해임고객 관리</span>
-    65	                        </a>
-    66	                    </div>
-    67	                </div>
-    68	                
-    69	                <!-- 매매사업자 관리 (드롭다운) -->
-    70	                <div class="nav-dropdown active">
-    71	                    <a href="#" class="nav-item" onclick="toggleDropdown(event)">
-    72	                        <i class="fas fa-store"></i>
-    73	                        <span>매매사업자 관리</span>
-    74	                        <i class="fas fa-chevron-down dropdown-arrow"></i>
-    75	                    </a>
-    76	                    <div class="dropdown-content">
-    77	                        <a href="traders-data.html" class="dropdown-item active">
-    78	                            <i class="fas fa-database"></i>
-    79	                            <span>매매사업자 데이터</span>
-    80	                        </a>
-    81	                        <a href="traders-checklist.html" class="dropdown-item">
-    82	                            <i class="fas fa-check-square"></i>
-    83	                            <span>매매사업자 체크리스트</span>
-    84	                        </a>
-    85	                        <a href="traders-vat.html" class="dropdown-item">
-    86	                            <i class="fas fa-calculator"></i>
-    87	                            <span>부가가치세 계산</span>
-    88	                        </a>
-    89	                    </div>
-    90	                </div>
-    91	                
-    92	                <a href="#" class="nav-item">
-    93	                    <i class="fas fa-file-invoice-dollar"></i>
-    94	                    <span>세무 관리</span>
-    95	                </a>
-    96	                <a href="#" class="nav-item">
-    97	                    <i class="fas fa-chart-bar"></i>
-    98	                    <span>통계 분석</span>
-    99	                </a>
-   100	                <a href="#" class="nav-item">
-   101	                    <i class="fas fa-cog"></i>
-   102	                    <span>설정</span>
-   103	                </a>
-   104	            </nav>
-   105	            
-   106	            <div class="sidebar-footer">
-   107	                <button id="logoutBtn" class="nav-item" style="width: 100%; border: none; background: none;">
-   108	                    <i class="fas fa-sign-out-alt"></i>
-   109	                    <span>로그아웃</span>
-   110	                </button>
-   111	            </div>
-   112	        </div>
-   113	
-   114	        <!-- Main Content -->
-   115	        <div class="main-content">
-   116	            <!-- Top Bar -->
-   117	            <div class="topbar">
-   118	                <div class="topbar-left">
-   119	                    <button class="menu-toggle">
-   120	                        <i class="fas fa-bars"></i>
-   121	                    </button>
-   122	                    <h1 class="topbar-title">매매사업자 데이터</h1>
-   123	                </div>
-   124	                
-   125	                <div class="topbar-right">
-   126	                    <div class="topbar-search">
-   127	                        <input type="text" id="globalSearch" placeholder="검색...">
-   128	                        <i class="fas fa-search"></i>
-   129	                    </div>
-   130	                    
-   131	                    <div class="user-profile">
-   132	                        <div class="user-avatar" id="userAvatar">A</div>
-   133	                        <div class="user-info">
-   134	                            <div class="user-name" id="userName">관리자</div>
-   135	                            <div class="user-role" id="userRole">Admin</div>
-   136	                        </div>
-   137	                    </div>
-   138	                </div>
-   139	            </div>
-   140	
-   141	            <!-- Content Area -->
-   142	            <div class="content-area">
-   143	                <!-- Filter Toolbar (고객사 관리와 동일한 디자인) -->
-   144	                <div class="card">
-   145	                    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 20px 24px;">
-   146	                        <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
-   147	                            <!-- Manager Filter -->
-   148	                            <select id="managerFilter" class="px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" style="min-width: 150px;">
-   149	                                <option value="">전체 담당자</option>
-   150	                            </select>
-   151	                            
-   152	                            <!-- Company Name Search -->
-   153	                            <input type="text" id="companyNameSearch" class="px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" placeholder="거래처명 검색..." style="width: 250px;">
-   154	                        </div>
-   155	                        
-   156	                        <div style="display: flex; gap: 12px;">
-   157	                            <!-- 일괄 엑셀 업로드 버튼 -->
-   158	                            <button onclick="downloadBulkExcelTemplate()" class="btn btn-success">
-   159	                                <i class="fas fa-download"></i> 양식 다운로드
-   160	                            </button>
-   161	                            <button onclick="document.getElementById('bulkExcelUpload').click()" class="btn btn-primary">
-   162	                                <i class="fas fa-upload"></i> 일괄 업로드
-   163	                            </button>
-   164	                            <input type="file" id="bulkExcelUpload" accept=".xlsx, .xls" style="display: none;" onchange="handleBulkExcelUpload(event)">
-   165	                            
-   166	                            <!-- 새로고침 버튼 -->
-   167	                            <button onclick="refreshData()" class="btn btn-secondary">
-   168	                                <i class="fas fa-sync-alt"></i> 새로고침
-   169	                            </button>
-   170	                        </div>
-   171	                    </div>
-   172	                </div>
-   173	
-   174	                <!-- Traders List -->
-   175	                <div class="card">
-   176	                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-   177	                        <h3 class="card-title">
-   178	                            <i class="fas fa-store mr-2"></i>
-   179	                            매매사업자 목록
-   180	                        </h3>
-   181	                        <div style="color: #6b7280; font-size: 14px;">
-   182	                            <span>업종코드: 703011, 703012</span>
-   183	                            <span style="margin-left: 16px;">총 <strong id="traderCount" style="color: #667eea;">0</strong>개</span>
-   184	                        </div>
-   185	                    </div>
-   186	                    
-   187	                    <!-- Loading -->
-   188	                    <div id="loading" style="text-align: center; padding: 60px;">
-   189	                        <div class="spinner" style="margin: 0 auto;"></div>
-   190	                        <p style="margin-top: 16px; color: #6b7280;">데이터를 불러오는 중...</p>
-   191	                    </div>
-   192	                    
-   193	                    <!-- Traders Grid -->
-   194	                    <div id="tradersGridContainer" style="display: none; padding: 24px;">
-   195	                        <!-- 담당자별 그리드가 여기에 동적으로 추가됩니다 -->
-   196	                    </div>
-   197	                    
-   198	                    <!-- Empty State -->
-   199	                    <div id="emptyState" style="display: none; text-align: center; padding: 60px;">
-   200	                        <i class="fas fa-inbox" style="font-size: 64px; color: #d1d5db; margin-bottom: 16px;"></i>
-   201	                        <p style="color: #6b7280; font-size: 16px;">매매사업자가 없습니다.</p>
-   202	                        <p style="color: #9ca3af; font-size: 14px; margin-top: 8px;">
-   203	                            고객사 관리에서 업종코드가 703011 또는 703012인 고객사를 추가하면<br>
-   204	                            자동으로 이곳에 표시됩니다.
-   205	                        </p>
-   206	                    </div>
-   207	                </div>
-   208	            </div>
-   209	        </div>
-   210	    </div>
-   211	
-   212	    <!-- Supabase Configuration and Auth -->
-   213	    <script src="js/supabase-config.js"></script>
-   214	    <script src="js/supabase-auth.js"></script>
-   215	    <script src="js/supabase-db.js"></script>
-   216	    <script src="js/common.js"></script>
-   217	    <script src="js/auto-backup.js"></script>
-   218	    <script>
-   219	       console.log('🚀 traders-data.html 스크립트 시작');
-   220	        
-   221	        // Check authentication with Supabase
-   222	        SupabaseAuth.onAuthStateChanged(async (user) => {
-   223	            if (!user) {
-   224	                window.location.href = 'index.html';
-   225	                return;
-   226	            }
-   227	            
-   228	            // Display user info
-   229	            try {
-   230	                // Supabase user 객체에서 직접 정보 가져오기
-   231	                const displayName = user.email?.split('@')[0] || 'User';
-   232	                const emailElement = document.getElementById('userName');
-   233	                const roleElement = document.getElementById('userRole');
-   234	                const avatarElement = document.getElementById('userAvatar');
-   235	                
-   236	                if (emailElement) emailElement.textContent = user.email || displayName;
-   237	                if (roleElement) roleElement.textContent = 'Admin';
-   238	                if (avatarElement) avatarElement.textContent = displayName.charAt(0).toUpperCase();
-   239	                
-   240	                console.log('✅ 사용자 정보 표시 완료:', user.email);
-   241	            } catch (error) {
-   242	                console.error('사용자 정보 표시 오류:', error);
-   243	                // 기본값 설정
-   244	                const displayName = user.email?.split('@')[0] || 'User';
-   245	                if (document.getElementById('userName')) 
-   246	                    document.getElementById('userName').textContent = displayName;
-   247	                if (document.getElementById('userRole')) 
-   248	                    document.getElementById('userRole').textContent = 'Admin';
-   249	                if (document.getElementById('userAvatar')) 
-   250	                    document.getElementById('userAvatar').textContent = displayName.charAt(0).toUpperCase();
-   251	            }
-   252	        });
-   253	
-   254	        // Global variables
-   255	        let allTraders = [];
-   256	        let filteredTraders = [];
-   257	        let selectedManager = '';
-   258	        
-   259	        // Cache settings
-   260	        const CACHE_KEY = 'traders_data_cache';
-   261	        const CACHE_TIME_KEY = 'traders_data_cache_time';
-   262	        const CACHE_DURATION = 5 * 60 * 1000; // 5분
-   263	
-   264	        // Load traders (업종코드 703011, 703012)
-   265	        async function loadTraders(forceRefresh = false) {
-   266	            console.log('🔄 loadTraders() 시작, forceRefresh:', forceRefresh);
-   267	            console.time('⏱️ Total Load Time');
-   268	            try {
-   269	                // 로딩 표시
-   270	                const loadingEl = document.getElementById('loading');
-   271	                const gridEl = document.getElementById('tradersGridContainer');
-   272	                const emptyEl = document.getElementById('emptyState');
-   273	                
-   274	                if (!loadingEl || !gridEl || !emptyEl) {
-   275	                    console.error('❌ 필수 DOM 요소를 찾을 수 없습니다!');
-   276	                    throw new Error('Required DOM elements not found');
-   277	                }
-   278	                
-   279	                loadingEl.style.display = 'block';
-   280	                gridEl.style.display = 'none';
-   281	                emptyEl.style.display = 'none';
-   282	                console.log('✅ 로딩 표시 활성화');
-   283	                
-   284	                // 🔹 캐시 확인 (forceRefresh가 false일 때만)
-   285	                if (!forceRefresh) {
-   286	                    const cachedData = localStorage.getItem(CACHE_KEY);
-   287	                    const cacheTime = localStorage.getItem(CACHE_TIME_KEY);
-   288	                    
-   289	                    if (cachedData && cacheTime) {
-   290	                        const elapsed = Date.now() - parseInt(cacheTime);
-   291	                        if (elapsed < CACHE_DURATION) {
-   292	                            console.log(`✅ Using cached data (age: ${Math.round(elapsed/1000)}s / ${CACHE_DURATION/1000}s)`);
-   293	                            allTraders = JSON.parse(cachedData);
-   294	                            
-   295	                            if (allTraders.length === 0) {
-   296	                                showEmptyState();
-   297	                            } else {
-   298	                                console.time('⏱️ Populate Filters Time');
-   299	                                populateFilters();
-   300	                                console.timeEnd('⏱️ Populate Filters Time');
-   301	                                
-   302	                                console.time('⏱️ Render Grid Time');
-   303	                                filteredTraders = [...allTraders];
-   304	                                applyFilters();
-   305	                                console.timeEnd('⏱️ Render Grid Time');
-   306	                            }
-   307	                            
-   308	                            console.timeEnd('⏱️ Total Load Time');
-   309	                            return;
-   310	                        } else {
-   311	                            console.log('⏰ Cache expired, fetching new data...');
-   312	                        }
-   313	                    }
-   314	                }
-   315	                
-   316	                // Supabase에서 데이터 로드
-   317	                console.log('🌐 Supabase 데이터 로드 시작...');
-   318	                console.time('⏱️ Supabase Fetch Time');
-   319	                
-   320	                // Get all clients from Supabase
-   321	                let allClients = [];
-   322	                
-   323	                try {
-   324	                    // Supabase API 사용
-   325	                    const { data: clients, error } = await supabaseClient
-   326	                        .from('clients')
-   327	                        .select('*')
-   328	                        .order('created_at', { ascending: false });
-   329	                    
-   330	                    if (error) {
-   331	                        console.error('❌ Supabase 오류:', error);
-   332	                        throw error;
-   333	                    }
-   334	                    
-   335	                    allClients = clients || [];
-   336	                    console.log(`✅ Supabase: ${allClients.length}개 고객사 로드 완료`);
-   337	                    console.timeEnd('⏱️ Supabase Fetch Time');
-   338	                } catch (fetchError) {
-   339	                    console.timeEnd('⏱️ Supabase Fetch Time');
-   340	                    console.error('❌ Supabase 데이터 로드 실패:', fetchError);
-   341	                    
-   342	                    // Fallback: GenSpark API 시도
-   343	                    try {
-   344	                        console.log('🔄 Fallback: GenSpark API 시도...');
-   345	                        const response = await fetch(`tables/clients?limit=1000`);
-   346	                        if (response.ok) {
-   347	                            const result = await response.json();
-   348	                            allClients = result.data || [];
-   349	                            console.log(`✅ GenSpark: ${allClients.length}개 고객사 로드됨 (Fallback)`);
-   350	                        }
-   351	                    } catch (fallbackError) {
-   352	                        console.warn('❌ Fallback도 실패, 빈 데이터 사용:', fallbackError);
-   353	                        allClients = [];
-   354	                    }
-   355	                }
-   356	                
-   357	                // Filter by business code (703011, 703012)
-   358	                console.time('⏱️ Filter Time');
-   359	                allTraders = allClients.filter(client => {
-   360	                    const code = (client.business_code || '').trim();
-   361	                    return code === '703011' || code === '703012';
-   362	                });
-   363	                console.timeEnd('⏱️ Filter Time');
-   364	                
-   365	                console.log(`✅ Filtered ${allTraders.length} traders from ${allClients.length} clients`);
-   366	                
-   367	                // 🔹 캐시 저장
-   368	                localStorage.setItem(CACHE_KEY, JSON.stringify(allTraders));
-   369	                localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
-   370	                console.log('💾 Data cached for 5 minutes');
-   371	                
-   372	                if (allTraders.length === 0) {
-   373	                    showEmptyState();
-   374	                } else {
-   375	                    console.time('⏱️ Populate Filters Time');
-   376	                    populateFilters();
-   377	                    console.timeEnd('⏱️ Populate Filters Time');
-   378	                    
-   379	                    console.time('⏱️ Render Grid Time');
-   380	                    filteredTraders = [...allTraders];
-   381	                    applyFilters();
-   382	                    console.timeEnd('⏱️ Render Grid Time');
-   383	                }
-   384	                
-   385	                console.timeEnd('⏱️ Total Load Time');
-   386	            } catch (error) {
-   387	                console.timeEnd('⏱️ Total Load Time');
-   388	                console.error('Error loading traders:', error);
-   389	                showNotification('데이터를 불러오는 중 오류가 발생했습니다.', 'error');
-   390	                showEmptyState();
-   391	            }
-   392	        }
-   393	        
-   394	        // 🔹 캐시 초기화 및 새로고침
-   395	        function refreshData() {
-   396	            localStorage.removeItem(CACHE_KEY);
-   397	            localStorage.removeItem(CACHE_TIME_KEY);
-   398	            console.log('🔄 Cache cleared, reloading data...');
-   399	            showNotification('데이터를 새로고침합니다...', 'info');
-   400	            loadTraders(true); // forceRefresh = true
-   401	        }
-   402	
-   403	        // Populate filters
-   404	        function populateFilters() {
-   405	            // Get unique managers
-   406	            const managers = [...new Set(allTraders.map(t => t.manager).filter(m => m))].sort();
-   407	            const managerFilter = document.getElementById('managerFilter');
-   408	            managerFilter.innerHTML = '<option value="">전체 담당자</option>' + 
-   409	                managers.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
-   410	        }
-   411	
-   412	        // Apply filters
-   413	        function applyFilters() {
-   414	            const managerFilter = document.getElementById('managerFilter').value;
-   415	            const companyNameSearch = document.getElementById('companyNameSearch').value.toLowerCase();
-   416	            
-   417	            filteredTraders = allTraders.filter(trader => {
-   418	                // Manager filter
-   419	                if (managerFilter && trader.manager !== managerFilter) return false;
-   420	                
-   421	                // Company name search
-   422	                if (companyNameSearch) {
-   423	                    const companyName = (trader.company_name || '').toLowerCase();
-   424	                    if (!companyName.includes(companyNameSearch)) return false;
-   425	                }
-   426	                
-   427	                return true;
-   428	            });
-   429	            
-   430	            document.getElementById('traderCount').textContent = filteredTraders.length;
-   431	            
-   432	            if (filteredTraders.length === 0) {
-   433	                showEmptyState();
-   434	            } else {
-   435	                renderTradersGrid(filteredTraders);
-   436	            }
-   437	        }
-   438	
-   439	        // Reset filters
-   440	        function resetFilters() {
-   441	            document.getElementById('managerFilter').value = '';
-   442	            document.getElementById('companyNameSearch').value = '';
-   443	            applyFilters();
-   444	        }
-   445	
-   446	        function renderTradersGrid(traders) {
-   447	            console.log('🎨 renderTradersGrid() 호출됨, traders.length:', traders.length);
-   448	            
-   449	            // Group by manager
-   450	            const byManager = {};
-   451	            traders.forEach(trader => {
-   452	                const manager = trader.manager || '미지정';
-   453	                if (!byManager[manager]) {
-   454	                    byManager[manager] = [];
-   455	                }
-   456	                byManager[manager].push(trader);
-   457	            });
-   458	            
-   459	            console.log('👥 담당자별 그룹:', Object.keys(byManager));
-   460	            
-   461	            // Sort managers
-   462	            const managers = Object.keys(byManager).sort();
-   463	            
-   464	            // Render grid
-   465	            const container = document.getElementById('tradersGridContainer');
-   466	            let html = '';
-   467	            
-   468	            managers.forEach((manager, index) => {
-   469	                const tradersList = byManager[manager];
-   470	                
-   471	                // Add spacing between groups
-   472	                if (index > 0) {
-   473	                    html += '<div style="height: 24px;"></div>';
-   474	                }
-   475	                
-   476	                // Manager header
-   477	                html += `
-   478	                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px 20px; border-radius: 8px; margin-bottom: 16px;">
-   479	                        <div style="color: white; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
-   480	                            <i class="fas fa-user-tie"></i>
-   481	                            ${escapeHtml(manager)}
-   482	                            <span style="font-weight: 400; opacity: 0.9; font-size: 14px;">(${tradersList.length}개)</span>
-   483	                        </div>
-   484	                    </div>
-   485	                `;
-   486	                
-   487	                // Trader buttons grid
-   488	                html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">';
-   489	                
-   490	                tradersList.forEach(trader => {
-   491	                    html += `
-   492	                        <button onclick="window.location.href='trader-detail.html?id=${trader.id}'" 
-   493	                                style="padding: 16px 20px; 
-   494	                                       background: white; 
-   495	                                       border: 2px solid #e5e7eb; 
-   496	                                       border-radius: 8px; 
-   497	                                       text-align: center; 
-   498	                                       font-size: 15px; 
-   499	                                       font-weight: 600; 
-   500	                                       color: #1f2937; 
-   501	                                       cursor: pointer;
-   502	                                       transition: all 0.2s;"
-   503	                                onmouseover="this.style.borderColor='#667eea'; this.style.background='#f5f3ff'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.15)';"
-   504	                                onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white'; this.style.transform='translateY(0)'; this.style.boxShadow='none';">
-   505	                            ${escapeHtml(trader.company_name || '-')}
-   506	                        </button>
-   507	                    `;
-   508	                });
-   509	                
-   510	                html += '</div>';
-   511	            });
-   512	            
-   513	            container.innerHTML = html;
-   514	            
-   515	            document.getElementById('tradersGridContainer').style.display = 'block';
-   516	            document.getElementById('loading').style.display = 'none';
-   517	            document.getElementById('emptyState').style.display = 'none';
-   518	            console.log('✅ 그리드 렌더링 완료');
-   519	        }
-   520	
-   521	        function showEmptyState() {
-   522	            console.log('📭 showEmptyState() 호출됨');
-   523	            document.getElementById('loading').style.display = 'none';
-   524	            document.getElementById('tradersGridContainer').style.display = 'none';
-   525	            document.getElementById('emptyState').style.display = 'block';
-   526	            console.log('✅ Empty state 표시 완료');
-   527	        }
-   528	
-   529	        function escapeHtml(text) {
-   530	            const div = document.createElement('div');
-   531	            div.textContent = text;
-   532	            return div.innerHTML;
-   533	        }
-   534	
-   535	        function formatPhoneNumber(number) {
-   536	            if (!number) return '';
-   537	            const cleaned = number.replace(/[^0-9]/g, '');
-   538	            if (cleaned.length === 11) {
-   539	                return cleaned.slice(0, 3) + '-' + cleaned.slice(3, 7) + '-' + cleaned.slice(7);
-   540	            }
-   541	            return number;
-   542	        }
-   543	
-   544	        // Event listeners
-   545	        document.getElementById('managerFilter').addEventListener('change', applyFilters);
-   546	        document.getElementById('companyNameSearch').addEventListener('input', applyFilters);
-   547	        document.getElementById('globalSearch').addEventListener('input', (e) => {
-   548	            // Global search will filter from filteredTraders
-   549	            const searchTerm = e.target.value.toLowerCase().trim();
-   550	            
-   551	            if (!searchTerm) {
-   552	                applyFilters();
-   553	                return;
-   554	            }
-   555	            
-   556	            const searched = filteredTraders.filter(trader => {
-   557	                const searchableText = [
-   558	                    trader.company_name,
-   559	                    trader.ceo_name,
-   560	                    trader.business_code,
-   561	                    trader.contact,
-   562	                    trader.address,
-   563	                    trader.number
-   564	                ].join(' ').toLowerCase();
-   565	                
-   566	                return searchableText.includes(searchTerm);
-   567	            });
-   568	            
-   569	            document.getElementById('traderCount').textContent = searched.length;
-   570	            
-   571	            if (searched.length === 0) {
-   572	                showEmptyState();
-   573	            } else {
-   574	                renderTradersGrid(searched);
-   575	            }
-   576	        });
-   577	
-   578	        // Create mock traders for preview mode
-   579	        function createMockTraders() {
-   580	            console.log('📦 Creating 60 mock traders for preview mode...');
-   581	            
-   582	            const managers = ['김철수', '이영희', '박민수', '정다은', '최준호'];
-   583	            const districts = ['강남구', '서초구', '송파구', '강동구', '마포구', '용산구', '영등포구', '구로구', '금천구', '관악구'];
-   584	            const codes = ['703011', '703012'];
-   585	            const names = ['홍길동', '김영수', '이순신', '세종대왕', '장보고', '신사임당', '유관순', '안중근', '윤봉길', '김구'];
-   586	            
-   587	            const traders = [];
-   588	            for (let i = 1; i <= 60; i++) {
-   589	                traders.push({
-   590	                    id: `mock-client-${i}`,
-   591	                    company_name: `매매사업자${i}`,
-   592	                    manager: managers[i % managers.length],
-   593	                    business_code: codes[i % codes.length],
-   594	                    ceo_name: names[i % names.length],
-   595	                    contact: `010-${String(1000 + i).slice(-4)}-${String(5000 + i).slice(-4)}`,
-   596	                    address: `서울시 ${districts[i % districts.length]} 테스트로 ${i * 10}`,
-   597	                    number: String(i)
-   598	                });
-   599	            }
-   600	            
-   601	            return traders;
-   602	        }
-   603	
-   604	        // ============================================
-   605	        // 일괄 엑셀 업로드 기능
-   606	        // ============================================
-   607	
-   608	        // 일괄 업로드 양식 다운로드
-   609	        function downloadBulkExcelTemplate() {
-   610	            if (typeof XLSX === 'undefined') {
-   611	                alert('엑셀 라이브러리가 로드되지 않았습니다.\n페이지를 새로고침한 후 다시 시도해주세요.');
-   612	                return;
-   613	            }
-   614	
-   615	            try {
-   616	                const wb = XLSX.utils.book_new();
-   617	                
-   618	                // Sheet 1: 물건목록
-   619	                const inventoryData = [
-   620	                    ['📋 물건목록 작성 방법: 거래처명*과 물건명을 정확히 입력하세요. 취득가액/기타필요경비는 필요경비상세 시트에서 자동 계산됩니다.'],
-   621	                    [],
-   622	                    ['거래처명*', '물건명', '소재지', '취득일(YYYYMMDD)', '양도일(YYYYMMDD)', '양도가액', '기납부 종소세', '기납부 지방소득세', '신고기한', '85초과(O/X)', '비고'],
-   623	                    ['예: (주)아톰세무회계', '서울시 강남구 아파트', '서울시 강남구 테헤란로 123', '20230101', '20250115', '150000000', '1000000', '100000', '', 'O', ''],
-   624	                    ['예: (주)아톰세무회계', '서울시 서초구 오피스텔', '서울시 서초구 서초대로 456', '20230201', '20250220', '120000000', '800000', '80000', '', 'X', ''],
-   625	                    ['예: (주)베타컴퍼니', '부산시 해운대 상가', '부산시 해운대구 해운대로 789', '20220315', '20250310', '280000000', '2000000', '200000', '', 'O', ''],
-   626	                    ['', '', '', '', '', '', '', '', '', '', '']
-   627	                ];
-   628	                
-   629	                const ws1 = XLSX.utils.aoa_to_sheet(inventoryData);
-   630	                
-   631	                ws1['!cols'] = [
-   632	                    {wch: 20}, // 거래처명
-   633	                    {wch: 25}, // 물건명
-   634	                    {wch: 35}, // 소재지
-   635	                    {wch: 18}, // 취득일
-   636	                    {wch: 18}, // 양도일
-   637	                    {wch: 15}, // 양도가액
-   638	                    {wch: 15}, // 기납부 종소세
-   639	                    {wch: 18}, // 기납부 지방소득세
-   640	                    {wch: 15}, // 신고기한
-   641	                    {wch: 12}, // 85초과
-   642	                    {wch: 20}  // 비고
-   643	                ];
-   644	                XLSX.utils.book_append_sheet(wb, ws1, '물건목록');
-   645	                
-   646	                // Sheet 2: 필요경비 상세
-   647	                const expenseData = [
-   648	                    ['📋 필요경비 작성 방법: 거래처명*과 물건명*은 물건목록 시트와 정확히 일치해야 합니다. (복사&붙여넣기 권장). 번호는 자동으로 부여됩니다.'],
-   649	                    [],
-   650	                    ['거래처명*', '물건명* (물건목록과 동일)', '번호', '비용명', '구분(취득가액/기타필요경비)', '금액', '비용인정(O/X)', '비고'],
-   651	                    ['예: (주)아톰세무회계', '서울시 강남구 아파트', '1', '취득가액', '취득가액', '100000000', 'O', ''],
-   652	                    ['예: (주)아톰세무회계', '서울시 강남구 아파트', '2', '취득세 등', '취득가액', '5000000', 'O', ''],
-   653	                    ['예: (주)아톰세무회계', '서울시 강남구 아파트', '3', '중개수수료', '기타필요경비', '2000000', 'O', ''],
-   654	                    ['예: (주)아톰세무회계', '서울시 서초구 오피스텔', '1', '취득가액', '취득가액', '80000000', 'O', ''],
-   655	                    ['예: (주)베타컴퍼니', '부산시 해운대 상가', '1', '취득가액', '취득가액', '200000000', 'O', ''],
-   656	                    ['예: (주)베타컴퍼니', '부산시 해운대 상가', '2', '취득세 등', '취득가액', '10000000', 'O', ''],
-   657	                    ['', '', '', '', '', '', '', '']
-   658	                ];
-   659	                
-   660	                const ws2 = XLSX.utils.aoa_to_sheet(expenseData);
-   661	                
-   662	                ws2['!cols'] = [
-   663	                    {wch: 20}, {wch: 25}, {wch: 8}, {wch: 20}, {wch: 28}, {wch: 15}, {wch: 15}, {wch: 20}
-   664	                ];
-   665	                XLSX.utils.book_append_sheet(wb, ws2, '필요경비상세');
-   666	                
-   667	                const fileName = `매매사업자_일괄업로드_양식_${new Date().toISOString().slice(0,10)}.xlsx`;
-   668	                XLSX.writeFile(wb, fileName);
-   669	                
-   670	                alert('✅ 엑셀 양식이 다운로드되었습니다.\n\n' +
-   671	                      '📋 작성 방법:\n' +
-   672	                      '1. Sheet 1 (물건목록): 거래처명*과 물건명을 정확히 입력\n' +
-   673	                      '   - 85초과: O 또는 X 입력 (Y/N도 가능)\n' +
-   674	                      '   - 취득가액/기타필요경비는 필요경비상세에서 자동 계산\n\n' +
-   675	                      '2. Sheet 2 (필요경비상세): 거래처명*과 물건명*을 물건목록과 동일하게 입력\n' +
-   676	                      '   - 구분: "취득가액" 또는 "기타필요경비"만 입력 (필수)\n' +
-   677	                      '   - 번호는 자동으로 부여됨\n\n' +
-   678	                      '⚠️ 중요: 거래처명과 물건명은 띄어쓰기까지 정확히 일치해야 매칭됩니다!\n' +
-   679	                      '   (복사&붙여넣기 권장)\n\n' +
-   680	                      '작성 완료 후 "일괄 업로드" 버튼을 클릭하세요.');
-   681	            } catch (error) {
-   682	                console.error('Excel template download error:', error);
-   683	                alert('엑셀 양식 다운로드 중 오류가 발생했습니다.\n' + error.message);
-   684	            }
-   685	        }
-   686	
-   687	        // 일괄 엑셀 업로드 처리
-   688	        async function handleBulkExcelUpload(event) {
-   689	            const file = event.target.files[0];
-   690	            if (!file) return;
-   691	            
-   692	            if (typeof XLSX === 'undefined') {
-   693	                alert('엑셀 라이브러리가 로드되지 않았습니다.\n페이지를 새로고침한 후 다시 시도해주세요.');
-   694	                event.target.value = '';
-   695	                return;
-   696	            }
-   697	            
-   698	            try {
-   699	                showLoading();
-   700	                
-   701	                console.log('📤 업로드 시작:', file.name, file.size, 'bytes');
-   702	                
-   703	                const data = await file.arrayBuffer();
-   704	                const workbook = XLSX.read(data);
-   705	                
-   706	                console.log('📋 시트 목록:', workbook.SheetNames);
-   707	                
-   708	                // Sheet 1: 물건목록
-   709	                const inventorySheet = workbook.Sheets['물건목록'];
-   710	                if (!inventorySheet) {
-   711	                    console.error('❌ 물건목록 시트 없음');
-   712	                    throw new Error('물건목록 시트를 찾을 수 없습니다.');
-   713	                }
-   714	                
-   715	                // 원본 데이터 (배열 형식)
-   716	                const inventoryRawData = XLSX.utils.sheet_to_json(inventorySheet, { header: 1, defval: '' });
-   717	                console.log('📊 원본 시트 총 행 수:', inventoryRawData.length);
-   718	                
-   719	                // 헤더 행 찾기 (거래처명* 포함된 행)
-   720	                let headerRowIndex = -1;
-   721	                for (let i = 0; i < Math.min(10, inventoryRawData.length); i++) {
-   722	                    const row = inventoryRawData[i];
-   723	                    
-   724	                    // 조건 1: "거래처명*"가 있어야 함
-   725	                    const hasCompanyName = row.some(cell => {
-   726	                        const str = String(cell).trim();
-   727	                        return str === '거래처명*' || str === '거래처명' || str === '회사명';
-   728	                    });
-   729	                    
-   730	                    // 조건 2: "물건명"도 같은 행에 있어야 함
-   731	                    const hasPropertyName = row.some(cell => {
-   732	                        const str = String(cell).trim();
-   733	                        return str === '물건명' || str === '물건명*';
-   734	                    });
-   735	                    
-   736	                    // 조건 3: 빈 셀이 너무 많지 않아야 함 (최소 5개 이상의 컬럼)
-   737	                    const nonEmptyCount = row.filter(cell => String(cell).trim() !== '').length;
-   738	                    
-   739	                    if (hasCompanyName && hasPropertyName && nonEmptyCount >= 5) {
-   740	                        headerRowIndex = i;
-   741	                        console.log(`✅ 헤더 행 발견: ${i + 1}행`);
-   742	                        console.log('📋 헤더:', row);
-   743	                        break;
-   744	                    }
-   745	                }
-   746	                
-   747	                if (headerRowIndex === -1) {
-   748	                    console.error('❌ 헤더 행을 찾을 수 없습니다. 처음 10행:', inventoryRawData.slice(0, 10));
-   749	                    throw new Error('물건목록 시트에서 "거래처명*" 컬럼을 찾을 수 없습니다.\n헤더 행이 올바른지 확인해주세요.');
-   750	                }
-   751	                
-   752	                // 헤더 행 이후의 데이터만 JSON으로 변환
-   753	                const headers = inventoryRawData[headerRowIndex];
-   754	                console.log('📋 헤더 배열 상세:', headers);
-   755	                console.log('📋 헤더 개수:', headers.length);
-   756	                headers.forEach((h, idx) => {
-   757	                    console.log(`  [${idx}]: "${h}"`);
-   758	                });
-   759	                
-   760	                const dataRows = inventoryRawData.slice(headerRowIndex + 1);
-   761	                
-   762	                // JSON 변환
-   763	                const inventoryJson = dataRows.map(row => {
-   764	                    const obj = {};
-   765	                    headers.forEach((header, idx) => {
-   766	                        obj[header] = row[idx] || '';
-   767	                    });
-   768	                    return obj;
-   769	                }).filter(row => {
-   770	                    // 완전히 빈 행 제거
-   771	                    return Object.values(row).some(val => String(val).trim() !== '');
-   772	                });
-   773	                
-   774	                console.log('✅ 물건목록 데이터:', inventoryJson.length, '행');
-   775	                
-   776	                if (inventoryJson.length > 0) {
-   777	                    console.log('📊 첫 번째 데이터 행:', inventoryJson[0]);
-   778	                    console.log('🔍 컬럼명:', Object.keys(inventoryJson[0]));
-   779	                    
-   780	                    // 각 컬럼의 값 출력
-   781	                    console.log('📋 각 컬럼의 값:');
-   782	                    Object.entries(inventoryJson[0]).forEach(([key, value]) => {
-   783	                        console.log(`  "${key}": "${value}"`);
-   784	                    });
-   785	                }
-   786	                
-   787	                // Sheet 2: 필요경비상세
-   788	                // 원본 시트를 배열로도 확인 (헤더 감지 문제 확인용)
-   789	                const rawData = XLSX.utils.sheet_to_json(inventorySheet, { header: 1, defval: '' });
-   790	                console.log('📊 원본 시트 (배열 형식):');
-   791	                console.log('  행 0 (첫번째):', rawData[0]);
-   792	                console.log('  행 1 (두번째):', rawData[1]);
-   793	                console.log('  행 2 (세번째):', rawData[2]);
-   794	                console.log('  행 3 (네번째):', rawData[3]);
-   795	                
-   796	                // Sheet 2: 필요경비상세
-   797	                const expenseSheet = workbook.Sheets['필요경비상세'];
-   798	                let expenseJson = [];
-   799	                if (expenseSheet) {
-   800	                    const expenseRawData = XLSX.utils.sheet_to_json(expenseSheet, { header: 1, defval: '' });
-   801	                    console.log('📊 필요경비상세 원본 행 수:', expenseRawData.length);
-   802	                    
-   803	                    // 헤더 행 찾기
-   804	                    let expenseHeaderRowIndex = -1;
-   805	                    for (let i = 0; i < Math.min(10, expenseRawData.length); i++) {
-   806	                        const row = expenseRawData[i];
-   807	                        
-   808	                        // 조건 1: "거래처명*"가 있어야 함
-   809	                        const hasCompanyName = row.some(cell => {
-   810	                            const str = String(cell).trim();
-   811	                            return str === '거래처명*' || str === '거래처명' || str === '회사명';
-   812	                        });
-   813	                        
-   814	                        // 조건 2: "비용명" 또는 "구분"이 같은 행에 있어야 함
-   815	                        const hasExpenseField = row.some(cell => {
-   816	                            const str = String(cell).trim();
-   817	                            return str === '비용명' || str.includes('구분');
-   818	                        });
-   819	                        
-   820	                        // 조건 3: 빈 셀이 너무 많지 않아야 함
-   821	                        const nonEmptyCount = row.filter(cell => String(cell).trim() !== '').length;
-   822	                        
-   823	                        if (hasCompanyName && hasExpenseField && nonEmptyCount >= 4) {
-   824	                            expenseHeaderRowIndex = i;
-   825	                            console.log(`✅ 필요경비상세 헤더 행 발견: ${i + 1}행`);
-   826	                            break;
-   827	                        }
-   828	                    }
-   829	                    
-   830	                    if (expenseHeaderRowIndex !== -1) {
-   831	                        const expenseHeaders = expenseRawData[expenseHeaderRowIndex];
-   832	                        const expenseDataRows = expenseRawData.slice(expenseHeaderRowIndex + 1);
-   833	                        
-   834	                        expenseJson = expenseDataRows.map(row => {
-   835	                            const obj = {};
-   836	                            expenseHeaders.forEach((header, idx) => {
-   837	                                obj[header] = row[idx] || '';
-   838	                            });
-   839	                            return obj;
-   840	                        }).filter(row => {
-   841	                            return Object.values(row).some(val => String(val).trim() !== '');
-   842	                        });
-   843	                        
-   844	                        console.log('✅ 필요경비상세 데이터:', expenseJson.length, '행');
-   845	                    } else {
-   846	                        console.log('⚠️ 필요경비상세 헤더 행을 찾을 수 없습니다.');
-   847	                    }
-   848	                } else {
-   849	                    console.log('⚠️ 필요경비상세 시트 없음 (선택사항)');
-   850	                }
-   851	                
-   852	                // 데이터 검증
-   853	                if (inventoryJson.length === 0) {
-   854	                    console.error('❌ 물건목록 데이터 없음');
-   855	                    throw new Error('물건목록 데이터가 없습니다.');
-   856	                }
-   857	                
-   858	                // 거래처명별로 그룹화
-   859	                const groupedData = {};
-   860	                console.log('🔄 데이터 그룹화 시작...');
-   861	                
-   862	                // 유연한 컬럼명 매칭
-   863	                const getCompanyName = (row) => {
-   864	                    return String(
-   865	                        row['거래처명*'] || 
-   866	                        row['거래처명'] || 
-   867	                        row['거래처 명*'] || 
-   868	                        row['거래처 명'] ||
-   869	                        row['회사명'] ||
-   870	                        ''
-   871	                    ).trim();
-   872	                };
-   873	                
-   874	                const getPropertyName = (row) => {
-   875	                    return String(
-   876	                        row['물건명'] || 
-   877	                        row['물건명*'] ||
-   878	                        row['물건 명'] ||
-   879	                        ''
-   880	                    ).trim();
-   881	                };
-   882	                
-   883	                for (const row of inventoryJson) {
-   884	                    const companyName = getCompanyName(row);
-   885	                    const propertyName = getPropertyName(row);
-   886	                    
-   887	                    console.log('📝 처리 중:', companyName, propertyName);
-   888	                    
-   889	                    if (!companyName) {
-   890	                        console.warn('⚠️ 거래처명 없음, 건너뜀');
-   891	                        console.warn('   행 데이터:', row);
-   892	                        continue;
-   893	                    }
-   894	                    
-   895	                    if (!groupedData[companyName]) {
-   896	                        groupedData[companyName] = {
-   897	                            properties: [],
-   898	                            expenses: []
-   899	                        };
-   900	                    }
-   901	                    
-   902	                    // 85초과 검증 (O/X 형식으로 변경)
-   903	                    const over85Value = String(
-   904	                        row['85초과(O/X)'] || 
-   905	                        row['85초과(Y/N)'] || 
-   906	                        row['85초과'] || 
-   907	                        row['85 초과(Y/N)'] ||
-   908	                        'X'
-   909	                    ).trim().toUpperCase();
-   910	                    
-   911	                    // O/X 또는 Y/N 모두 허용
-   912	                    let over85 = 'N';
-   913	                    if (over85Value === 'O' || over85Value === 'Y') {
-   914	                        over85 = 'Y';
-   915	                    }
-   916	                    
-   917	                    if (over85Value !== 'Y' && over85Value !== 'N' && over85Value !== 'O' && over85Value !== 'X') {
-   918	                        console.warn(`⚠️ 85초과 값이 잘못되었습니다: [${companyName}] ${propertyName} - "${over85Value}" (O/X 또는 Y/N만 가능)`);
-   919	                    }
-   920	                    
-   921	                    // 물건 데이터
-   922	                    const property = {
-   923	                        property_name: propertyName,
-   924	                        address: row['소재지'] || row['주소'] || '',
-   925	                        acquisition_value: 0, // 필요경비 상세에서 자동 계산
-   926	                        other_expenses: 0, // 필요경비 상세에서 자동 계산
-   927	                        transfer_value: parseNumber(row['양도가액'] || row['양도 가액']) || 0,
-   928	                        acquisition_date: formatDateToISO(row['취득일(YYYYMMDD)'] || row['취득일'] || row['취득 일(YYYYMMDD)']),
-   929	                        transfer_date: formatDateToISO(row['양도일(YYYYMMDD)'] || row['양도일'] || row['양도 일(YYYYMMDD)']),
-   930	                        report_deadline: '', // 양도일에서 자동 계산
-   931	                        prepaid_income_tax: parseNumber(row['기납부 종소세'] || row['기납부종소세']) || 0,
-   932	                        prepaid_local_tax: parseNumber(row['기납부 지방소득세'] || row['기납부지방소득세']) || 0,
-   933	                        over_85: over85,
-   934	                        progress_stage: '미확인',
-   935	                        remarks: row['비고'] || '',
-   936	                        expenses: []
-   937	                    };
-   938	                    
-   939	                    // 신고기한 자동 계산 (양도일이 속한 달의 말일로부터 2개월 후)
-   940	                    if (property.transfer_date) {
-   941	                        try {
-   942	                            const transferDate = new Date(property.transfer_date);
-   943	                            // 양도일이 속한 달의 말일
-   944	                            const endOfMonth = new Date(transferDate.getFullYear(), transferDate.getMonth() + 1, 0);
-   945	                            // 2개월 후의 말일
-   946	                            const deadline = new Date(endOfMonth.getFullYear(), endOfMonth.getMonth() + 3, 0);
-   947	                            property.report_deadline = deadline.toISOString().split('T')[0];
-   948	                            console.log(`📅 신고기한 계산: 양도일 ${property.transfer_date} → 신고기한 ${property.report_deadline}`);
-   949	                        } catch (e) {
-   950	                            console.warn('신고기한 계산 실패:', e);
-   951	                        }
-   952	                    }
-   953	                    
-   954	                    groupedData[companyName].properties.push(property);
-   955	                }
-   956	                
-   957	                // 필요경비 매칭 및 자동 넘버링
-   958	                let matchedExpenseCount = 0;
-   959	                let unmatchedExpenses = [];
-   960	                
-   961	                for (const expenseRow of expenseJson) {
-   962	                    const companyName = getCompanyName(expenseRow);
-   963	                    const propertyName = String(
-   964	                        expenseRow['물건명*'] || 
-   965	                        expenseRow['물건명* (물건목록과 동일)'] || 
-   966	                        expenseRow['물건명'] ||
-   967	                        ''
-   968	                    ).trim();
-   969	                    
-   970	                    if (!companyName || !propertyName) continue;
-   971	                    
-   972	                    // 구분 검증
-   973	                    const categoryValue = String(
-   974	                        expenseRow['구분(취득가액/기타필요경비)'] || 
-   975	                        expenseRow['구분'] ||
-   976	                        ''
-   977	                    ).trim();
-   978	                    if (categoryValue !== '취득가액' && categoryValue !== '기타필요경비') {
-   979	                        console.warn(`⚠️ 구분 값이 잘못되었습니다: [${companyName}] ${propertyName} - "${categoryValue}" (취득가액 또는 기타필요경비만 가능)`);
-   980	                        continue; // 잘못된 구분은 건너뜀
-   981	                    }
-   982	                    
-   983	                    const expense = {
-   984	                        no: '', // 자동 넘버링 (나중에 설정)
-   985	                        expense_name: expenseRow['비용명'] || expenseRow['경비명'] || '',
-   986	                        category: categoryValue,
-   987	                        amount: parseNumber(expenseRow['금액']) || 0,
-   988	                        preliminary_approved: expenseRow['비용인정(O/X)'] || expenseRow['비용인정'] || 'X',
-   989	                        remarks: ''
-   990	                    };
-   991	                    
-   992	                    // 해당 거래처명과 물건명에 매칭
-   993	                    let matched = false;
-   994	                    if (groupedData[companyName]) {
-   995	                        for (const property of groupedData[companyName].properties) {
-   996	                            if (property.property_name === propertyName) {
-   997	                                property.expenses.push(expense);
-   998	                                matched = true;
-   999	                                matchedExpenseCount++;
-  1000	                                break;
-  1001	                            }
-  1002	                        }
-  1003	                    }
-  1004	                    
-  1005	                    // 매칭 실패 기록
-  1006	                    if (!matched) {
-  1007	                        unmatchedExpenses.push({
-  1008	                            companyName: companyName,
-  1009	                            propertyName: propertyName,
-  1010	                            expenseName: expense.expense_name
-  1011	                        });
-  1012	                    }
-  1013	                }
-  1014	                
-  1015	                // 각 물건의 필요경비 자동 넘버링 및 취득가액/기타필요경비 계산
-  1016	                for (const companyName in groupedData) {
-  1017	                    for (const property of groupedData[companyName].properties) {
-  1018	                        let acquisitionTotal = 0;
-  1019	                        let otherExpensesTotal = 0;
-  1020	                        
-  1021	                        property.expenses.forEach((expense, idx) => {
-  1022	                            // 자동 넘버링
-  1023	                            expense.no = String(idx + 1);
-  1024	                            
-  1025	                            // 구분에 따라 합계 계산
-  1026	                            if (expense.category === '취득가액') {
-  1027	                                acquisitionTotal += expense.amount;
-  1028	                            } else if (expense.category === '기타필요경비') {
-  1029	                                otherExpensesTotal += expense.amount;
-  1030	                            }
-  1031	                        });
-  1032	                        
-  1033	                        // 물건의 취득가액과 기타필요경비 설정
-  1034	                        property.acquisition_value = acquisitionTotal;
-  1035	                        property.other_expenses = otherExpensesTotal;
-  1036	                        
-  1037	                        // 양도소득 자동 계산
-  1038	                        property.transfer_income = property.transfer_value - property.acquisition_value - property.other_expenses;
-  1039	                        
-  1040	                        console.log(`  물건: ${property.property_name}`);
-  1041	                        console.log(`    취득가액: ${acquisitionTotal.toLocaleString()}원`);
-  1042	                        console.log(`    기타필요경비: ${otherExpensesTotal.toLocaleString()}원`);
-  1043	                        console.log(`    양도가액: ${property.transfer_value.toLocaleString()}원`);
-  1044	                        console.log(`    양도소득: ${property.transfer_income.toLocaleString()}원`);
-  1045	                    }
-  1046	                }
-  1047	                
-  1048	                // 각 거래처명별로 데이터 저장
-  1049	                let successCount = 0;
-  1050	                let failCount = 0;
-  1051	                const errors = [];
-  1052	                
-  1053	                console.log('💾 데이터 저장 시작...');
-  1054	                console.log('📊 그룹화된 거래처 수:', Object.keys(groupedData).length);
-  1055	                
-  1056	                for (const [companyName, data] of Object.entries(groupedData)) {
-  1057	                    console.log(`\n🔍 처리 중: ${companyName}`);
-  1058	                    console.log(`  물건 수: ${data.properties.length}개`);
-  1059	                    
-  1060	                    try {
-  1061	                        // 거래처명으로 고객사 찾기
-  1062	                        const client = allTraders.find(t => {
-  1063	                            const clientName = (t.company_name || '').trim();
-  1064	                            const targetName = companyName.trim();
-  1065	                            return clientName === targetName;
-  1066	                        });
-  1067	                        
-  1068	                        if (!client) {
-  1069	                            const errorMsg = `거래처명 ${companyName}: 고객사를 찾을 수 없습니다.`;
-  1070	                            console.error('❌', errorMsg);
-  1071	                            errors.push(errorMsg);
-  1072	                            failCount += data.properties.length;
-  1073	                            continue;
-  1074	                        }
-  1075	                        
-  1076	                        console.log(`  ✅ 고객사 찾음: ${client.company_name} (ID: ${client.id})`);
-  1077	                        
-  1078	                        // localStorage에 저장
-  1079	                        const storageKey = `trader_inventory_${client.id}`;
-  1080	                        let existingData = [];
-  1081	                        
-  1082	                        try {
-  1083	                            const stored = localStorage.getItem(storageKey);
-  1084	                            if (stored) {
-  1085	                                existingData = JSON.parse(stored);
-  1086	                                console.log(`  📦 기존 데이터: ${existingData.length}개`);
-  1087	                            }
-  1088	                        } catch (e) {
-  1089	                            console.warn('기존 데이터 로드 실패:', e);
-  1090	                        }
-  1091	                        
-  1092	                        // 새 데이터 추가 (기존 데이터 유지)
-  1093	                        const updatedData = [...existingData, ...data.properties];
-  1094	                        localStorage.setItem(storageKey, JSON.stringify(updatedData));
-  1095	                        
-  1096	                        console.log(`  💾 저장 완료: ${data.properties.length}개 물건 추가`);
-  1097	                        console.log(`  📊 총 데이터: ${updatedData.length}개`);
-  1098	                        
-  1099	                        successCount += data.properties.length;
-  1100	                    } catch (error) {
-  1101	                        console.error(`거래처명 ${companyName} 처리 실패:`, error);
-  1102	                        errors.push(`거래처명 ${companyName}: ${error.message}`);
-  1103	                        failCount += data.properties.length;
-  1104	                    }
-  1105	                }
-  1106	                
-  1107	                hideLoading();
-  1108	                event.target.value = '';
-  1109	                
-  1110	                console.log('\n📊 최종 결과:');
-  1111	                console.log(`  ✅ 성공: ${successCount}건`);
-  1112	                console.log(`  ❌ 실패: ${failCount}건`);
-  1113	                console.log(`  💰 필요경비 매칭: ${matchedExpenseCount}건`);
-  1114	                console.log(`  ⚠️ 필요경비 미매칭: ${unmatchedExpenses.length}건`);
-  1115	                
-  1116	                // 결과 알림
-  1117	                let message = `✅ 업로드 완료!\n\n`;
-  1118	                message += `📦 물건 목록: ${successCount}건 성공, ${failCount}건 실패\n`;
-  1119	                message += `💰 필요경비: ${matchedExpenseCount}건 매칭`;
-  1120	                
-  1121	                if (unmatchedExpenses.length > 0) {
-  1122	                    message += `, ${unmatchedExpenses.length}건 매칭 실패`;
-  1123	                }
-  1124	                
-  1125	                if (errors.length > 0) {
-  1126	                    message += '\n\n[물건 등록 오류]\n' + errors.slice(0, 3).join('\n');
-  1127	                    if (errors.length > 3) {
-  1128	                        message += `\n... 외 ${errors.length - 3}건`;
-  1129	                    }
-  1130	                }
-  1131	                
-  1132	                if (unmatchedExpenses.length > 0) {
-  1133	                    message += '\n\n[필요경비 매칭 실패]\n';
-  1134	                    message += '⚠️ 물건명이 일치하지 않아 연결되지 않은 경비:\n';
-  1135	                    const samples = unmatchedExpenses.slice(0, 3);
-  1136	                    for (const exp of samples) {
-  1137	                        message += `- ${exp.companyName} / "${exp.propertyName}" / ${exp.expenseName}\n`;
-  1138	                    }
-  1139	                    if (unmatchedExpenses.length > 3) {
-  1140	                        message += `... 외 ${unmatchedExpenses.length - 3}건`;
-  1141	                    }
-  1142	                    message += '\n💡 물건명을 물건목록 시트와 정확히 일치시켜주세요.';
-  1143	                }
-  1144	                
-  1145	                alert(message);
-  1146	                
-  1147	                if (successCount > 0) {
-  1148	                    // 페이지 새로고침 제안
-  1149	                    if (confirm('업로드된 데이터를 확인하시겠습니까?\n(확인 시 페이지가 새로고침됩니다)')) {
-  1150	                        location.reload();
-  1151	                    }
-  1152	                }
-  1153	                
-  1154	            } catch (error) {
-  1155	                hideLoading();
-  1156	                event.target.value = '';
-  1157	                console.error('Bulk upload error:', error);
-  1158	                alert('❌ 업로드 중 오류가 발생했습니다.\n\n' + error.message + '\n\n양식을 확인하고 다시 시도해주세요.');
-  1159	            }
-  1160	        }
-  1161	
-  1162	        // 날짜 포맷 변환 함수 (YYYYMMDD → YYYY-MM-DD, 엑셀 시리얼 번호 지원)
-  1163	        function formatDateToISO(dateStr) {
-  1164	            if (!dateStr) return '';
-  1165	            
-  1166	            const str = String(dateStr).trim();
-  1167	            
-  1168	            // 1) 엑셀 시리얼 번호 감지 (숫자만 있고, 8자리가 아니고, 5자리 정도)
-  1169	            // 엑셀 날짜 시리얼: 1900-01-01 기준 (시리얼 번호 1)
-  1170	            // 예: 45700 = 2025-02-08
-  1171	            const numOnly = str.replace(/[^0-9]/g, '');
-  1172	            if (numOnly === str && numOnly.length >= 4 && numOnly.length <= 6) {
-  1173	                const serialNumber = parseInt(numOnly, 10);
-  1174	                
-  1175	                // 엑셀 날짜 시리얼 범위 체크 (1900년 ~ 2100년 정도)
-  1176	                // 1: 1900-01-01, 45700: 2025년, 73050: 2100년
-  1177	                if (serialNumber >= 1 && serialNumber <= 80000) {
-  1178	                    // 엑셀 시리얼 → Date 객체
-  1179	                    // 엑셀은 1900-01-01을 1로 시작 (단, 1900년 윤년 버그 보정 필요)
-  1180	                    const excelEpoch = new Date(1899, 11, 30); // 1899-12-30 (엑셀 기준일)
-  1181	                    const jsDate = new Date(excelEpoch.getTime() + serialNumber * 24 * 60 * 60 * 1000);
-  1182	                    
-  1183	                    // YYYY-MM-DD 포맷
-  1184	                    const year = jsDate.getFullYear();
-  1185	                    const month = String(jsDate.getMonth() + 1).padStart(2, '0');
-  1186	                    const day = String(jsDate.getDate()).padStart(2, '0');
-  1187	                    
-  1188	                    console.log(`📅 엑셀 시리얼 변환: ${serialNumber} → ${year}-${month}-${day}`);
-  1189	                    return `${year}-${month}-${day}`;
-  1190	                }
-  1191	            }
-  1192	            
-  1193	            // 2) YYYYMMDD 형식 (8자리)
-  1194	            if (numOnly.length === 8) {
-  1195	                return `${numOnly.slice(0, 4)}-${numOnly.slice(4, 6)}-${numOnly.slice(6, 8)}`;
-  1196	            }
-  1197	            
-  1198	            // 3) 이미 YYYY-MM-DD 형식이면 그대로 반환
-  1199	            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-  1200	                return str;
-  1201	            }
-  1202	            
-  1203	            // 4) 변환 실패 시 원본 반환
-  1204	            console.warn(`⚠️ 날짜 형식 인식 실패: "${dateStr}"`);
-  1205	            return dateStr;
-  1206	        }
-  1207	
-  1208	        // 숫자 파싱 함수
-  1209	        function parseNumber(value) {
-  1210	            if (!value || value === '') return 0;
-  1211	            const str = String(value).replace(/[^0-9.-]/g, '');
-  1212	            return parseFloat(str) || 0;
-  1213	        }
-  1214	
-  1215	        // ============================================
-  1216	
-  1217	        // Load on page load
-  1218	        console.log('📥 페이지 로드 완료 - loadTraders() 호출 준비');
-  1219	        
-  1220	        // DOM이 완전히 로드된 후 실행
-  1221	        if (document.readyState === 'loading') {
-  1222	            console.log('⏳ DOM 로딩 대기 중...');
-  1223	            document.addEventListener('DOMContentLoaded', () => {
-  1224	                console.log('✅ DOMContentLoaded 이벤트 발생');
-  1225	                loadTraders();
-  1226	            });
-  1227	        } else {
-  1228	            console.log('✅ DOM 이미 로드됨 - 즉시 실행');
-  1229	            loadTraders();
-  1230	        }
-  1231	    </script>
-  1232	</body>
-  1233	</html>
-  1234	
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>매매사업자 데이터 - 아톰세무회계</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <!-- Preconnect to CDNs for faster loading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    
+    <!-- Font Awesome (최소화: solid 아이콘만) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/fontawesome.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/solid.min.css">
+    
+    <!-- Google Fonts (최적화: 필요한 웨이트만) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Preload critical CSS -->
+    <link rel="preload" href="css/style.css" as="style">
+    <link rel="preload" href="css/traders-performance.css" as="style">
+    
+    <!-- Preload JavaScript -->
+    <link rel="preload" href="js/common.js" as="script">
+    
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/traders-performance.css">
+    
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="trader-performance">
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span>아톰세무회계</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>대시보드</span>
+                </a>
+                
+                <!-- 고객사 관리 (드롭다운) -->
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-item" onclick="toggleDropdown(event)">
+                        <i class="fas fa-building"></i>
+                        <span>고객사 관리</span>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <div class="dropdown-content">
+                        <a href="clients.html" class="dropdown-item">
+                            <i class="fas fa-briefcase"></i>
+                            <span>기장고객 관리</span>
+                        </a>
+                        <a href="clients-terminated.html" class="dropdown-item">
+                            <i class="fas fa-user-times"></i>
+                            <span>해임고객 관리</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 매매사업자 관리 (드롭다운) -->
+                <div class="nav-dropdown active">
+                    <a href="#" class="nav-item" onclick="toggleDropdown(event)">
+                        <i class="fas fa-store"></i>
+                        <span>매매사업자 관리</span>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <div class="dropdown-content">
+                        <a href="traders-data.html" class="dropdown-item active">
+                            <i class="fas fa-database"></i>
+                            <span>매매사업자 데이터</span>
+                        </a>
+                        <a href="traders-checklist.html" class="dropdown-item">
+                            <i class="fas fa-check-square"></i>
+                            <span>매매사업자 체크리스트</span>
+                        </a>
+                        <a href="traders-vat.html" class="dropdown-item">
+                            <i class="fas fa-calculator"></i>
+                            <span>부가가치세 계산</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <a href="#" class="nav-item">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>세무 관리</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>통계 분석</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>설정</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="nav-item" style="width: 100%; border: none; background: none;">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>로그아웃</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="topbar">
+                <div class="topbar-left">
+                    <button class="menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="topbar-title">매매사업자 데이터</h1>
+                </div>
+                
+                <div class="topbar-right">
+                    <div class="topbar-search">
+                        <input type="text" id="globalSearch" placeholder="검색...">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    
+                    <div class="user-profile">
+                        <div class="user-avatar" id="userAvatar">A</div>
+                        <div class="user-info">
+                            <div class="user-name" id="userName">관리자</div>
+                            <div class="user-role" id="userRole">Admin</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Filter Toolbar (고객사 관리와 동일한 디자인) -->
+                <div class="card">
+                    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 20px 24px;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                            <!-- Manager Filter -->
+                            <select id="managerFilter" class="px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" style="min-width: 150px;">
+                                <option value="">전체 담당자</option>
+                            </select>
+                            
+                            <!-- Company Name Search -->
+                            <input type="text" id="companyNameSearch" class="px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" placeholder="거래처명 검색..." style="width: 250px;">
+                        </div>
+                        
+                        <div style="display: flex; gap: 12px;">
+                            <!-- 일괄 엑셀 업로드 버튼 -->
+                            <button onclick="downloadBulkExcelTemplate()" class="btn btn-success">
+                                <i class="fas fa-download"></i> 양식 다운로드
+                            </button>
+                            <button onclick="document.getElementById('bulkExcelUpload').click()" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> 일괄 업로드
+                            </button>
+                            <input type="file" id="bulkExcelUpload" accept=".xlsx, .xls" style="display: none;" onchange="handleBulkExcelUpload(event)">
+                            
+                            <!-- 새로고침 버튼 -->
+                            <button onclick="refreshData()" class="btn btn-secondary">
+                                <i class="fas fa-sync-alt"></i> 새로고침
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Traders List -->
+                <div class="card">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 class="card-title">
+                            <i class="fas fa-store mr-2"></i>
+                            매매사업자 목록
+                        </h3>
+                        <div style="color: #6b7280; font-size: 14px;">
+                            <span>업종코드: 703011, 703012</span>
+                            <span style="margin-left: 16px;">총 <strong id="traderCount" style="color: #667eea;">0</strong>개</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Loading -->
+                    <div id="loading" style="text-align: center; padding: 60px;">
+                        <div class="spinner" style="margin: 0 auto;"></div>
+                        <p style="margin-top: 16px; color: #6b7280;">데이터를 불러오는 중...</p>
+                    </div>
+                    
+                    <!-- Traders Grid -->
+                    <div id="tradersGridContainer" style="display: none; padding: 24px;">
+                        <!-- 담당자별 그리드가 여기에 동적으로 추가됩니다 -->
+                    </div>
+                    
+                    <!-- Empty State -->
+                    <div id="emptyState" style="display: none; text-align: center; padding: 60px;">
+                        <i class="fas fa-inbox" style="font-size: 64px; color: #d1d5db; margin-bottom: 16px;"></i>
+                        <p style="color: #6b7280; font-size: 16px;">매매사업자가 없습니다.</p>
+                        <p style="color: #9ca3af; font-size: 14px; margin-top: 8px;">
+                            고객사 관리에서 업종코드가 703011 또는 703012인 고객사를 추가하면<br>
+                            자동으로 이곳에 표시됩니다.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase Configuration and Auth -->
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-auth.js"></script>
+    <script src="js/supabase-db.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/auto-backup.js"></script>
+    <script>
+        console.log('🚀 traders-data.html 스크립트 시작');
+        
+        // Check authentication with Supabase
+        SupabaseAuth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // Display user info
+            try {
+                // Supabase user 객체에서 직접 정보 가져오기
+                const displayName = user.email?.split('@')[0] || 'User';
+                const emailElement = document.getElementById('userName');
+                const roleElement = document.getElementById('userRole');
+                const avatarElement = document.getElementById('userAvatar');
+                
+                if (emailElement) emailElement.textContent = user.email || displayName;
+                if (roleElement) roleElement.textContent = 'Admin';
+                if (avatarElement) avatarElement.textContent = displayName.charAt(0).toUpperCase();
+                
+                console.log('✅ 사용자 정보 표시 완료:', user.email);
+            } catch (error) {
+                console.error('사용자 정보 표시 오류:', error);
+                // 기본값 설정
+                const displayName = user.email?.split('@')[0] || 'User';
+                if (document.getElementById('userName')) 
+                    document.getElementById('userName').textContent = displayName;
+                if (document.getElementById('userRole')) 
+                    document.getElementById('userRole').textContent = 'Admin';
+                if (document.getElementById('userAvatar')) 
+                    document.getElementById('userAvatar').textContent = displayName.charAt(0).toUpperCase();
+            }
+        });
+
+        // Global variables
+        let allTraders = [];
+        let filteredTraders = [];
+        let selectedManager = '';
+        
+        // Cache settings
+        const CACHE_KEY = 'traders_data_cache';
+        const CACHE_TIME_KEY = 'traders_data_cache_time';
+        const CACHE_DURATION = 5 * 60 * 1000; // 5분
+
+        // Load traders (업종코드 703011, 703012)
+        async function loadTraders(forceRefresh = false) {
+            console.log('🔄 loadTraders() 시작, forceRefresh:', forceRefresh);
+            console.time('⏱️ Total Load Time');
+            try {
+                // 로딩 표시
+                const loadingEl = document.getElementById('loading');
+                const gridEl = document.getElementById('tradersGridContainer');
+                const emptyEl = document.getElementById('emptyState');
+                
+                if (!loadingEl || !gridEl || !emptyEl) {
+                    console.error('❌ 필수 DOM 요소를 찾을 수 없습니다!');
+                    throw new Error('Required DOM elements not found');
+                }
+                
+                loadingEl.style.display = 'block';
+                gridEl.style.display = 'none';
+                emptyEl.style.display = 'none';
+                console.log('✅ 로딩 표시 활성화');
+                
+                // 🔹 캐시 확인 (forceRefresh가 false일 때만)
+                if (!forceRefresh) {
+                    const cachedData = localStorage.getItem(CACHE_KEY);
+                    const cacheTime = localStorage.getItem(CACHE_TIME_KEY);
+                    
+                    if (cachedData && cacheTime) {
+                        const elapsed = Date.now() - parseInt(cacheTime);
+                        if (elapsed < CACHE_DURATION) {
+                            console.log(`✅ Using cached data (age: ${Math.round(elapsed/1000)}s / ${CACHE_DURATION/1000}s)`);
+                            allTraders = JSON.parse(cachedData);
+                            
+                            if (allTraders.length === 0) {
+                                showEmptyState();
+                            } else {
+                                console.time('⏱️ Populate Filters Time');
+                                populateFilters();
+                                console.timeEnd('⏱️ Populate Filters Time');
+                                
+                                console.time('⏱️ Render Grid Time');
+                                filteredTraders = [...allTraders];
+                                applyFilters();
+                                console.timeEnd('⏱️ Render Grid Time');
+                            }
+                            
+                            console.timeEnd('⏱️ Total Load Time');
+                            return;
+                        } else {
+                            console.log('⏰ Cache expired, fetching new data...');
+                        }
+                    }
+                }
+                
+                // Supabase에서 데이터 로드
+                console.log('🌐 Supabase 데이터 로드 시작...');
+                console.time('⏱️ Supabase Fetch Time');
+                
+                // Get all clients from Supabase
+                let allClients = [];
+                
+                try {
+                    // Supabase API 사용
+                    const { data: clients, error } = await supabaseClient
+                        .from('clients')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                    
+                    if (error) {
+                        console.error('❌ Supabase 오류:', error);
+                        throw error;
+                    }
+                    
+                    allClients = clients || [];
+                    console.log(`✅ Supabase: ${allClients.length}개 고객사 로드 완료`);
+                    console.timeEnd('⏱️ Supabase Fetch Time');
+                } catch (fetchError) {
+                    console.timeEnd('⏱️ Supabase Fetch Time');
+                    console.error('❌ Supabase 데이터 로드 실패:', fetchError);
+                    
+                    // Fallback: GenSpark API 시도
+                    try {
+                        console.log('🔄 Fallback: GenSpark API 시도...');
+                        const response = await fetch(`tables/clients?limit=1000`);
+                        if (response.ok) {
+                            const result = await response.json();
+                            allClients = result.data || [];
+                            console.log(`✅ GenSpark: ${allClients.length}개 고객사 로드됨 (Fallback)`);
+                        }
+                    } catch (fallbackError) {
+                        console.warn('❌ Fallback도 실패, 빈 데이터 사용:', fallbackError);
+                        allClients = [];
+                    }
+                }
+                
+                // Filter by business code (703011, 703012)
+                console.time('⏱️ Filter Time');
+                allTraders = allClients.filter(client => {
+                    const code = (client.business_code || '').trim();
+                    return code === '703011' || code === '703012';
+                });
+                console.timeEnd('⏱️ Filter Time');
+                
+                console.log(`✅ Filtered ${allTraders.length} traders from ${allClients.length} clients`);
+                
+                // 🔹 캐시 저장
+                localStorage.setItem(CACHE_KEY, JSON.stringify(allTraders));
+                localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+                console.log('💾 Data cached for 5 minutes');
+                
+                if (allTraders.length === 0) {
+                    showEmptyState();
+                } else {
+                    console.time('⏱️ Populate Filters Time');
+                    populateFilters();
+                    console.timeEnd('⏱️ Populate Filters Time');
+                    
+                    console.time('⏱️ Render Grid Time');
+                    filteredTraders = [...allTraders];
+                    applyFilters();
+                    console.timeEnd('⏱️ Render Grid Time');
+                }
+                
+                console.timeEnd('⏱️ Total Load Time');
+            } catch (error) {
+                console.timeEnd('⏱️ Total Load Time');
+                console.error('Error loading traders:', error);
+                showNotification('데이터를 불러오는 중 오류가 발생했습니다.', 'error');
+                showEmptyState();
+            }
+        }
+        
+        // 🔹 캐시 초기화 및 새로고침
+        function refreshData() {
+            localStorage.removeItem(CACHE_KEY);
+            localStorage.removeItem(CACHE_TIME_KEY);
+            console.log('🔄 Cache cleared, reloading data...');
+            showNotification('데이터를 새로고침합니다...', 'info');
+            loadTraders(true); // forceRefresh = true
+        }
+
+        // Populate filters
+        function populateFilters() {
+            // Get unique managers
+            const managers = [...new Set(allTraders.map(t => t.manager).filter(m => m))].sort();
+            const managerFilter = document.getElementById('managerFilter');
+            managerFilter.innerHTML = '<option value="">전체 담당자</option>' + 
+                managers.map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+        }
+
+        // Apply filters
+        function applyFilters() {
+            const managerFilter = document.getElementById('managerFilter').value;
+            const companyNameSearch = document.getElementById('companyNameSearch').value.toLowerCase();
+            
+            filteredTraders = allTraders.filter(trader => {
+                // Manager filter
+                if (managerFilter && trader.manager !== managerFilter) return false;
+                
+                // Company name search
+                if (companyNameSearch) {
+                    const companyName = (trader.company_name || '').toLowerCase();
+                    if (!companyName.includes(companyNameSearch)) return false;
+                }
+                
+                return true;
+            });
+            
+            document.getElementById('traderCount').textContent = filteredTraders.length;
+            
+            if (filteredTraders.length === 0) {
+                showEmptyState();
+            } else {
+                renderTradersGrid(filteredTraders);
+            }
+        }
+
+        // Reset filters
+        function resetFilters() {
+            document.getElementById('managerFilter').value = '';
+            document.getElementById('companyNameSearch').value = '';
+            applyFilters();
+        }
+
+        function renderTradersGrid(traders) {
+            console.log('🎨 renderTradersGrid() 호출됨, traders.length:', traders.length);
+            
+            // Group by manager
+            const byManager = {};
+            traders.forEach(trader => {
+                const manager = trader.manager || '미지정';
+                if (!byManager[manager]) {
+                    byManager[manager] = [];
+                }
+                byManager[manager].push(trader);
+            });
+            
+            console.log('👥 담당자별 그룹:', Object.keys(byManager));
+            
+            // Sort managers
+            const managers = Object.keys(byManager).sort();
+            
+            // Render grid
+            const container = document.getElementById('tradersGridContainer');
+            let html = '';
+            
+            managers.forEach((manager, index) => {
+                const tradersList = byManager[manager];
+                
+                // Add spacing between groups
+                if (index > 0) {
+                    html += '<div style="height: 24px;"></div>';
+                }
+                
+                // Manager header
+                html += `
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px 20px; border-radius: 8px; margin-bottom: 16px;">
+                        <div style="color: white; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-user-tie"></i>
+                            ${escapeHtml(manager)}
+                            <span style="font-weight: 400; opacity: 0.9; font-size: 14px;">(${tradersList.length}개)</span>
+                        </div>
+                    </div>
+                `;
+                
+                // Trader buttons grid
+                html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 20px;">';
+                
+                tradersList.forEach(trader => {
+                    html += `
+                        <button onclick="window.location.href='trader-detail.html?id=${trader.id}'" 
+                                style="padding: 16px 20px; 
+                                       background: white; 
+                                       border: 2px solid #e5e7eb; 
+                                       border-radius: 8px; 
+                                       text-align: center; 
+                                       font-size: 15px; 
+                                       font-weight: 600; 
+                                       color: #1f2937; 
+                                       cursor: pointer;
+                                       transition: all 0.2s;"
+                                onmouseover="this.style.borderColor='#667eea'; this.style.background='#f5f3ff'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.15)';"
+                                onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='white'; this.style.transform='translateY(0)'; this.style.boxShadow='none';">
+                            ${escapeHtml(trader.company_name || '-')}
+                        </button>
+                    `;
+                });
+                
+                html += '</div>';
+            });
+            
+            container.innerHTML = html;
+            
+            document.getElementById('tradersGridContainer').style.display = 'block';
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'none';
+            console.log('✅ 그리드 렌더링 완료');
+        }
+
+        function showEmptyState() {
+            console.log('📭 showEmptyState() 호출됨');
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('tradersGridContainer').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+            console.log('✅ Empty state 표시 완료');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatPhoneNumber(number) {
+            if (!number) return '';
+            const cleaned = number.replace(/[^0-9]/g, '');
+            if (cleaned.length === 11) {
+                return cleaned.slice(0, 3) + '-' + cleaned.slice(3, 7) + '-' + cleaned.slice(7);
+            }
+            return number;
+        }
+
+        // Event listeners
+        document.getElementById('managerFilter').addEventListener('change', applyFilters);
+        document.getElementById('companyNameSearch').addEventListener('input', applyFilters);
+        document.getElementById('globalSearch').addEventListener('input', (e) => {
+            // Global search will filter from filteredTraders
+            const searchTerm = e.target.value.toLowerCase().trim();
+            
+            if (!searchTerm) {
+                applyFilters();
+                return;
+            }
+            
+            const searched = filteredTraders.filter(trader => {
+                const searchableText = [
+                    trader.company_name,
+                    trader.ceo_name,
+                    trader.business_code,
+                    trader.contact,
+                    trader.address,
+                    trader.number
+                ].join(' ').toLowerCase();
+                
+                return searchableText.includes(searchTerm);
+            });
+            
+            document.getElementById('traderCount').textContent = searched.length;
+            
+            if (searched.length === 0) {
+                showEmptyState();
+            } else {
+                renderTradersGrid(searched);
+            }
+        });
+
+        // Create mock traders for preview mode
+        function createMockTraders() {
+            console.log('📦 Creating 60 mock traders for preview mode...');
+            
+            const managers = ['김철수', '이영희', '박민수', '정다은', '최준호'];
+            const districts = ['강남구', '서초구', '송파구', '강동구', '마포구', '용산구', '영등포구', '구로구', '금천구', '관악구'];
+            const codes = ['703011', '703012'];
+            const names = ['홍길동', '김영수', '이순신', '세종대왕', '장보고', '신사임당', '유관순', '안중근', '윤봉길', '김구'];
+            
+            const traders = [];
+            for (let i = 1; i <= 60; i++) {
+                traders.push({
+                    id: `mock-client-${i}`,
+                    company_name: `매매사업자${i}`,
+                    manager: managers[i % managers.length],
+                    business_code: codes[i % codes.length],
+                    ceo_name: names[i % names.length],
+                    contact: `010-${String(1000 + i).slice(-4)}-${String(5000 + i).slice(-4)}`,
+                    address: `서울시 ${districts[i % districts.length]} 테스트로 ${i * 10}`,
+                    number: String(i)
+                });
+            }
+            
+            return traders;
+        }
+
+        // ============================================
+        // 일괄 엑셀 업로드 기능
+        // ============================================
+
+        // 일괄 업로드 양식 다운로드
+        function downloadBulkExcelTemplate() {
+            if (typeof XLSX === 'undefined') {
+                alert('엑셀 라이브러리가 로드되지 않았습니다.\n페이지를 새로고침한 후 다시 시도해주세요.');
+                return;
+            }
+
+            try {
+                const wb = XLSX.utils.book_new();
+                
+                // Sheet 1: 물건목록
+                const inventoryData = [
+                    ['📋 물건목록 작성 방법: 거래처명*과 물건명을 정확히 입력하세요. 취득가액/기타필요경비는 필요경비상세 시트에서 자동 계산됩니다.'],
+                    [],
+                    ['거래처명*', '물건명', '소재지', '취득일(YYYYMMDD)', '양도일(YYYYMMDD)', '양도가액', '기납부 종소세', '기납부 지방소득세', '신고기한', '85초과(O/X)', '비고'],
+                    ['예: (주)아톰세무회계', '서울시 강남구 아파트', '서울시 강남구 테헤란로 123', '20230101', '20250115', '150000000', '1000000', '100000', '', 'O', ''],
+                    ['예: (주)아톰세무회계', '서울시 서초구 오피스텔', '서울시 서초구 서초대로 456', '20230201', '20250220', '120000000', '800000', '80000', '', 'X', ''],
+                    ['예: (주)베타컴퍼니', '부산시 해운대 상가', '부산시 해운대구 해운대로 789', '20220315', '20250310', '280000000', '2000000', '200000', '', 'O', ''],
+                    ['', '', '', '', '', '', '', '', '', '', '']
+                ];
+                
+                const ws1 = XLSX.utils.aoa_to_sheet(inventoryData);
+                
+                ws1['!cols'] = [
+                    {wch: 20}, // 거래처명
+                    {wch: 25}, // 물건명
+                    {wch: 35}, // 소재지
+                    {wch: 18}, // 취득일
+                    {wch: 18}, // 양도일
+                    {wch: 15}, // 양도가액
+                    {wch: 15}, // 기납부 종소세
+                    {wch: 18}, // 기납부 지방소득세
+                    {wch: 15}, // 신고기한
+                    {wch: 12}, // 85초과
+                    {wch: 20}  // 비고
+                ];
+                XLSX.utils.book_append_sheet(wb, ws1, '물건목록');
+                
+                // Sheet 2: 필요경비 상세
+                const expenseData = [
+                    ['📋 필요경비 작성 방법: 거래처명*과 물건명*은 물건목록 시트와 정확히 일치해야 합니다. (복사&붙여넣기 권장). 번호는 자동으로 부여됩니다.'],
+                    [],
+                    ['거래처명*', '물건명* (물건목록과 동일)', '번호', '비용명', '구분(취득가액/기타필요경비)', '금액', '비용인정(O/X)', '비고'],
+                    ['예: (주)아톰세무회계', '서울시 강남구 아파트', '1', '취득가액', '취득가액', '100000000', 'O', ''],
+                    ['예: (주)아톰세무회계', '서울시 강남구 아파트', '2', '취득세 등', '취득가액', '5000000', 'O', ''],
+                    ['예: (주)아톰세무회계', '서울시 강남구 아파트', '3', '중개수수료', '기타필요경비', '2000000', 'O', ''],
+                    ['예: (주)아톰세무회계', '서울시 서초구 오피스텔', '1', '취득가액', '취득가액', '80000000', 'O', ''],
+                    ['예: (주)베타컴퍼니', '부산시 해운대 상가', '1', '취득가액', '취득가액', '200000000', 'O', ''],
+                    ['예: (주)베타컴퍼니', '부산시 해운대 상가', '2', '취득세 등', '취득가액', '10000000', 'O', ''],
+                    ['', '', '', '', '', '', '', '']
+                ];
+                
+                const ws2 = XLSX.utils.aoa_to_sheet(expenseData);
+                
+                ws2['!cols'] = [
+                    {wch: 20}, {wch: 25}, {wch: 8}, {wch: 20}, {wch: 28}, {wch: 15}, {wch: 15}, {wch: 20}
+                ];
+                XLSX.utils.book_append_sheet(wb, ws2, '필요경비상세');
+                
+                const fileName = `매매사업자_일괄업로드_양식_${new Date().toISOString().slice(0,10)}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+                
+                alert('✅ 엑셀 양식이 다운로드되었습니다.\n\n' +
+                      '📋 작성 방법:\n' +
+                      '1. Sheet 1 (물건목록): 거래처명*과 물건명을 정확히 입력\n' +
+                      '   - 85초과: O 또는 X 입력 (Y/N도 가능)\n' +
+                      '   - 취득가액/기타필요경비는 필요경비상세에서 자동 계산\n\n' +
+                      '2. Sheet 2 (필요경비상세): 거래처명*과 물건명*을 물건목록과 동일하게 입력\n' +
+                      '   - 구분: "취득가액" 또는 "기타필요경비"만 입력 (필수)\n' +
+                      '   - 번호는 자동으로 부여됨\n\n' +
+                      '⚠️ 중요: 거래처명과 물건명은 띄어쓰기까지 정확히 일치해야 매칭됩니다!\n' +
+                      '   (복사&붙여넣기 권장)\n\n' +
+                      '작성 완료 후 "일괄 업로드" 버튼을 클릭하세요.');
+            } catch (error) {
+                console.error('Excel template download error:', error);
+                alert('엑셀 양식 다운로드 중 오류가 발생했습니다.\n' + error.message);
+            }
+        }
+
+        // 일괄 엑셀 업로드 처리
+        async function handleBulkExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (typeof XLSX === 'undefined') {
+                alert('엑셀 라이브러리가 로드되지 않았습니다.\n페이지를 새로고침한 후 다시 시도해주세요.');
+                event.target.value = '';
+                return;
+            }
+            
+            try {
+                showLoading();
+                
+                console.log('📤 업로드 시작:', file.name, file.size, 'bytes');
+                
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data);
+                
+                console.log('📋 시트 목록:', workbook.SheetNames);
+                
+                // Sheet 1: 물건목록
+                const inventorySheet = workbook.Sheets['물건목록'];
+                if (!inventorySheet) {
+                    console.error('❌ 물건목록 시트 없음');
+                    throw new Error('물건목록 시트를 찾을 수 없습니다.');
+                }
+                
+                // 원본 데이터 (배열 형식)
+                const inventoryRawData = XLSX.utils.sheet_to_json(inventorySheet, { header: 1, defval: '' });
+                console.log('📊 원본 시트 총 행 수:', inventoryRawData.length);
+                
+                // 헤더 행 찾기 (거래처명* 포함된 행)
+                let headerRowIndex = -1;
+                for (let i = 0; i < Math.min(10, inventoryRawData.length); i++) {
+                    const row = inventoryRawData[i];
+                    
+                    // 조건 1: "거래처명*"가 있어야 함
+                    const hasCompanyName = row.some(cell => {
+                        const str = String(cell).trim();
+                        return str === '거래처명*' || str === '거래처명' || str === '회사명';
+                    });
+                    
+                    // 조건 2: "물건명"도 같은 행에 있어야 함
+                    const hasPropertyName = row.some(cell => {
+                        const str = String(cell).trim();
+                        return str === '물건명' || str === '물건명*';
+                    });
+                    
+                    // 조건 3: 빈 셀이 너무 많지 않아야 함 (최소 5개 이상의 컬럼)
+                    const nonEmptyCount = row.filter(cell => String(cell).trim() !== '').length;
+                    
+                    if (hasCompanyName && hasPropertyName && nonEmptyCount >= 5) {
+                        headerRowIndex = i;
+                        console.log(`✅ 헤더 행 발견: ${i + 1}행`);
+                        console.log('📋 헤더:', row);
+                        break;
+                    }
+                }
+                
+                if (headerRowIndex === -1) {
+                    console.error('❌ 헤더 행을 찾을 수 없습니다. 처음 10행:', inventoryRawData.slice(0, 10));
+                    throw new Error('물건목록 시트에서 "거래처명*" 컬럼을 찾을 수 없습니다.\n헤더 행이 올바른지 확인해주세요.');
+                }
+                
+                // 헤더 행 이후의 데이터만 JSON으로 변환
+                const headers = inventoryRawData[headerRowIndex];
+                console.log('📋 헤더 배열 상세:', headers);
+                console.log('📋 헤더 개수:', headers.length);
+                headers.forEach((h, idx) => {
+                    console.log(`  [${idx}]: "${h}"`);
+                });
+                
+                const dataRows = inventoryRawData.slice(headerRowIndex + 1);
+                
+                // JSON 변환
+                const inventoryJson = dataRows.map(row => {
+                    const obj = {};
+                    headers.forEach((header, idx) => {
+                        obj[header] = row[idx] || '';
+                    });
+                    return obj;
+                }).filter(row => {
+                    // 완전히 빈 행 제거
+                    return Object.values(row).some(val => String(val).trim() !== '');
+                });
+                
+                console.log('✅ 물건목록 데이터:', inventoryJson.length, '행');
+                
+                if (inventoryJson.length > 0) {
+                    console.log('📊 첫 번째 데이터 행:', inventoryJson[0]);
+                    console.log('🔍 컬럼명:', Object.keys(inventoryJson[0]));
+                    
+                    // 각 컬럼의 값 출력
+                    console.log('📋 각 컬럼의 값:');
+                    Object.entries(inventoryJson[0]).forEach(([key, value]) => {
+                        console.log(`  "${key}": "${value}"`);
+                    });
+                }
+                
+                // Sheet 2: 필요경비상세
+                // 원본 시트를 배열로도 확인 (헤더 감지 문제 확인용)
+                const rawData = XLSX.utils.sheet_to_json(inventorySheet, { header: 1, defval: '' });
+                console.log('📊 원본 시트 (배열 형식):');
+                console.log('  행 0 (첫번째):', rawData[0]);
+                console.log('  행 1 (두번째):', rawData[1]);
+                console.log('  행 2 (세번째):', rawData[2]);
+                console.log('  행 3 (네번째):', rawData[3]);
+                
+                // Sheet 2: 필요경비상세
+                const expenseSheet = workbook.Sheets['필요경비상세'];
+                let expenseJson = [];
+                if (expenseSheet) {
+                    const expenseRawData = XLSX.utils.sheet_to_json(expenseSheet, { header: 1, defval: '' });
+                    console.log('📊 필요경비상세 원본 행 수:', expenseRawData.length);
+                    
+                    // 헤더 행 찾기
+                    let expenseHeaderRowIndex = -1;
+                    for (let i = 0; i < Math.min(10, expenseRawData.length); i++) {
+                        const row = expenseRawData[i];
+                        
+                        // 조건 1: "거래처명*"가 있어야 함
+                        const hasCompanyName = row.some(cell => {
+                            const str = String(cell).trim();
+                            return str === '거래처명*' || str === '거래처명' || str === '회사명';
+                        });
+                        
+                        // 조건 2: "비용명" 또는 "구분"이 같은 행에 있어야 함
+                        const hasExpenseField = row.some(cell => {
+                            const str = String(cell).trim();
+                            return str === '비용명' || str.includes('구분');
+                        });
+                        
+                        // 조건 3: 빈 셀이 너무 많지 않아야 함
+                        const nonEmptyCount = row.filter(cell => String(cell).trim() !== '').length;
+                        
+                        if (hasCompanyName && hasExpenseField && nonEmptyCount >= 4) {
+                            expenseHeaderRowIndex = i;
+                            console.log(`✅ 필요경비상세 헤더 행 발견: ${i + 1}행`);
+                            break;
+                        }
+                    }
+                    
+                    if (expenseHeaderRowIndex !== -1) {
+                        const expenseHeaders = expenseRawData[expenseHeaderRowIndex];
+                        const expenseDataRows = expenseRawData.slice(expenseHeaderRowIndex + 1);
+                        
+                        expenseJson = expenseDataRows.map(row => {
+                            const obj = {};
+                            expenseHeaders.forEach((header, idx) => {
+                                obj[header] = row[idx] || '';
+                            });
+                            return obj;
+                        }).filter(row => {
+                            return Object.values(row).some(val => String(val).trim() !== '');
+                        });
+                        
+                        console.log('✅ 필요경비상세 데이터:', expenseJson.length, '행');
+                    } else {
+                        console.log('⚠️ 필요경비상세 헤더 행을 찾을 수 없습니다.');
+                    }
+                } else {
+                    console.log('⚠️ 필요경비상세 시트 없음 (선택사항)');
+                }
+                
+                // 데이터 검증
+                if (inventoryJson.length === 0) {
+                    console.error('❌ 물건목록 데이터 없음');
+                    throw new Error('물건목록 데이터가 없습니다.');
+                }
+                
+                // 거래처명별로 그룹화
+                const groupedData = {};
+                console.log('🔄 데이터 그룹화 시작...');
+                
+                // 유연한 컬럼명 매칭
+                const getCompanyName = (row) => {
+                    return String(
+                        row['거래처명*'] || 
+                        row['거래처명'] || 
+                        row['거래처 명*'] || 
+                        row['거래처 명'] ||
+                        row['회사명'] ||
+                        ''
+                    ).trim();
+                };
+                
+                const getPropertyName = (row) => {
+                    return String(
+                        row['물건명'] || 
+                        row['물건명*'] ||
+                        row['물건 명'] ||
+                        ''
+                    ).trim();
+                };
+                
+                for (const row of inventoryJson) {
+                    const companyName = getCompanyName(row);
+                    const propertyName = getPropertyName(row);
+                    
+                    console.log('📝 처리 중:', companyName, propertyName);
+                    
+                    if (!companyName) {
+                        console.warn('⚠️ 거래처명 없음, 건너뜀');
+                        console.warn('   행 데이터:', row);
+                        continue;
+                    }
+                    
+                    if (!groupedData[companyName]) {
+                        groupedData[companyName] = {
+                            properties: [],
+                            expenses: []
+                        };
+                    }
+                    
+                    // 85초과 검증 (O/X 형식으로 변경)
+                    const over85Value = String(
+                        row['85초과(O/X)'] || 
+                        row['85초과(Y/N)'] || 
+                        row['85초과'] || 
+                        row['85 초과(Y/N)'] ||
+                        'X'
+                    ).trim().toUpperCase();
+                    
+                    // O/X 또는 Y/N 모두 허용
+                    let over85 = 'N';
+                    if (over85Value === 'O' || over85Value === 'Y') {
+                        over85 = 'Y';
+                    }
+                    
+                    if (over85Value !== 'Y' && over85Value !== 'N' && over85Value !== 'O' && over85Value !== 'X') {
+                        console.warn(`⚠️ 85초과 값이 잘못되었습니다: [${companyName}] ${propertyName} - "${over85Value}" (O/X 또는 Y/N만 가능)`);
+                    }
+                    
+                    // 물건 데이터
+                    const property = {
+                        property_name: propertyName,
+                        address: row['소재지'] || row['주소'] || '',
+                        acquisition_value: 0, // 필요경비 상세에서 자동 계산
+                        other_expenses: 0, // 필요경비 상세에서 자동 계산
+                        transfer_value: parseNumber(row['양도가액'] || row['양도 가액']) || 0,
+                        acquisition_date: formatDateToISO(row['취득일(YYYYMMDD)'] || row['취득일'] || row['취득 일(YYYYMMDD)']),
+                        transfer_date: formatDateToISO(row['양도일(YYYYMMDD)'] || row['양도일'] || row['양도 일(YYYYMMDD)']),
+                        report_deadline: '', // 양도일에서 자동 계산
+                        prepaid_income_tax: parseNumber(row['기납부 종소세'] || row['기납부종소세']) || 0,
+                        prepaid_local_tax: parseNumber(row['기납부 지방소득세'] || row['기납부지방소득세']) || 0,
+                        over_85: over85,
+                        progress_stage: '미확인',
+                        remarks: row['비고'] || '',
+                        expenses: []
+                    };
+                    
+                    // 신고기한 자동 계산 (양도일이 속한 달의 말일로부터 2개월 후)
+                    if (property.transfer_date) {
+                        try {
+                            const transferDate = new Date(property.transfer_date);
+                            // 양도일이 속한 달의 말일
+                            const endOfMonth = new Date(transferDate.getFullYear(), transferDate.getMonth() + 1, 0);
+                            // 2개월 후의 말일
+                            const deadline = new Date(endOfMonth.getFullYear(), endOfMonth.getMonth() + 3, 0);
+                            property.report_deadline = deadline.toISOString().split('T')[0];
+                            console.log(`📅 신고기한 계산: 양도일 ${property.transfer_date} → 신고기한 ${property.report_deadline}`);
+                        } catch (e) {
+                            console.warn('신고기한 계산 실패:', e);
+                        }
+                    }
+                    
+                    groupedData[companyName].properties.push(property);
+                }
+                
+                // 필요경비 매칭 및 자동 넘버링
+                let matchedExpenseCount = 0;
+                let unmatchedExpenses = [];
+                
+                for (const expenseRow of expenseJson) {
+                    const companyName = getCompanyName(expenseRow);
+                    const propertyName = String(
+                        expenseRow['물건명*'] || 
+                        expenseRow['물건명* (물건목록과 동일)'] || 
+                        expenseRow['물건명'] ||
+                        ''
+                    ).trim();
+                    
+                    if (!companyName || !propertyName) continue;
+                    
+                    // 구분 검증
+                    const categoryValue = String(
+                        expenseRow['구분(취득가액/기타필요경비)'] || 
+                        expenseRow['구분'] ||
+                        ''
+                    ).trim();
+                    if (categoryValue !== '취득가액' && categoryValue !== '기타필요경비') {
+                        console.warn(`⚠️ 구분 값이 잘못되었습니다: [${companyName}] ${propertyName} - "${categoryValue}" (취득가액 또는 기타필요경비만 가능)`);
+                        continue; // 잘못된 구분은 건너뜀
+                    }
+                    
+                    const expense = {
+                        no: '', // 자동 넘버링 (나중에 설정)
+                        expense_name: expenseRow['비용명'] || expenseRow['경비명'] || '',
+                        category: categoryValue,
+                        amount: parseNumber(expenseRow['금액']) || 0,
+                        preliminary_approved: expenseRow['비용인정(O/X)'] || expenseRow['비용인정'] || 'X',
+                        remarks: ''
+                    };
+                    
+                    // 해당 거래처명과 물건명에 매칭
+                    let matched = false;
+                    if (groupedData[companyName]) {
+                        for (const property of groupedData[companyName].properties) {
+                            if (property.property_name === propertyName) {
+                                property.expenses.push(expense);
+                                matched = true;
+                                matchedExpenseCount++;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // 매칭 실패 기록
+                    if (!matched) {
+                        unmatchedExpenses.push({
+                            companyName: companyName,
+                            propertyName: propertyName,
+                            expenseName: expense.expense_name
+                        });
+                    }
+                }
+                
+                // 각 물건의 필요경비 자동 넘버링 및 취득가액/기타필요경비 계산
+                for (const companyName in groupedData) {
+                    for (const property of groupedData[companyName].properties) {
+                        let acquisitionTotal = 0;
+                        let otherExpensesTotal = 0;
+                        
+                        property.expenses.forEach((expense, idx) => {
+                            // 자동 넘버링
+                            expense.no = String(idx + 1);
+                            
+                            // 구분에 따라 합계 계산
+                            if (expense.category === '취득가액') {
+                                acquisitionTotal += expense.amount;
+                            } else if (expense.category === '기타필요경비') {
+                                otherExpensesTotal += expense.amount;
+                            }
+                        });
+                        
+                        // 물건의 취득가액과 기타필요경비 설정
+                        property.acquisition_value = acquisitionTotal;
+                        property.other_expenses = otherExpensesTotal;
+                        
+                        // 양도소득 자동 계산
+                        property.transfer_income = property.transfer_value - property.acquisition_value - property.other_expenses;
+                        
+                        console.log(`  물건: ${property.property_name}`);
+                        console.log(`    취득가액: ${acquisitionTotal.toLocaleString()}원`);
+                        console.log(`    기타필요경비: ${otherExpensesTotal.toLocaleString()}원`);
+                        console.log(`    양도가액: ${property.transfer_value.toLocaleString()}원`);
+                        console.log(`    양도소득: ${property.transfer_income.toLocaleString()}원`);
+                    }
+                }
+                
+                // 각 거래처명별로 데이터 저장
+                let successCount = 0;
+                let failCount = 0;
+                const errors = [];
+                
+                console.log('💾 데이터 저장 시작...');
+                console.log('📊 그룹화된 거래처 수:', Object.keys(groupedData).length);
+                
+                for (const [companyName, data] of Object.entries(groupedData)) {
+                    console.log(`\n🔍 처리 중: ${companyName}`);
+                    console.log(`  물건 수: ${data.properties.length}개`);
+                    
+                    try {
+                        // 거래처명으로 고객사 찾기
+                        const client = allTraders.find(t => {
+                            const clientName = (t.company_name || '').trim();
+                            const targetName = companyName.trim();
+                            return clientName === targetName;
+                        });
+                        
+                        if (!client) {
+                            const errorMsg = `거래처명 ${companyName}: 고객사를 찾을 수 없습니다.`;
+                            console.error('❌', errorMsg);
+                            errors.push(errorMsg);
+                            failCount += data.properties.length;
+                            continue;
+                        }
+                        
+                        console.log(`  ✅ 고객사 찾음: ${client.company_name} (ID: ${client.id})`);
+                        
+                        // localStorage에 저장
+                        const storageKey = `trader_inventory_${client.id}`;
+                        let existingData = [];
+                        
+                        try {
+                            const stored = localStorage.getItem(storageKey);
+                            if (stored) {
+                                existingData = JSON.parse(stored);
+                                console.log(`  📦 기존 데이터: ${existingData.length}개`);
+                            }
+                        } catch (e) {
+                            console.warn('기존 데이터 로드 실패:', e);
+                        }
+                        
+                        // 새 데이터 추가 (기존 데이터 유지)
+                        const updatedData = [...existingData, ...data.properties];
+                        localStorage.setItem(storageKey, JSON.stringify(updatedData));
+                        
+                        console.log(`  💾 저장 완료: ${data.properties.length}개 물건 추가`);
+                        console.log(`  📊 총 데이터: ${updatedData.length}개`);
+                        
+                        successCount += data.properties.length;
+                    } catch (error) {
+                        console.error(`거래처명 ${companyName} 처리 실패:`, error);
+                        errors.push(`거래처명 ${companyName}: ${error.message}`);
+                        failCount += data.properties.length;
+                    }
+                }
+                
+                hideLoading();
+                event.target.value = '';
+                
+                console.log('\n📊 최종 결과:');
+                console.log(`  ✅ 성공: ${successCount}건`);
+                console.log(`  ❌ 실패: ${failCount}건`);
+                console.log(`  💰 필요경비 매칭: ${matchedExpenseCount}건`);
+                console.log(`  ⚠️ 필요경비 미매칭: ${unmatchedExpenses.length}건`);
+                
+                // 결과 알림
+                let message = `✅ 업로드 완료!\n\n`;
+                message += `📦 물건 목록: ${successCount}건 성공, ${failCount}건 실패\n`;
+                message += `💰 필요경비: ${matchedExpenseCount}건 매칭`;
+                
+                if (unmatchedExpenses.length > 0) {
+                    message += `, ${unmatchedExpenses.length}건 매칭 실패`;
+                }
+                
+                if (errors.length > 0) {
+                    message += '\n\n[물건 등록 오류]\n' + errors.slice(0, 3).join('\n');
+                    if (errors.length > 3) {
+                        message += `\n... 외 ${errors.length - 3}건`;
+                    }
+                }
+                
+                if (unmatchedExpenses.length > 0) {
+                    message += '\n\n[필요경비 매칭 실패]\n';
+                    message += '⚠️ 물건명이 일치하지 않아 연결되지 않은 경비:\n';
+                    const samples = unmatchedExpenses.slice(0, 3);
+                    for (const exp of samples) {
+                        message += `- ${exp.companyName} / "${exp.propertyName}" / ${exp.expenseName}\n`;
+                    }
+                    if (unmatchedExpenses.length > 3) {
+                        message += `... 외 ${unmatchedExpenses.length - 3}건`;
+                    }
+                    message += '\n💡 물건명을 물건목록 시트와 정확히 일치시켜주세요.';
+                }
+                
+                alert(message);
+                
+                if (successCount > 0) {
+                    // 페이지 새로고침 제안
+                    if (confirm('업로드된 데이터를 확인하시겠습니까?\n(확인 시 페이지가 새로고침됩니다)')) {
+                        location.reload();
+                    }
+                }
+                
+            } catch (error) {
+                hideLoading();
+                event.target.value = '';
+                console.error('Bulk upload error:', error);
+                alert('❌ 업로드 중 오류가 발생했습니다.\n\n' + error.message + '\n\n양식을 확인하고 다시 시도해주세요.');
+            }
+        }
+
+        // 날짜 포맷 변환 함수 (YYYYMMDD → YYYY-MM-DD, 엑셀 시리얼 번호 지원)
+        function formatDateToISO(dateStr) {
+            if (!dateStr) return '';
+            
+            const str = String(dateStr).trim();
+            
+            // 1) 엑셀 시리얼 번호 감지 (숫자만 있고, 8자리가 아니고, 5자리 정도)
+            // 엑셀 날짜 시리얼: 1900-01-01 기준 (시리얼 번호 1)
+            // 예: 45700 = 2025-02-08
+            const numOnly = str.replace(/[^0-9]/g, '');
+            if (numOnly === str && numOnly.length >= 4 && numOnly.length <= 6) {
+                const serialNumber = parseInt(numOnly, 10);
+                
+                // 엑셀 날짜 시리얼 범위 체크 (1900년 ~ 2100년 정도)
+                // 1: 1900-01-01, 45700: 2025년, 73050: 2100년
+                if (serialNumber >= 1 && serialNumber <= 80000) {
+                    // 엑셀 시리얼 → Date 객체
+                    // 엑셀은 1900-01-01을 1로 시작 (단, 1900년 윤년 버그 보정 필요)
+                    const excelEpoch = new Date(1899, 11, 30); // 1899-12-30 (엑셀 기준일)
+                    const jsDate = new Date(excelEpoch.getTime() + serialNumber * 24 * 60 * 60 * 1000);
+                    
+                    // YYYY-MM-DD 포맷
+                    const year = jsDate.getFullYear();
+                    const month = String(jsDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(jsDate.getDate()).padStart(2, '0');
+                    
+                    console.log(`📅 엑셀 시리얼 변환: ${serialNumber} → ${year}-${month}-${day}`);
+                    return `${year}-${month}-${day}`;
+                }
+            }
+            
+            // 2) YYYYMMDD 형식 (8자리)
+            if (numOnly.length === 8) {
+                return `${numOnly.slice(0, 4)}-${numOnly.slice(4, 6)}-${numOnly.slice(6, 8)}`;
+            }
+            
+            // 3) 이미 YYYY-MM-DD 형식이면 그대로 반환
+            if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+                return str;
+            }
+            
+            // 4) 변환 실패 시 원본 반환
+            console.warn(`⚠️ 날짜 형식 인식 실패: "${dateStr}"`);
+            return dateStr;
+        }
+
+        // 숫자 파싱 함수
+        function parseNumber(value) {
+            if (!value || value === '') return 0;
+            const str = String(value).replace(/[^0-9.-]/g, '');
+            return parseFloat(str) || 0;
+        }
+
+        // ============================================
+
+        // Load on page load
+        console.log('📥 페이지 로드 완료 - loadTraders() 호출 준비');
+        
+        // DOM이 완전히 로드된 후 실행
+        if (document.readyState === 'loading') {
+            console.log('⏳ DOM 로딩 대기 중...');
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('✅ DOMContentLoaded 이벤트 발생');
+                loadTraders();
+            });
+        } else {
+            console.log('✅ DOM 이미 로드됨 - 즉시 실행');
+            loadTraders();
+        }
+    </script>
+</body>
+</html>
