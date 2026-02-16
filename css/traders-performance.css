@@ -1,0 +1,222 @@
+/* 
+ * 매매사업자 관리 전용 성능 최적화 CSS
+ * 애니메이션, 트랜지션, 효과 최소화
+ */
+
+/* 모든 애니메이션/트랜지션 제거 */
+.trader-performance * {
+    transition: none !important;
+    animation: none !important;
+}
+
+/* 테이블 행 호버 효과 (빠른 피드백) */
+.trader-performance .trader-row:hover {
+    background-color: #f3f4f6 !important;
+    transition: none !important;
+}
+
+/* 매니저 헤더 스타일 */
+.trader-performance .manager-header {
+    border: none !important;
+}
+
+.trader-performance .manager-spacer {
+    pointer-events: none;
+}
+
+/* 호버 효과 최소화 */
+.trader-performance .nav-item:hover,
+.trader-performance .dropdown-item:hover,
+.trader-performance .trader-card:hover,
+.trader-performance button:hover,
+.trader-performance a:hover {
+    transition: none !important;
+    transform: none !important;
+}
+
+/* 그라디언트 제거 (단색으로) */
+.trader-performance .sidebar {
+    background: #5b4fc9 !important;
+}
+
+.trader-performance .user-avatar {
+    background: #667eea !important;
+}
+
+/* 그림자 효과 간소화 */
+.trader-performance .card,
+.trader-performance .sidebar,
+.trader-performance .modal {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 버튼 효과 최소화 */
+.trader-performance .btn,
+.trader-performance .trader-btn,
+.trader-performance button {
+    transition: none !important;
+}
+
+.trader-performance .btn:hover,
+.trader-performance .trader-btn:hover,
+.trader-performance button:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* 테이블 행 호버 효과 단순화 */
+.trader-performance .table-view tbody tr:hover {
+    background: #f9fafb !important;
+    transition: none !important;
+}
+
+/* 스피너 단순화 */
+.trader-performance .spinner {
+    animation: none !important;
+    border: 3px solid #e5e7eb !important;
+    border-top-color: #667eea !important;
+}
+
+/* 로딩 오버레이 제거 (즉시 표시) */
+.trader-performance .loading-overlay {
+    transition: none !important;
+}
+
+/* 모달 애니메이션 제거 */
+.trader-performance .modal-backdrop {
+    transition: none !important;
+}
+
+.trader-performance .modal {
+    transition: none !important;
+    transform: none !important;
+}
+
+/* 드롭다운 애니메이션 제거 */
+.trader-performance .dropdown-content {
+    transition: none !important;
+}
+
+/* 배지 효과 제거 */
+.trader-performance .badge,
+.trader-performance .status-badge {
+    transition: none !important;
+}
+
+/* 입력 필드 효과 최소화 */
+.trader-performance input:focus,
+.trader-performance select:focus,
+.trader-performance textarea:focus {
+    transition: none !important;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2) !important;
+}
+
+/* 필터 버튼 효과 제거 */
+.trader-performance .filter-btn {
+    transition: none !important;
+}
+
+.trader-performance .filter-btn:hover {
+    transform: none !important;
+}
+
+/* 아이콘 회전 애니메이션 제거 */
+.trader-performance .fa-sync,
+.trader-performance .fa-spinner {
+    animation: none !important;
+}
+
+/* 스크롤 최적화 */
+.trader-performance .content-area,
+.trader-performance .table-view {
+    scroll-behavior: auto !important;
+}
+
+/* GPU 가속 비활성화 (불필요한 레이어 제거) */
+.trader-performance * {
+    will-change: auto !important;
+    transform: translateZ(0) !important;
+}
+
+/* 블러 효과 제거 */
+.trader-performance {
+    backdrop-filter: none !important;
+    filter: none !important;
+}
+
+/* 그라디언트 테두리 제거 */
+.trader-performance .card,
+.trader-performance .btn {
+    border-image: none !important;
+}
+
+/* 페이드 효과 제거 */
+.trader-performance .fade-in,
+.trader-performance .fade-out {
+    opacity: 1 !important;
+    transition: none !important;
+}
+
+/* 슬라이드 효과 제거 */
+.trader-performance .slide-in,
+.trader-performance .slide-out {
+    transform: none !important;
+    transition: none !important;
+}
+
+/* FullCalendar 애니메이션 제거 */
+.trader-performance .fc {
+    --fc-event-border-color: transparent;
+}
+
+.trader-performance .fc-event {
+    transition: none !important;
+}
+
+/* 성능 최적화: 불필요한 리페인트 방지 */
+.trader-performance .table-view table {
+    table-layout: fixed;
+}
+
+/* 이미지 렌더링 최적화 */
+.trader-performance img {
+    image-rendering: auto;
+}
+
+/* 폰트 렌더링 최적화 */
+.trader-performance {
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
+    text-rendering: optimizeSpeed;
+}
+
+/* 스크롤바 단순화 */
+.trader-performance ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.trader-performance ::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.trader-performance ::-webkit-scrollbar-thumb {
+    background: #888;
+}
+
+.trader-performance ::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* 포커스 효과 단순화 */
+.trader-performance *:focus {
+    outline: 2px solid #667eea !important;
+    outline-offset: 2px;
+    transition: none !important;
+}
+
+/* 선택 효과 단순화 */
+.trader-performance ::selection {
+    background: #667eea;
+    color: white;
+}
