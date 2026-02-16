@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>중복 데이터 정리</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div style="max-width: 1200px; margin: 40px auto; padding: 0 20px;">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-broom mr-2"></i>중복 데이터 정리 (사업자번호 기준)
+                </h2>
+            </div>
+            
+            <div style="padding: 24px;">
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
+                    <p style="color: #92400e; font-weight: 600; margin-bottom: 8px;">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>경고
+                    </p>
+                    <p style="color: #92400e; font-size: 14px;">
+                        사업자번호가 동일한 중복 데이터를 모두 삭제합니다.<br>
+                        각 사업자번호당 가장 최근에 등록된 데이터 1개만 남기고 나머지는 모두 삭제됩니다.<br>
+                        <strong>이 작업은 되돌릴 수 없습니다!</strong>
+                    </p>
+                </div>
+                
+                <div style="text-align: center; margin: 40px 0;">
+                    <button id="startCleanup" class="btn btn-danger" style="font-size: 18px; padding: 16px 32px;">
+                        <i class="fas fa-broom mr-2"></i>중복 데이터 정리 시작
+                    </button>
+                </div>
+                
+                <div id="progressContainer" style="display: none;">
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-weight: 600; color: #374151;">진행 상황</span>
+                            <span id="progressText" style="font-weight: 600; color: #ef4444;">0 / 0</span>
+                        </div>
+                        <div style="background: #e5e7eb; height: 24px; border-radius: 12px; overflow: hidden;">
+                            <div id="progressBar" style="background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="logContainer" style="background: #1f2937; color: #e5e7eb; padding: 16px; border-radius: 8px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 13px;">
+                        <div id="logs"></div>
+                    </div>
+                </div>
+                
+                <div id="resultContainer" style="display: none; margin-top: 24px;">
+                    <div style="background: #d1fae5; border-left: 4px solid #059669; padding: 16px; border-radius: 4px; margin-bottom: 16px;">
+                        <p style="color: #047857; font-weight: 600; margin-bottom: 8px;">
+                            <i class="fas fa-check-circle mr-2"></i>정리 완료!
+                        </p>
+                        <p style="color: #047857; font-size: 14px;" id="resultMessage"></p>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <a href="clients.html" class="btn btn-primary">
+                            <i class="fas fa-list mr-2"></i>고객사 목록 보기
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script>
+        let isProcessing = false;
+        let deletedCount = 0;
+        let keptCount = 0;
+
+        function addLog(message, type = 'info') {
+            const logsContainer = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString('ko-KR');
+            const colors = {
+                info: '#60a5fa',
+                success: '#34d399',
+                warning: '#fbbf24',
+                error: '#f87171'
+            };
+            const icons = {
+                info: 'info-circle',
+                success: 'check-circle',
+                warning: 'exclamation-triangle',
+                error: 'times-circle'
+            };
+            
+            const logEntry = document.createElement('div');
+            logEntry.style.marginBottom = '4px';
+            logEntry.innerHTML = `<span style="color: #9ca3af;">[${timestamp}]</span> <i class="fas fa-${icons[type]}" style="color: ${colors[type]};"></i> ${message}`;
+            logsContainer.appendChild(logEntry);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        function updateProgress(current, total) {
+            const percent = Math.round((current / total) * 100);
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressText').textContent = `${current} / ${total}`;
+        }
+
+        async function cleanupDuplicates() {
+            if (isProcessing) return;
+            
+            if (!confirm('정말로 중복 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다!')) {
+                return;
+            }
+            
+            isProcessing = true;
+            document.getElementById('startCleanup').disabled = true;
+            document.getElementById('progressContainer').style.display = 'block';
+            
+            try {
+                addLog('데이터 로딩 중...', 'info');
+                const response = await API.getClients();
+                const allClients = response.data || [];
+                addLog(`총 ${allClients.length}개의 고객사 발견`, 'info');
+                
+                // Group by business_number
+                const businessNumberMap = new Map();
+                
+                allClients.forEach(client => {
+                    const businessNumber = client.business_number?.trim();
+                    
+                    // Skip if no business number
+                    if (!businessNumber || businessNumber === '') {
+                        addLog(`⚠️ ${client.company_name}: 사업자번호 없음 (유지)`, 'warning');
+                        keptCount++;
+                        return;
+                    }
+                    
+                    if (!businessNumberMap.has(businessNumber)) {
+                        businessNumberMap.set(businessNumber, []);
+                    }
+                    businessNumberMap.get(businessNumber).push(client);
+                });
+                
+                addLog(`${businessNumberMap.size}개의 고유 사업자번호 발견`, 'success');
+                
+                // Find duplicates
+                const duplicatesToDelete = [];
+                
+                businessNumberMap.forEach((clients, businessNumber) => {
+                    if (clients.length > 1) {
+                        // Sort by created_at (most recent first)
+                        clients.sort((a, b) => {
+                            const dateA = new Date(a.created_at || 0).getTime();
+                            const dateB = new Date(b.created_at || 0).getTime();
+                            return dateB - dateA;
+                        });
+                        
+                        // Keep the first (most recent), delete the rest
+                        const toKeep = clients[0];
+                        const toDelete = clients.slice(1);
+                        
+                        addLog(`📋 사업자번호 ${businessNumber}: ${clients.length}개 중복 발견`, 'warning');
+                        addLog(`  ✓ 유지: ${toKeep.company_name} (${toKeep.number})`, 'success');
+                        
+                        toDelete.forEach(client => {
+                            addLog(`  ✗ 삭제: ${client.company_name} (${client.number})`, 'error');
+                            duplicatesToDelete.push(client);
+                        });
+                        
+                        keptCount++;
+                    } else {
+                        // No duplicates
+                        keptCount++;
+                    }
+                });
+                
+                if (duplicatesToDelete.length === 0) {
+                    addLog('중복 데이터가 없습니다!', 'success');
+                    showResult(0, keptCount);
+                    return;
+                }
+                
+                addLog(`${duplicatesToDelete.length}개의 중복 데이터 삭제 시작...`, 'warning');
+                
+                // Delete duplicates
+                let processed = 0;
+                const total = duplicatesToDelete.length;
+                
+                for (const client of duplicatesToDelete) {
+                    try {
+                        await API.deleteClient(client.id);
+                        deletedCount++;
+                        processed++;
+                        addLog(`✓ ${client.company_name} 삭제 완료`, 'success');
+                        updateProgress(processed, total);
+                    } catch (error) {
+                        addLog(`✗ ${client.company_name} 삭제 실패: ${error.message}`, 'error');
+                        processed++;
+                        updateProgress(processed, total);
+                    }
+                    
+                    // Small delay to prevent overwhelming the API
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+                addLog('정리 완료!', 'success');
+                showResult(deletedCount, keptCount);
+                
+            } catch (error) {
+                console.error('Cleanup error:', error);
+                addLog(`오류 발생: ${error.message}`, 'error');
+            } finally {
+                isProcessing = false;
+            }
+        }
+
+        function showResult(deleted, kept) {
+            document.getElementById('resultContainer').style.display = 'block';
+            document.getElementById('resultMessage').innerHTML = `
+                삭제된 중복 데이터: <strong>${deleted}개</strong><br>
+                유지된 고객사: <strong>${kept}개</strong><br>
+                <strong>중복 제거 완료!</strong>
+            `;
+        }
+
+        document.getElementById('startCleanup').addEventListener('click', cleanupDuplicates);
+    </script>
+</body>
+</html>

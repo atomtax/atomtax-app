@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>매매사업자 체크리스트 - 아톰세무회계</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/traders-performance.css">
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/main.min.css' rel='stylesheet' />
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .status-미확인 {
+            background: #f3f4f6;
+            color: #6b7280;
+        }
+        
+        .status-확인 {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .status-위하고입력 {
+            background: #fed7aa;
+            color: #c2410c;
+        }
+        
+        .status-고객안내 {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-신고완료 {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .dropdown-menu {
+            position: absolute;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            padding: 4px;
+            min-width: 140px;
+            display: none;
+        }
+        
+        .dropdown-menu.show {
+            display: block;
+        }
+        
+        /* 진행단계 드롭다운 아이템 */
+        .filter-dropdown-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 13px;
+            transition: all 0.2s;
+            color: #374151;
+        }
+        
+        .filter-dropdown-item:hover {
+            background: #f3f4f6;
+        }
+        
+        .calendar-container {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .fc-event {
+            cursor: pointer;
+            border: none;
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        
+        .fc-daygrid-event {
+            white-space: normal;
+        }
+        
+        .table-view {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .table-view table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .table-view th {
+            background: #f9fafb;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        .table-view td {
+            padding: 16px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+            color: #1f2937;
+        }
+        
+        .table-view tbody tr {
+            transition: all 0.2s;
+        }
+        
+        .table-view tbody tr:hover {
+            background: #f9fafb;
+        }
+        
+        /* Toast notification animations */
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+        
+        /* 물건 상세 정보 확장 탭 */
+        .detail-row {
+            display: none;
+            background: #f9fafb;
+            border-top: 2px solid #667eea;
+        }
+        
+        .detail-row.show {
+            display: table-row;
+        }
+        
+        .detail-content {
+            padding: 16px;
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .detail-item {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .detail-label {
+            font-size: 11px;
+            color: #6b7280;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        
+        .detail-value {
+            font-size: 14px;
+            color: #1f2937;
+            font-weight: 500;
+        }
+        
+        .detail-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 12px;
+        }
+        
+        .clickable-row {
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .clickable-row:hover {
+            background: #f9fafb;
+        }
+    </style>
+</head>
+<body class="trader-performance">
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span>아톰세무회계</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>대시보드</span>
+                </a>
+                
+                <!-- 고객사 관리 (드롭다운) -->
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-item" onclick="toggleDropdown(event)">
+                        <i class="fas fa-building"></i>
+                        <span>고객사 관리</span>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <div class="dropdown-content">
+                        <a href="clients.html" class="dropdown-item">
+                            <i class="fas fa-briefcase"></i>
+                            <span>기장고객 관리</span>
+                        </a>
+                        <a href="clients-terminated.html" class="dropdown-item">
+                            <i class="fas fa-user-times"></i>
+                            <span>해임고객 관리</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 매매사업자 관리 (드롭다운) -->
+                <div class="nav-dropdown active">
+                    <a href="#" class="nav-item" onclick="toggleDropdown(event)">
+                        <i class="fas fa-store"></i>
+                        <span>매매사업자 관리</span>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <div class="dropdown-content">
+                        <a href="traders-data.html" class="dropdown-item">
+                            <i class="fas fa-database"></i>
+                            <span>매매사업자 데이터</span>
+                        </a>
+                        <a href="traders-checklist.html" class="dropdown-item active">
+                            <i class="fas fa-check-square"></i>
+                            <span>매매사업자 체크리스트</span>
+                        </a>
+                        <a href="traders-vat.html" class="dropdown-item">
+                            <i class="fas fa-calculator"></i>
+                            <span>부가가치세 계산</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <a href="#" class="nav-item">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>세무 관리</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>통계 분석</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>설정</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="nav-item" style="width: 100%; border: none; background: none;">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>로그아웃</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="topbar">
+                <div class="topbar-left">
+                    <button class="menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="topbar-title">매매사업자 예정신고 체크리스트</h1>
+                </div>
+                
+                <div class="topbar-right">
+                    <div class="user-profile">
+                        <div class="user-avatar" id="userAvatar">A</div>
+                        <div class="user-info">
+                            <div class="user-name" id="userName">관리자</div>
+                            <div class="user-role" id="userRole">Admin</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- 필터 섹션 (고객사 관리와 동일한 디자인) -->
+                <div class="card">
+                    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 20px 24px;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                            <!-- 담당자 필터 -->
+                            <select id="managerFilter" onchange="applyFilters()" class="px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" style="min-width: 150px;">
+                                <option value="all">전체 담당자</option>
+                            </select>
+                            
+                            <!-- 신고기한 필터 -->
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button onclick="changePeriod(-1)" class="px-3 py-2 border-2 border-gray-200 rounded-lg hover:bg-gray-50 transition-all" title="전월">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                
+                                <select id="deadlineFilter" onchange="applyFilters()" class="px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" style="min-width: 180px;">
+                                </select>
+                                
+                                <button onclick="changePeriod(1)" class="px-3 py-2 border-2 border-gray-200 rounded-lg hover:bg-gray-50 transition-all" title="다음월">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 12px;">
+                            <button class="btn" style="background: #10b981; color: white; border: none;" onclick="document.getElementById('documentUpload').click()">
+                                <i class="fas fa-file-upload"></i> 서류 업로드
+                            </button>
+                            <input type="file" id="documentUpload" accept=".pdf,.jpg,.jpeg,.png" multiple style="display: none;" onchange="handleDocumentUpload(event)">
+                            <button class="btn btn-primary" onclick="loadChecklistItems()">
+                                <i class="fas fa-sync"></i> 동기화
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 진행 중인 항목 -->
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 class="card-title">
+                            <i class="fas fa-tasks mr-2"></i>
+                            진행 중인 항목
+                            <span id="progressCount" class="badge badge-primary ml-2">0</span>
+                        </h3>
+                        <button class="btn btn-primary" onclick="loadChecklistItems()" style="padding: 8px 16px;">
+                            <i class="fas fa-sync"></i> 동기화
+                        </button>
+                    </div>
+                    
+                    <div class="table-view">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 150px;">고객사명</th>
+                                    <th style="width: 100px;">담당자</th>
+                                    <th style="width: 180px;">물건명</th>
+                                    <th style="width: 100px;">85타입 초과</th>
+                                    <th style="width: 120px;">매도일(양도일)</th>
+                                    <th style="width: 120px;">신고기한</th>
+                                    <th style="width: 140px;">진행단계</th>
+                                    <th style="width: 100px; text-align: center;">폴더</th>
+                                </tr>
+                            </thead>
+                            <tbody id="progressTable">
+                                <tr>
+                                    <td colspan="8" style="text-align: center; padding: 40px;">
+                                        <div class="spinner" style="margin: 0 auto;"></div>
+                                        <p style="margin-top: 16px; color: #6b7280;">데이터를 불러오는 중...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 신고 완료 항목 -->
+                <div id="completeSection" class="card" style="margin-top: 20px;">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 class="card-title">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            신고 완료
+                            <span id="completeCount" class="badge badge-success ml-2">0</span>
+                        </h3>
+                    </div>
+                    
+                    <div class="table-view">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 150px;">고객사명</th>
+                                    <th style="width: 100px;">담당자</th>
+                                    <th style="width: 180px;">물건명</th>
+                                    <th style="width: 100px;">85타입 초과</th>
+                                    <th style="width: 120px;">매도일(양도일)</th>
+                                    <th style="width: 120px;">신고기한</th>
+                                    <th style="width: 140px;">진행단계</th>
+                                    <th style="width: 100px; text-align: center;">폴더</th>
+                                </tr>
+                            </thead>
+                            <tbody id="completeTable">
+                                <tr>
+                                    <td colspan="7" style="text-align: center; padding: 40px;">
+                                        <div class="spinner" style="margin: 0 auto;"></div>
+                                        <p style="margin-top: 16px; color: #6b7280;">데이터를 불러오는 중...</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Calendar Section -->
+                <div class="card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-calendar-alt mr-2"></i>
+                            신고기한 캘린더
+                        </h3>
+                        <p style="font-size: 13px; color: #6b7280; margin-top: 4px;">
+                            신고완료된 항목은 캘린더에서 제외됩니다.
+                        </p>
+                    </div>
+                    <div class="calendar-container">
+                        <div id="calendar"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 보고서 모달 -->
+    <div id="reportModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; max-width: 800px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+            <!-- Report Header -->
+            <div style="padding: 20px; border-bottom: 2px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-size: 20px; font-weight: 700; color: #1f2937; margin: 0;">양도소득세 신고 보고서</h3>
+                <button onclick="closeReportModal()" style="background: none; border: none; font-size: 24px; color: #9ca3af; cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; transition: all 0.2s;" onmouseover="this.style.background='#f3f4f6'; this.style.color='#1f2937';" onmouseout="this.style.background='none'; this.style.color='#9ca3af';">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Report Content -->
+            <div id="reportContent" style="padding: 40px; background: white;">
+                <!-- Content will be dynamically generated -->
+            </div>
+            
+            <!-- Report Actions -->
+            <div style="padding: 20px; border-top: 2px solid #f3f4f6; display: flex; gap: 12px; justify-content: flex-end;">
+                <button onclick="closeReportModal()" style="padding: 10px 20px; background: #e5e7eb; color: #1f2937; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">
+                    닫기
+                </button>
+                <button onclick="downloadReport()" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">
+                    <i class="fas fa-download"></i> PNG 다운로드
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Configuration and Auth -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/firebase-auth.js"></script>
+    <script src="js/firebase-db.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/auto-backup.js"></script>
+    <script>
+        // Check authentication
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // Display user info from Firestore
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    document.getElementById('userName').textContent = userData.name || user.email;
+                    document.getElementById('userRole').textContent = userData.role === 'admin' ? '관리자' : '매니저';
+                    document.getElementById('userAvatar').textContent = (userData.name || user.email).charAt(0).toUpperCase();
+                } else {
+                    const displayName = user.displayName || user.email.split('@')[0];
+                    document.getElementById('userName').textContent = displayName;
+                    document.getElementById('userRole').textContent = '매니저';
+                    document.getElementById('userAvatar').textContent = displayName.charAt(0).toUpperCase();
+                }
+            } catch (error) {
+                console.error('사용자 정보 로드 오류:', error);
+                const displayName = user.displayName || user.email.split('@')[0];
+                document.getElementById('userName').textContent = displayName;
+                document.getElementById('userRole').textContent = '매니저';
+                document.getElementById('userAvatar').textContent = displayName.charAt(0).toUpperCase();
+            }
+        });
+
+        let allItems = [];
+        let filteredItems = []; // 필터링된 항목
+        let calendar;
+        let selectedManager = 'all';
+        let selectedDeadline = '';
+
+        // Load checklist items from localStorage
+        async function loadChecklistItems() {
+            try {
+                console.log('=== Starting loadChecklistItems ===');
+                console.log('Current time:', new Date().toLocaleString());
+                
+                // Get all clients
+                let clients = [];
+                try {
+                    const clientsResponse = await fetch('tables/clients?limit=1000');
+                    if (!clientsResponse.ok) throw new Error('Failed to load clients');
+                    const clientsResult = await clientsResponse.json();
+                    clients = clientsResult.data || [];
+                } catch (fetchError) {
+                    console.warn('API 호출 실패 - Preview 모드로 전환합니다:', fetchError);
+                    // Preview mode: use mock data
+                    clients = createMockClients();
+                }
+                
+                console.log('Total clients:', clients.length);
+                
+                // Filter traders (업종코드 703011, 703012)
+                const traders = clients.filter(c => {
+                    const code = (c.business_code || '').trim();
+                    return code === '703011' || code === '703012';
+                });
+                
+                console.log('Traders found:', traders.length);
+                traders.forEach(t => console.log(`  - ${t.company_name} (ID: ${t.id})`));
+                
+                // Load inventory data for each trader from localStorage
+                allItems = [];
+                traders.forEach(trader => {
+                    const storageKey = `trader_inventory_${trader.id}`;
+                    const savedData = localStorage.getItem(storageKey);
+                    
+                    console.log(`\nTrader: ${trader.company_name} (${trader.id})`);
+                    console.log(`  Storage key: ${storageKey}`);
+                    console.log(`  Has data: ${!!savedData}`);
+                    
+                    if (savedData) {
+                        try {
+                            const inventoryRows = JSON.parse(savedData);
+                            console.log(`  Total rows: ${inventoryRows.length}`);
+                            
+                            // Log all rows with their status
+                            inventoryRows.forEach((row, idx) => {
+                                console.log(`  Row ${idx + 1}:`);
+                                console.log(`    - property_name: ${row.property_name}`);
+                                console.log(`    - progress_stage: ${row.progress_stage || '(undefined)'}`);
+                                console.log(`    - over_85: ${row.over_85}`);
+                                console.log(`    - transfer_date: ${row.transfer_date}`);
+                            });
+                            
+                            // Filter: 미확인 제외 AND progress_stage가 존재하는 항목만
+                            const filteredRows = inventoryRows.filter(row => {
+                                const hasStage = row.progress_stage && row.progress_stage !== '미확인';
+                                console.log(`  Filtering "${row.property_name}": stage="${row.progress_stage}", included=${hasStage}`);
+                                return hasStage;
+                            });
+                            
+                            console.log(`  Filtered rows (excluding 미확인): ${filteredRows.length}`);
+                            
+                            filteredRows.forEach(row => {
+                                const item = {
+                                    client_id: trader.id,
+                                    client_name: trader.company_name,
+                                    property_name: row.property_name,
+                                    address: row.address,
+                                    acquisition_value: row.acquisition_value || 0,
+                                    acquisition_date: row.acquisition_date || '',
+                                    other_expenses: row.other_expenses || 0,
+                                    transfer_value: row.transfer_value || 0,
+                                    transfer_income: row.transfer_income || 0,
+                                    over_85: row.over_85,
+                                    comparative_tax: row.comparative_tax || 'N',
+                                    prepaid_income_tax: row.prepaid_income_tax || 0,
+                                    prepaid_local_tax: row.prepaid_local_tax || 0,
+                                    transfer_date: row.transfer_date,
+                                    report_deadline: row.report_deadline,
+                                    manager: trader.manager,
+                                    progress_stage: row.progress_stage,
+                                    real_estate_drive_folder: trader.real_estate_drive_folder,
+                                    expenses: row.expenses || []
+                                };
+                                allItems.push(item);
+                                console.log(`  Added to allItems: ${item.property_name} - ${item.progress_stage}`);
+                            });
+                        } catch (parseError) {
+                            console.error(`Error parsing data for trader ${trader.company_name}:`, parseError);
+                        }
+                    } else {
+                        console.log(`  No data in localStorage`);
+                    }
+                });
+                
+                console.log('\n=== Summary ===');
+                console.log('Total items after filtering:', allItems.length);
+                console.log('Items by status:');
+                const statusCounts = {};
+                allItems.forEach(item => {
+                    statusCounts[item.progress_status] = (statusCounts[item.progress_status] || 0) + 1;
+                });
+                Object.keys(statusCounts).forEach(status => {
+                    console.log(`  ${status}: ${statusCounts[status]}`);
+                });
+                
+                // Initialize filters
+                initializeFilters();
+                
+                // Apply filters
+                applyFilters();
+                
+                renderCalendar();
+                
+                if (allItems.length > 0) {
+                    showNotification(`${allItems.length}개 항목이 동기화되었습니다.`, 'success');
+                } else {
+                    showNotification('표시할 항목이 없습니다. 매매사업자 데이터에서 진행단계를 설정해주세요.', 'info');
+                }
+            } catch (error) {
+                console.error('Error loading checklist:', error);
+                allItems = [];
+                initializeFilters();
+                applyFilters();
+                renderCalendar();
+                showNotification('데이터를 불러오는 중 오류가 발생했습니다.', 'error');
+            }
+        }
+        
+        // Initialize filter options
+        function initializeFilters() {
+            // Manager filter
+            const managers = new Set();
+            allItems.forEach(item => {
+                if (item.manager) managers.add(item.manager);
+            });
+            
+            const managerFilter = document.getElementById('managerFilter');
+            managerFilter.innerHTML = '<option value="all">전체</option>';
+            Array.from(managers).sort().forEach(manager => {
+                managerFilter.innerHTML += `<option value="${escapeHtml(manager)}">${escapeHtml(manager)}</option>`;
+            });
+            
+            // Deadline filter (년월) - show 6 months before and after current month
+            const deadlineFilter = document.getElementById('deadlineFilter');
+            const now = new Date();
+            const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            
+            // Add "전체" option first (selected by default)
+            deadlineFilter.innerHTML = '<option value="all" selected>전체</option>';
+            
+            const months = [];
+            for (let i = -6; i <= 6; i++) {
+                const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
+                const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                const label = `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
+                months.push({ value: yearMonth, label: label, isCurrent: yearMonth === currentYearMonth });
+            }
+            
+            months.forEach(month => {
+                // Remove selected from individual months
+                deadlineFilter.innerHTML += `<option value="${month.value}">${month.label}</option>`;
+            });
+            
+            // Set default to "all"
+            selectedDeadline = 'all';
+        }
+        
+        // Change period (prev/next month)
+        function changePeriod(direction) {
+            const deadlineFilter = document.getElementById('deadlineFilter');
+            const currentValue = deadlineFilter.value;
+            
+            // If "전체" is selected, go to current month
+            if (currentValue === 'all') {
+                const now = new Date();
+                const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                deadlineFilter.value = currentYearMonth;
+                applyFilters();
+                return;
+            }
+            
+            // Parse current year-month
+            const [year, month] = currentValue.split('-').map(Number);
+            const currentDate = new Date(year, month - 1, 1);
+            
+            // Add or subtract one month
+            currentDate.setMonth(currentDate.getMonth() + direction);
+            
+            const newYearMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+            
+            // Check if the new value exists in options
+            const option = Array.from(deadlineFilter.options).find(opt => opt.value === newYearMonth);
+            if (option) {
+                deadlineFilter.value = newYearMonth;
+                applyFilters();
+            } else {
+                // If not in range, add it dynamically
+                const label = `${currentDate.getFullYear()}년 ${currentDate.getMonth() + 1}월`;
+                const newOption = new Option(label, newYearMonth, false, true);
+                deadlineFilter.add(newOption);
+                applyFilters();
+            }
+        }
+        
+        // Apply filters
+        function applyFilters() {
+            selectedManager = document.getElementById('managerFilter').value;
+            selectedDeadline = document.getElementById('deadlineFilter').value;
+            
+            // Filter by manager
+            filteredItems = allItems;
+            if (selectedManager !== 'all') {
+                filteredItems = filteredItems.filter(item => item.manager === selectedManager);
+            }
+            
+            // Filter by deadline (year-month)
+            if (selectedDeadline && selectedDeadline !== 'all') {
+                filteredItems = filteredItems.filter(item => {
+                    if (!item.report_deadline) return false;
+                    const itemYearMonth = item.report_deadline.substring(0, 7); // YYYY-MM-DD -> YYYY-MM
+                    return itemYearMonth === selectedDeadline;
+                });
+            }
+            // If selectedDeadline is 'all', show all items (no filtering by deadline)
+            
+            renderTables();
+        }
+
+        // Render tables
+        function renderTables() {
+            // Split by progress stage (use filteredItems instead of allItems)
+            const progressItems = filteredItems.filter(item => item.progress_stage !== '신고완료');
+            const completeItems = filteredItems.filter(item => item.progress_stage === '신고완료');
+            
+            // Update counts
+            document.getElementById('progressCount').textContent = progressItems.length;
+            document.getElementById('completeCount').textContent = completeItems.length;
+            
+            // Render progress table
+            const progressTable = document.getElementById('progressTable');
+            if (progressItems.length === 0) {
+                progressTable.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px;">
+                            <i class="fas fa-inbox" style="font-size: 48px; color: #d1d5db; margin-bottom: 12px;"></i>
+                            <p style="color: #6b7280;">진행 중인 항목이 없습니다.</p>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                progressTable.innerHTML = progressItems.map(item => renderTableRow(item)).join('');
+            }
+            
+            // Render complete table
+            const completeTable = document.getElementById('completeTable');
+            if (completeItems.length === 0) {
+                completeTable.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px;">
+                            <i class="fas fa-inbox" style="font-size: 48px; color: #d1d5db; margin-bottom: 12px;"></i>
+                            <p style="color: #6b7280;">신고 완료된 항목이 없습니다.</p>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                completeTable.innerHTML = completeItems.map(item => renderTableRow(item)).join('');
+            }
+        }
+
+        // Render table row
+        function renderTableRow(item) {
+            // Check if deadline is this month
+            const isThisMonth = isDeadlineThisMonth(item.report_deadline);
+            const deadlineStyle = isThisMonth ? 'color: #dc2626; font-weight: 700;' : '';
+            
+            // Unique ID for this row
+            const rowId = `${item.client_id}_${item.property_name.replace(/\s/g, '_')}`;
+            
+            // Check if this item has been loaded before
+            const loadedItems = JSON.parse(localStorage.getItem('checklist_loaded_items') || '{}');
+            const isLoaded = loadedItems[rowId] === true;
+            
+            return `
+                <tr class="clickable-row" onclick="toggleDetailRow('${rowId}')">
+                    <td>
+                        <a href="trader-detail.html?id=${item.client_id}" style="color: #667eea; font-weight: 600; text-decoration: none;" onclick="event.stopPropagation()">
+                            ${escapeHtml(item.client_name)}
+                        </a>
+                    </td>
+                    <td>${escapeHtml(item.manager || '-')}</td>
+                    <td>${escapeHtml(item.property_name || '-')}</td>
+                    <td>
+                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; 
+                                     background: ${item.over_85 === 'Y' ? '#fee2e2' : '#dbeafe'}; 
+                                     color: ${item.over_85 === 'Y' ? '#991b1b' : '#1e40af'};">
+                            ${item.over_85 === 'Y' ? '초과' : '미만'}
+                        </span>
+                    </td>
+                    <td>${formatDate(item.transfer_date)}</td>
+                    <td style="${deadlineStyle}">${formatDate(item.report_deadline)}</td>
+                    <td onclick="event.stopPropagation()">
+                        <select class="status-badge status-${item.progress_stage || '미확인'}" 
+                                style="border: none; cursor: pointer; font-size: 12px; padding: 6px 12px; border-radius: 6px;"
+                                onchange="updateProgressStatus('${item.client_id}', '${escapeHtml(item.property_name)}', this.value)"
+                                data-row-id="${rowId}">
+                            <option value="미확인" ${item.progress_stage === '미확인' ? 'selected' : ''}>미확인</option>
+                            <option value="확인" ${item.progress_stage === '확인' ? 'selected' : ''}>확인</option>
+                            <option value="위하고입력" ${item.progress_stage === '위하고입력' ? 'selected' : ''}>위하고입력</option>
+                            <option value="고객안내" ${item.progress_stage === '고객안내' ? 'selected' : ''}>고객안내</option>
+                            <option value="신고완료" ${item.progress_stage === '신고완료' ? 'selected' : ''}>신고완료</option>
+                        </select>
+                    </td>
+                    <td style="text-align: center;" onclick="event.stopPropagation()">
+                        ${item.real_estate_drive_folder ? `
+                            <a href="${escapeHtml(item.real_estate_drive_folder)}" target="_blank" 
+                               style="display: inline-flex; align-items: center; justify-content: center; 
+                                      width: 32px; height: 32px; background: #f59e0b; color: white; 
+                                      border-radius: 6px; text-decoration: none; transition: all 0.2s;"
+                               title="부동산 폴더 열기"
+                               onmouseover="this.style.background='#d97706'"
+                               onmouseout="this.style.background='#f59e0b'">
+                                <i class="fas fa-building"></i>
+                            </a>
+                        ` : `
+                            <span style="color: #d1d5db;" title="폴더 없음">
+                                <i class="fas fa-minus"></i>
+                            </span>
+                        `}
+                    </td>
+                </tr>
+                <tr class="detail-row" id="detail-${rowId}">
+                    <td colspan="8">
+                        <div class="detail-content">
+                            <div class="detail-info" id="detail-info-${rowId}" style="text-align: center; padding: 20px; color: #9ca3af; ${isLoaded ? 'display: none;' : ''}">
+                                <i class="fas fa-info-circle" style="font-size: 24px; margin-bottom: 8px;"></i>
+                                <p style="margin: 0; font-size: 14px;">'불러오기' 버튼을 클릭하여 상세 데이터를 가져오세요.</p>
+                            </div>
+                            <div class="detail-grid" id="detail-grid-${rowId}" style="${isLoaded ? 'display: grid;' : 'display: none;'}">
+                                <div class="detail-item">
+                                    <div class="detail-label">물건명</div>
+                                    <div class="detail-value" id="detail-property-${rowId}">${isLoaded ? escapeHtml(item.property_name || '-') : '-'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">취득가액</div>
+                                    <div class="detail-value" id="detail-acquisition-${rowId}">${isLoaded ? formatNumber(item.acquisition_value || 0) + '원' : '-'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">기타필요경비</div>
+                                    <div class="detail-value" id="detail-expenses-${rowId}">${isLoaded ? formatNumber(item.other_expenses || 0) + '원' : '-'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">양도가액</div>
+                                    <div class="detail-value" id="detail-transfer-${rowId}">${isLoaded ? formatNumber(item.transfer_value || 0) + '원' : '-'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">양도소득</div>
+                                    <div class="detail-value" id="detail-income-${rowId}" style="color: #667eea; font-weight: 700;">${isLoaded ? formatNumber(item.transfer_income || 0) + '원' : '-'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">기납부 종소세</div>
+                                    <div class="detail-value" id="detail-prepaid-income-${rowId}">${isLoaded ? formatNumber(item.prepaid_income_tax || 0) + '원' : '-'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">기납부 지방소득세</div>
+                                    <div class="detail-value" id="detail-prepaid-local-${rowId}">${isLoaded ? formatNumber(item.prepaid_local_tax || 0) + '원' : '-'}</div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">비교과세</div>
+                                    <div class="detail-value" id="detail-comparative-${rowId}">
+                                        ${isLoaded ? `
+                                            <span style="padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; 
+                                                         background: ${item.comparative_tax === 'Y' ? '#dcfce7' : '#f3f4f6'}; 
+                                                         color: ${item.comparative_tax === 'Y' ? '#166534' : '#6b7280'};">
+                                                ${item.comparative_tax === 'Y' ? 'Y' : 'N'}
+                                            </span>
+                                        ` : '-'}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="detail-actions">
+                                <button onclick="loadDetailData('${rowId}')" style="padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;">
+                                    <i class="fas fa-sync-alt"></i> 불러오기
+                                </button>
+                                <button onclick="openTraderDetail('${rowId}')" style="padding: 8px 16px; background: #8b5cf6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;">
+                                    <i class="fas fa-external-link-alt"></i> 상세페이지
+                                </button>
+                                <button onclick="generateReport('${rowId}')" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500;">
+                                    <i class="fas fa-file-alt"></i> 보고서
+                                </button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '-';
+            return date.toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        }
+        
+        // Check if deadline is this month
+        function isDeadlineThisMonth(dateString) {
+            if (!dateString) return false;
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return false;
+            
+            const now = new Date();
+            return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+        }
+
+        // Render calendar
+        function renderCalendar() {
+            const calendarEl = document.getElementById('calendar');
+            
+            // Show all incomplete items (not just filtered ones)
+            const incompleteItems = allItems.filter(item => 
+                item.progress_status !== '신고완료' && item.report_deadline
+            );
+            
+            // Create events with manager in title
+            const events = incompleteItems.map(item => ({
+                title: `${item.client_name} - ${item.property_name} - ${item.manager || '담당자미정'}`,
+                start: item.report_deadline,
+                backgroundColor: getStatusColor(item.progress_status),
+                borderColor: getStatusColor(item.progress_status),
+                url: `trader-detail.html?id=${item.client_id}`
+            }));
+            
+            if (calendar) {
+                calendar.destroy();
+            }
+            
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'ko',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,listMonth'
+                },
+                events: events,
+                height: 'auto',
+                buttonText: {
+                    today: '오늘',
+                    month: '월',
+                    list: '목록'
+                }
+            });
+            
+            calendar.render();
+        }
+
+        // Get status color
+        function getStatusColor(status) {
+            const colors = {
+                '미확인': '#9ca3af',
+                '확인': '#3b82f6',
+                '위하고입력': '#f97316',
+                '고객안내': '#f59e0b',
+                '신고완료': '#10b981'
+            };
+            return colors[status] || '#9ca3af';
+        }
+        
+        // Update progress status
+        async function updateProgressStatus(clientId, propertyName, newStatus) {
+            try {
+                console.log(`Updating stage for ${clientId} - ${propertyName}: ${newStatus}`);
+                
+                // Get current inventory data from localStorage
+                const storageKey = `trader_inventory_${clientId}`;
+                const savedData = localStorage.getItem(storageKey);
+                
+                if (!savedData) {
+                    showNotification('저장된 데이터를 찾을 수 없습니다.', 'error');
+                    return;
+                }
+                
+                // Parse and update
+                const inventoryRows = JSON.parse(savedData);
+                const rowIndex = inventoryRows.findIndex(row => row.property_name === propertyName);
+                
+                if (rowIndex === -1) {
+                    showNotification('해당 물건을 찾을 수 없습니다.', 'error');
+                    return;
+                }
+                
+                // Update progress_stage
+                inventoryRows[rowIndex].progress_stage = newStatus;
+                
+                // Save back to localStorage
+                localStorage.setItem(storageKey, JSON.stringify(inventoryRows));
+                
+                console.log(`✅ Stage updated successfully in localStorage`);
+                
+                // Reload data to reflect changes
+                await loadChecklistItems();
+                
+                // Special message if completed
+                if (newStatus === '신고완료') {
+                    showNotification(`✅ 진행단계가 "신고완료"로 변경되었습니다.<br>항목이 아래 "신고완료" 테이블로 이동했습니다.`, 'success');
+                    
+                    // Scroll to complete section after 1 second
+                    setTimeout(() => {
+                        const completeSection = document.getElementById('completeSection');
+                        if (completeSection) {
+                            completeSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                    }, 1500);
+                } else {
+                    showNotification(`진행단계가 "${newStatus}"(으)로 변경되었습니다.`, 'success');
+                }
+                
+            } catch (error) {
+                console.error('진행단계 업데이트 실패:', error);
+                showNotification('진행단계 업데이트에 실패했습니다.', 'error');
+            }
+        }
+        
+        // Show notification
+        function showNotification(message, type = 'info') {
+            // Simple alert for now (can be enhanced with toast notifications)
+            const icons = {
+                success: '✅',
+                error: '❌',
+                info: 'ℹ️',
+                warning: '⚠️'
+            };
+            
+            const icon = icons[type] || icons.info;
+            
+            // Create a toast-like notification
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+                color: white;
+                padding: 16px 24px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                z-index: 10000;
+                font-size: 14px;
+                font-weight: 600;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                animation: slideIn 0.3s ease-out;
+            `;
+            notification.innerHTML = `<div style="display: flex; align-items: flex-start; gap: 12px;"><span>${icon}</span><div style="line-height: 1.5;">${message}</div></div>`;
+            
+            document.body.appendChild(notification);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Format number with commas
+        function formatNumber(num) {
+            if (!num && num !== 0) return '0';
+            return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        }
+        
+        // Toggle detail row
+        function toggleDetailRow(rowId) {
+            const detailRow = document.getElementById(`detail-${rowId}`);
+            if (detailRow) {
+                detailRow.classList.toggle('show');
+            }
+        }
+        
+        // Load detail data (불러오기 버튼)
+        function loadDetailData(rowId) {
+            // Find item from allItems
+            const item = allItems.find(i => {
+                const itemRowId = `${i.client_id}_${i.property_name.replace(/\s/g, '_')}`;
+                return itemRowId === rowId;
+            });
+            
+            if (!item) {
+                showNotification('항목을 찾을 수 없습니다.', 'error');
+                return;
+            }
+            
+            // Hide info message and show detail grid
+            const detailRow = document.getElementById(`detail-${rowId}`);
+            const infoDiv = detailRow.querySelector('.detail-info');
+            const gridDiv = document.getElementById(`detail-grid-${rowId}`);
+            
+            if (infoDiv) infoDiv.style.display = 'none';
+            if (gridDiv) gridDiv.style.display = 'grid';
+            
+            // Populate data
+            document.getElementById(`detail-property-${rowId}`).textContent = item.property_name || '-';
+            document.getElementById(`detail-acquisition-${rowId}`).textContent = formatNumber(item.acquisition_value || 0) + '원';
+            document.getElementById(`detail-expenses-${rowId}`).textContent = formatNumber(item.other_expenses || 0) + '원';
+            document.getElementById(`detail-transfer-${rowId}`).textContent = formatNumber(item.transfer_value || 0) + '원';
+            document.getElementById(`detail-income-${rowId}`).textContent = formatNumber(item.transfer_income || 0) + '원';
+            document.getElementById(`detail-prepaid-income-${rowId}`).textContent = formatNumber(item.prepaid_income_tax || 0) + '원';
+            document.getElementById(`detail-prepaid-local-${rowId}`).textContent = formatNumber(item.prepaid_local_tax || 0) + '원';
+            
+            // Comparative tax badge
+            const comparativeDiv = document.getElementById(`detail-comparative-${rowId}`);
+            const isComparative = item.comparative_tax === 'Y';
+            comparativeDiv.innerHTML = `
+                <span style="padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; 
+                             background: ${isComparative ? '#dcfce7' : '#f3f4f6'}; 
+                             color: ${isComparative ? '#166534' : '#6b7280'};">
+                    ${isComparative ? 'Y' : 'N'}
+                </span>
+            `;
+            
+            // Save to localStorage that this item has been loaded
+            const loadedItems = JSON.parse(localStorage.getItem('checklist_loaded_items') || '{}');
+            loadedItems[rowId] = true;
+            localStorage.setItem('checklist_loaded_items', JSON.stringify(loadedItems));
+            
+            showNotification('데이터를 불러왔습니다.', 'success');
+        }
+        
+        // Open trader detail page
+        function openTraderDetail(rowId) {
+            // Find item from allItems
+            const item = allItems.find(i => {
+                const itemRowId = `${i.client_id}_${i.property_name.replace(/\s/g, '_')}`;
+                return itemRowId === rowId;
+            });
+            
+            if (!item) {
+                showNotification('항목을 찾을 수 없습니다.', 'error');
+                return;
+            }
+            
+            // Navigate to trader-detail.html with item data
+            const url = `trader-detail.html?id=${item.client_id}`;
+            window.open(url, '_blank');
+        }
+        
+        // Generate report (보고서 버튼)
+        async function generateReport(rowId) {
+            // Find item from allItems
+            const item = allItems.find(i => {
+                const itemRowId = `${i.client_id}_${i.property_name.replace(/\s/g, '_')}`;
+                return itemRowId === rowId;
+            });
+            
+            if (!item) {
+                showNotification('항목을 찾을 수 없습니다.', 'error');
+                return;
+            }
+            
+            // Load inventory data to get expenses
+            const storageKey = `trader_inventory_${item.client_id}`;
+            const savedData = localStorage.getItem(storageKey);
+            let expenses = [];
+            
+            if (savedData) {
+                try {
+                    const inventoryRows = JSON.parse(savedData);
+                    const propertyRow = inventoryRows.find(row => row.property_name === item.property_name);
+                    if (propertyRow && propertyRow.expenses) {
+                        expenses = propertyRow.expenses;
+                    }
+                } catch (e) {
+                    console.error('Error loading expenses:', e);
+                }
+            }
+            
+            // Calculate tax rate and amounts
+            const transferIncome = item.transfer_income || 0;
+            const taxBrackets = [
+                { limit: 14000000, rate: 6, deduction: 0 },
+                { limit: 50000000, rate: 15, deduction: 1260000 },
+                { limit: 88000000, rate: 24, deduction: 5760000 },
+                { limit: 150000000, rate: 35, deduction: 15440000 },
+                { limit: 300000000, rate: 38, deduction: 19940000 },
+                { limit: 500000000, rate: 40, deduction: 25940000 },
+                { limit: 1000000000, rate: 42, deduction: 35940000 },
+                { limit: Infinity, rate: 45, deduction: 65940000 }
+            ];
+            
+            let taxRate = 6;
+            let deduction = 0;
+            
+            for (const bracket of taxBrackets) {
+                if (transferIncome <= bracket.limit) {
+                    taxRate = bracket.rate;
+                    deduction = bracket.deduction;
+                    break;
+                }
+            }
+            
+            const incomeTax = item.comparative_tax === 'Y' ? 0 : Math.floor((transferIncome * (taxRate / 100) - deduction) / 10) * 10;
+            const localTax = Math.floor(incomeTax * 0.1 / 10) * 10;
+            
+            // Generate report HTML
+            const reportHTML = `
+                <div style="font-family: 'Inter', sans-serif; max-width: 700px; margin: 0 auto;">
+                    <!-- Header -->
+                    <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #667eea;">
+                        <h1 style="font-size: 28px; font-weight: 800; color: #1f2937; margin: 0 0 10px 0;">토지등 매매차익 예정신고 보고서</h1>
+                        <p style="font-size: 14px; color: #6b7280; margin: 0;">${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    </div>
+                    
+                    <!-- Client Info -->
+                    <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div>
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px; font-weight: 600;">고객사명</div>
+                                <div style="font-size: 16px; color: #1f2937; font-weight: 600;">${escapeHtml(item.client_name)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px; font-weight: 600;">물건명</div>
+                                <div style="font-size: 16px; color: #1f2937; font-weight: 600;">${escapeHtml(item.property_name)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px; font-weight: 600;">양도일</div>
+                                <div style="font-size: 16px; color: #1f2937; font-weight: 600;">${formatDate(item.transfer_date)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px; font-weight: 600;">취득일</div>
+                                <div style="font-size: 16px; color: #1f2937; font-weight: 600;">${formatDate(item.acquisition_date || '-')}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px; font-weight: 600;">납부기한</div>
+                                <div style="font-size: 16px; color: #1f2937; font-weight: 600;">${formatDate(item.report_deadline)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px; font-weight: 600;">비교과세</div>
+                                <div>
+                                    <span style="padding: 4px 12px; border-radius: 6px; font-size: 14px; font-weight: 700; 
+                                                 background: ${item.comparative_tax === 'Y' ? '#dcfce7' : '#f3f4f6'}; 
+                                                 color: ${item.comparative_tax === 'Y' ? '#166534' : '#6b7280'};">
+                                        ${item.comparative_tax === 'Y' ? 'Y' : 'N'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Main Data Table -->
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <thead>
+                            <tr style="background: #667eea;">
+                                <th style="padding: 12px; text-align: left; color: white; font-weight: 700; font-size: 14px; border: 1px solid #5568d3;">항목</th>
+                                <th style="padding: 12px; text-align: right; color: white; font-weight: 700; font-size: 14px; border: 1px solid #5568d3;">금액</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="background: white;">
+                                <td style="padding: 12px; font-weight: 600; color: #1f2937; border: 1px solid #e5e7eb;">양도가액</td>
+                                <td style="padding: 12px; text-align: right; font-weight: 600; color: #1f2937; border: 1px solid #e5e7eb;">${formatNumber(item.transfer_value || 0)}원</td>
+                            </tr>
+                            <tr style="background: #f9fafb;">
+                                <td style="padding: 12px; font-weight: 600; color: #1f2937; border: 1px solid #e5e7eb;">취득가액</td>
+                                <td style="padding: 12px; text-align: right; font-weight: 600; color: #1f2937; border: 1px solid #e5e7eb;">${formatNumber(item.acquisition_value || 0)}원</td>
+                            </tr>
+                            <tr style="background: white;">
+                                <td style="padding: 12px; font-weight: 600; color: #1f2937; border: 1px solid #e5e7eb;">필요경비</td>
+                                <td style="padding: 12px; text-align: right; font-weight: 600; color: #1f2937; border: 1px solid #e5e7eb;">${formatNumber(item.other_expenses || 0)}원</td>
+                            </tr>
+                            <tr style="background: #fef3c7;">
+                                <td style="padding: 12px; font-weight: 700; color: #1f2937; border: 1px solid #e5e7eb;">양도차익 (양도소득)</td>
+                                <td style="padding: 12px; text-align: right; font-weight: 700; color: #d97706; font-size: 16px; border: 1px solid #e5e7eb;">${formatNumber(item.transfer_income || 0)}원</td>
+                            </tr>
+                            <tr style="background: #dbeafe;">
+                                <td style="padding: 12px; font-weight: 700; color: #1f2937; border: 1px solid #e5e7eb;">세율</td>
+                                <td style="padding: 12px; text-align: right; font-weight: 700; color: #1e40af; font-size: 16px; border: 1px solid #e5e7eb;">${taxRate}%</td>
+                            </tr>
+                            <tr style="background: #e0e7ff;">
+                                <td style="padding: 12px; font-weight: 700; color: #1f2937; border: 1px solid #e5e7eb;">종합소득세</td>
+                                <td style="padding: 12px; text-align: right; font-weight: 700; color: #1e40af; font-size: 16px; border: 1px solid #e5e7eb;">${formatNumber(incomeTax)}원</td>
+                            </tr>
+                            <tr style="background: #e0e7ff;">
+                                <td style="padding: 12px; font-weight: 700; color: #1f2937; border: 1px solid #e5e7eb;">지방소득세</td>
+                                <td style="padding: 12px; text-align: right; font-weight: 700; color: #1e40af; font-size: 16px; border: 1px solid #e5e7eb;">${formatNumber(localTax)}원</td>
+                            </tr>
+                            <tr style="background: #fef3c7;">
+                                <td style="padding: 12px; font-weight: 700; color: #1f2937; border: 1px solid #e5e7eb;">💰 총 세금</td>
+                                <td style="padding: 12px; text-align: right; font-weight: 700; color: #d97706; font-size: 18px; border: 1px solid #e5e7eb;">${formatNumber(incomeTax + localTax)}원</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    ${expenses.length > 0 ? `
+                    <!-- Expenses Detail -->
+                    <div style="margin-top: 30px;">
+                        <h3 style="font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #667eea;">필요경비 상세</h3>
+                        
+                        ${(() => {
+                            // 취득가액과 기타필요경비로 분류
+                            const acquisitionExpenses = expenses.filter(exp => exp.category === '취득가액');
+                            const otherExpenses = expenses.filter(exp => exp.category === '기타필요경비');
+                            
+                            // 소계 계산
+                            const acquisitionSubtotal = acquisitionExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+                            const otherSubtotal = otherExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+                            const grandTotal = acquisitionSubtotal + otherSubtotal;
+                            
+                            return `
+                                ${acquisitionExpenses.length > 0 ? `
+                                <!-- 취득가액 -->
+                                <div style="margin-bottom: 20px;">
+                                    <h4 style="font-size: 14px; font-weight: 700; color: #1e40af; margin-bottom: 8px; padding: 8px; background: #dbeafe; border-radius: 4px;">📌 취득가액</h4>
+                                    <table style="width: 100%; border-collapse: collapse; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 2px solid #9ca3af;">
+                                        <thead>
+                                            <tr style="background: #667eea;">
+                                                <th style="padding: 10px; text-align: left; color: white; font-weight: 600; font-size: 13px; border: 1px solid #6b7280;">비용명</th>
+                                                <th style="padding: 10px; text-align: right; color: white; font-weight: 600; font-size: 13px; border: 1px solid #6b7280;">금액</th>
+                                                <th style="padding: 10px; text-align: center; color: white; font-weight: 600; font-size: 13px; border: 1px solid #6b7280;">예정신고 비용인정</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${acquisitionExpenses.map((exp, idx) => `
+                                                <tr style="background: ${idx % 2 === 0 ? 'white' : '#f9fafb'};">
+                                                    <td style="padding: 10px; color: #1f2937; font-weight: 500; border: 1px solid #d1d5db;">${escapeHtml(exp.expense_name || '-')}</td>
+                                                    <td style="padding: 10px; text-align: right; color: #1f2937; font-weight: 600; border: 1px solid #d1d5db;">${formatNumber(exp.amount || 0)}원</td>
+                                                    <td style="padding: 10px; text-align: center; border: 1px solid #d1d5db;">
+                                                        <span style="padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; 
+                                                                     background: ${exp.income_tax_approved === 'O' ? '#dcfce7' : '#fee2e2'}; 
+                                                                     color: ${exp.income_tax_approved === 'O' ? '#166534' : '#991b1b'};">
+                                                            ${exp.income_tax_approved === 'O' ? 'O' : 'X'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            `).join('')}
+                                            <tr style="background: #dbeafe;">
+                                                <td style="padding: 10px; font-weight: 700; color: #1e40af; border: 1px solid #d1d5db;">소계</td>
+                                                <td style="padding: 10px; text-align: right; font-weight: 700; color: #1e40af; border: 1px solid #d1d5db;">${formatNumber(acquisitionSubtotal)}원</td>
+                                                <td style="padding: 10px; border: 1px solid #d1d5db;"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                ` : ''}
+                                
+                                ${otherExpenses.length > 0 ? `
+                                <!-- 기타필요경비 -->
+                                <div style="margin-bottom: 20px;">
+                                    <h4 style="font-size: 14px; font-weight: 700; color: #92400e; margin-bottom: 8px; padding: 8px; background: #fef3c7; border-radius: 4px;">📌 기타필요경비</h4>
+                                    <table style="width: 100%; border-collapse: collapse; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border: 2px solid #9ca3af;">
+                                        <thead>
+                                            <tr style="background: #667eea;">
+                                                <th style="padding: 10px; text-align: left; color: white; font-weight: 600; font-size: 13px; border: 1px solid #6b7280;">비용명</th>
+                                                <th style="padding: 10px; text-align: right; color: white; font-weight: 600; font-size: 13px; border: 1px solid #6b7280;">금액</th>
+                                                <th style="padding: 10px; text-align: center; color: white; font-weight: 600; font-size: 13px; border: 1px solid #6b7280;">예정신고 비용인정</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${otherExpenses.map((exp, idx) => `
+                                                <tr style="background: ${idx % 2 === 0 ? 'white' : '#f9fafb'};">
+                                                    <td style="padding: 10px; color: #1f2937; font-weight: 500; border: 1px solid #d1d5db;">${escapeHtml(exp.expense_name || '-')}</td>
+                                                    <td style="padding: 10px; text-align: right; color: #1f2937; font-weight: 600; border: 1px solid #d1d5db;">${formatNumber(exp.amount || 0)}원</td>
+                                                    <td style="padding: 10px; text-align: center; border: 1px solid #d1d5db;">
+                                                        <span style="padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; 
+                                                                     background: ${exp.income_tax_approved === 'O' ? '#dcfce7' : '#fee2e2'}; 
+                                                                     color: ${exp.income_tax_approved === 'O' ? '#166534' : '#991b1b'};">
+                                                            ${exp.income_tax_approved === 'O' ? 'O' : 'X'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            `).join('')}
+                                            <tr style="background: #fef3c7;">
+                                                <td style="padding: 10px; font-weight: 700; color: #92400e; border: 1px solid #d1d5db;">소계</td>
+                                                <td style="padding: 10px; text-align: right; font-weight: 700; color: #92400e; border: 1px solid #d1d5db;">${formatNumber(otherSubtotal)}원</td>
+                                                <td style="padding: 10px; border: 1px solid #d1d5db;"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                ` : ''}
+                                
+                                <!-- 전체 비용 합계 -->
+                                <div style="margin-top: 16px; padding: 12px 16px; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 8px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <div style="color: #4b5563; font-size: 14px; font-weight: 600;">💰 전체 비용 합계</div>
+                                        <div style="color: #1f2937; font-size: 16px; font-weight: 700;">${formatNumber(grandTotal)}원</div>
+                                    </div>
+                                </div>
+                            `;
+                        })()}
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            // Show report modal
+            document.getElementById('reportContent').innerHTML = reportHTML;
+            document.getElementById('reportModal').style.display = 'flex';
+            
+            // Store current item for download
+            window.currentReportItem = item;
+        }
+        
+        // Close report modal
+        function closeReportModal() {
+            document.getElementById('reportModal').style.display = 'none';
+        }
+        
+        // Download report as PNG
+        async function downloadReport() {
+            const reportContent = document.getElementById('reportContent');
+            
+            try {
+                showNotification('보고서를 생성하는 중입니다...', 'info');
+                
+                const canvas = await html2canvas(reportContent, {
+                    backgroundColor: '#ffffff',
+                    scale: 2,
+                    logging: false,
+                    useCORS: true
+                });
+                
+                // Convert to PNG and download
+                const link = document.createElement('a');
+                const item = window.currentReportItem;
+                const fileName = `양도소득세신고보고서_${item.client_name}_${item.property_name}_${new Date().toISOString().split('T')[0]}.png`;
+                
+                link.download = fileName;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                showNotification('보고서가 다운로드되었습니다.', 'success');
+            } catch (error) {
+                console.error('Report download error:', error);
+                showNotification('보고서 다운로드 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // Create mock clients for preview mode
+        function createMockClients() {
+            console.log('📦 Creating mock data for preview mode...');
+            
+            const mockClients = [
+                {
+                    id: 'mock-client-1',
+                    company_name: '테스트매매사업자1',
+                    manager: '김철수',
+                    business_code: '703011'
+                },
+                {
+                    id: 'mock-client-2',
+                    company_name: '테스트매매사업자2',
+                    manager: '이영희',
+                    business_code: '703012'
+                },
+                {
+                    id: 'mock-client-3',
+                    company_name: '테스트매매사업자3',
+                    manager: '박민수',
+                    business_code: '703011'
+                }
+            ];
+            
+            // Create mock inventory data in localStorage (always refresh for preview)
+            mockClients.forEach((client, idx) => {
+                const storageKey = `trader_inventory_${client.id}`;
+                const now = new Date();
+                const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                const nextMonth = `${now.getFullYear()}-${String(now.getMonth() + 2).padStart(2, '0')}`;
+                const lastMonth = `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`;
+                
+                const mockInventory = [
+                    {
+                        property_name: `테스트물건${idx * 3 + 1}`,
+                        address: '서울시 강남구',
+                        acquisition_value: 300000000,
+                        other_expenses: 10000000,
+                        transfer_value: 400000000,
+                        transfer_income: 90000000,
+                        transfer_date: '2024-12-15',
+                        report_deadline: `${thisMonth}-15`, // This month
+                        over_85: 'Y',
+                        progress_status: '확인',
+                        expenses: []
+                    },
+                    {
+                        property_name: `테스트물건${idx * 3 + 2}`,
+                        address: '서울시 서초구',
+                        acquisition_value: 250000000,
+                        other_expenses: 8000000,
+                        transfer_value: 350000000,
+                        transfer_income: 92000000,
+                        transfer_date: '2024-11-20',
+                        report_deadline: `${thisMonth}-28`, // This month
+                        over_85: 'N',
+                        progress_status: idx === 0 ? '신고완료' : '위하고입력',
+                        expenses: []
+                    },
+                    {
+                        property_name: `테스트물건${idx * 3 + 3}`,
+                        address: '서울시 송파구',
+                        acquisition_value: 280000000,
+                        other_expenses: 9000000,
+                        transfer_value: 380000000,
+                        transfer_income: 91000000,
+                        transfer_date: '2025-01-10',
+                        report_deadline: `${nextMonth}-10`, // Next month
+                        over_85: 'Y',
+                        progress_status: '고객안내',
+                        expenses: []
+                    }
+                ];
+                localStorage.setItem(storageKey, JSON.stringify(mockInventory));
+                console.log(`✅ Mock data created for ${client.company_name}`);
+            });
+            
+            console.log('📦 Mock data ready!');
+            return mockClients;
+        }
+
+        // Handle document upload (PDF, JPG, PNG)
+        async function handleDocumentUpload(event) {
+            const files = Array.from(event.target.files);
+            
+            if (files.length === 0) {
+                showNotification('파일을 선택해주세요.', 'warning');
+                return;
+            }
+            
+            console.log(`📄 ${files.length}개 파일 업로드 시작...`);
+            
+            try {
+                showLoading();
+                
+                // Show processing notification
+                showNotification(`${files.length}개 파일 처리 중... 잠시만 기다려주세요.`, 'info');
+                
+                const results = [];
+                
+                for (const file of files) {
+                    console.log(`📄 처리 중: ${file.name}`);
+                    
+                    // Check file type
+                    const fileType = file.type;
+                    const fileName = file.name;
+                    
+                    if (!fileType.includes('pdf') && !fileType.includes('image')) {
+                        console.warn(`⚠️ 지원하지 않는 파일 형식: ${fileName}`);
+                        continue;
+                    }
+                    
+                    // Process file
+                    const result = await processDocument(file);
+                    if (result) {
+                        results.push(result);
+                    }
+                }
+                
+                hideLoading();
+                
+                if (results.length > 0) {
+                    showNotification(`✅ ${results.length}개 파일 처리 완료!`, 'success');
+                    
+                    // Show preview modal with extracted data
+                    showExtractedDataModal(results);
+                } else {
+                    showNotification('데이터를 추출할 수 없었습니다.', 'error');
+                }
+                
+                // Reset file input
+                event.target.value = '';
+                
+            } catch (error) {
+                console.error('문서 업로드 오류:', error);
+                showNotification('파일 처리 중 오류가 발생했습니다.', 'error');
+                hideLoading();
+                event.target.value = '';
+            }
+        }
+        
+        // Process individual document (OCR/Image Analysis)
+        async function processDocument(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                
+                reader.onload = async function(e) {
+                    try {
+                        const dataUrl = e.target.result;
+                        
+                        // TODO: 여기에 OCR API 연동
+                        // 현재는 시뮬레이션 데이터 반환
+                        
+                        console.log(`🔍 ${file.name} 분석 중...`);
+                        
+                        // Simulate OCR processing delay
+                        await new Promise(r => setTimeout(r, 1000));
+                        
+                        // Mock extracted data
+                        const mockData = {
+                            fileName: file.name,
+                            fileType: file.type,
+                            dataUrl: dataUrl,
+                            extracted: {
+                                clientName: '시뮬레이션고객사',
+                                propertyName: file.name.replace(/\.(pdf|jpg|jpeg|png)$/i, ''),
+                                acquisitionValue: Math.floor(Math.random() * 500000000) + 100000000,
+                                transferValue: Math.floor(Math.random() * 600000000) + 200000000,
+                                transferDate: '2025-01-15',
+                                address: '시뮬레이션 주소',
+                                over85: Math.random() > 0.5 ? 'Y' : 'N',
+                                expenses: [
+                                    {
+                                        expenseName: '취득세',
+                                        category: '취득가액',
+                                        amount: Math.floor(Math.random() * 10000000) + 1000000,
+                                        recognized: 'O'
+                                    },
+                                    {
+                                        expenseName: '중개수수료',
+                                        category: '기타필요경비',
+                                        amount: Math.floor(Math.random() * 5000000) + 500000,
+                                        recognized: 'O'
+                                    }
+                                ]
+                            }
+                        };
+                        
+                        resolve(mockData);
+                        
+                    } catch (error) {
+                        console.error(`Error processing ${file.name}:`, error);
+                        reject(error);
+                    }
+                };
+                
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+        
+        // Show extracted data modal for confirmation
+        function showExtractedDataModal(results) {
+            let modalHTML = `
+                <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;" id="extractedDataModal">
+                    <div style="background: white; border-radius: 12px; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3); width: 90%;">
+                        <div style="padding: 20px; border-bottom: 2px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; z-index: 1;">
+                            <h3 style="font-size: 20px; font-weight: 700; color: #1f2937; margin: 0;">
+                                <i class="fas fa-file-alt"></i> 추출된 데이터 확인
+                            </h3>
+                            <button onclick="closeExtractedDataModal()" style="background: none; border: none; font-size: 24px; color: #9ca3af; cursor: pointer;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        
+                        <div style="padding: 20px;">
+                            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px;">
+                                <div style="display: flex; align-items: center; gap: 8px; color: #1e40af;">
+                                    <i class="fas fa-info-circle"></i>
+                                    <span style="font-size: 14px; font-weight: 600;">추출된 데이터를 확인하고 수정한 후 저장하세요.</span>
+                                </div>
+                            </div>
+                            
+                            <div id="extractedDataContent">
+                                ${results.map((result, index) => `
+                                    <div style="border: 2px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                            <h4 style="font-weight: 700; color: #1f2937; margin: 0;">
+                                                📄 ${result.fileName}
+                                            </h4>
+                                            <span style="font-size: 12px; color: #6b7280;">${result.fileType}</span>
+                                        </div>
+                                        
+                                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                                            <div>
+                                                <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 4px;">고객사명</label>
+                                                <input type="text" value="${result.extracted.clientName || ''}" 
+                                                       id="clientName_${index}"
+                                                       style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                                            </div>
+                                            <div>
+                                                <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 4px;">물건명</label>
+                                                <input type="text" value="${result.extracted.propertyName || ''}" 
+                                                       id="propertyName_${index}"
+                                                       style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                                            </div>
+                                            <div>
+                                                <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 4px;">취득가액</label>
+                                                <input type="text" value="${formatNumber(result.extracted.acquisitionValue) || ''}" 
+                                                       id="acquisitionValue_${index}"
+                                                       style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                                            </div>
+                                            <div>
+                                                <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 4px;">양도가액</label>
+                                                <input type="text" value="${formatNumber(result.extracted.transferValue) || ''}" 
+                                                       id="transferValue_${index}"
+                                                       style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                                            </div>
+                                            <div>
+                                                <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 4px;">양도일</label>
+                                                <input type="date" value="${result.extracted.transferDate || ''}" 
+                                                       id="transferDate_${index}"
+                                                       style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                                            </div>
+                                            <div>
+                                                <label style="display: block; font-size: 12px; color: #6b7280; margin-bottom: 4px;">85초과</label>
+                                                <select id="over85_${index}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                                                    <option value="Y" ${result.extracted.over85 === 'Y' ? 'selected' : ''}>Y</option>
+                                                    <option value="N" ${result.extracted.over85 === 'N' ? 'selected' : ''}>N</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        ${result.extracted.expenses && result.extracted.expenses.length > 0 ? `
+                                            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                                                <div style="font-weight: 600; font-size: 13px; color: #374151; margin-bottom: 8px;">
+                                                    💰 필요경비 (${result.extracted.expenses.length}건)
+                                                </div>
+                                                <div style="font-size: 12px; color: #6b7280;">
+                                                    ${result.extracted.expenses.map(exp => 
+                                                        `• ${exp.expenseName}: ${formatNumber(exp.amount)}원 (${exp.category})`
+                                                    ).join('<br>')}
+                                                </div>
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        
+                        <div style="padding: 20px; border-top: 2px solid #f3f4f6; display: flex; gap: 12px; justify-content: flex-end; position: sticky; bottom: 0; background: white;">
+                            <button onclick="closeExtractedDataModal()" style="padding: 10px 20px; background: #e5e7eb; color: #1f2937; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">
+                                취소
+                            </button>
+                            <button onclick="saveExtractedData(${JSON.stringify(results).replace(/"/g, '&quot;')})" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">
+                                <i class="fas fa-save"></i> 저장 및 적용
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+        
+        // Close extracted data modal
+        function closeExtractedDataModal() {
+            const modal = document.getElementById('extractedDataModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        // Save extracted data to inventory
+        function saveExtractedData(results) {
+            console.log('💾 추출된 데이터 저장 중...');
+            
+            // TODO: 실제 저장 로직 구현
+            // 1. 고객사 찾기 또는 생성
+            // 2. 물건 목록에 추가
+            // 3. 필요경비 추가
+            
+            showNotification('데이터 저장 기능은 곧 구현됩니다.', 'info');
+            closeExtractedDataModal();
+        }
+
+        // Load on page load
+        loadChecklistItems();
+    </script>
+</body>
+</html>

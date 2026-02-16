@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>기장총괄표 상세 분석 (거래처별 시트)</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #374151;
+            margin: 20px 0 10px;
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .sheet-card {
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        .sheet-card.highlighted {
+            border-color: #10b981;
+            background: #d1fae5;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 11px;
+        }
+        th, td {
+            border: 1px solid #d1d5db;
+            padding: 6px;
+            text-align: left;
+        }
+        th {
+            background: #4b5563;
+            color: white;
+            font-weight: 600;
+        }
+        tr:nth-child(even) { background: #f9fafb; }
+        pre {
+            background: #1f2937;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 11px;
+            max-height: 400px;
+        }
+        .info {
+            background: #dbeafe;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d1fae5;
+            border-left: 4px solid #10b981;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 10px 5px;
+        }
+        .btn:hover { background: #5568d3; }
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .data-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .data-item strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 기장총괄표 상세 분석 (거래처별 시트)</h1>
+        
+        <div class="info">
+            <strong>📌 분석 목적:</strong> 각 시트가 거래처명으로 되어있고, 각 시트 안에 물건 데이터가 있는지 확인합니다.
+        </div>
+        
+        <div id="output">
+            <p>파일을 로드하는 중...</p>
+        </div>
+        
+        <div id="conversionSection" style="display: none;">
+            <h2>🔄 변환 작업</h2>
+            <button class="btn" onclick="convertAllSheets()">✨ 모든 거래처 데이터 변환 시작</button>
+            <div id="convertOutput"></div>
+        </div>
+    </div>
+
+    <script>
+        let workbookData = null;
+        let traderSheets = [];
+
+        async function init() {
+            const output = document.getElementById('output');
+            
+            try {
+                output.innerHTML = '<div class="info"><strong>🔄 파일 로드 중...</strong></div>';
+                
+                const response = await fetch('기장총괄표_원본.xlsx');
+                if (!response.ok) throw new Error('파일을 찾을 수 없습니다.');
+                
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(new Uint8Array(arrayBuffer), {type: 'array', cellDates: true});
+                
+                workbookData = workbook;
+                
+                output.innerHTML = `<div class="success"><strong>✅ 파일 로드 완료</strong><br>총 시트 수: ${workbook.SheetNames.length}개</div>`;
+                
+                // 각 시트 상세 분석
+                output.innerHTML += '<h2>📊 각 시트 상세 분석</h2>';
+                
+                workbook.SheetNames.forEach((sheetName, idx) => {
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonArray = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ''});
+                    const jsonObjects = XLSX.utils.sheet_to_json(worksheet, {defval: ''});
+                    
+                    // 시트 분석
+                    const analysis = analyzeSheet(sheetName, jsonArray, jsonObjects);
+                    
+                    let html = `<div class="sheet-card ${analysis.isTradingSheet ? 'highlighted' : ''}">
+                        <h3>${idx + 1}. ${sheetName} ${analysis.isTradingSheet ? '✅ (매매사업자 시트)' : ''}</h3>
+                        <div class="data-grid">
+                            <div class="data-item"><strong>행 수:</strong> ${jsonArray.length}</div>
+                            <div class="data-item"><strong>데이터 행:</strong> ${jsonObjects.length}</div>
+                            <div class="data-item"><strong>컬럼 수:</strong> ${jsonArray[0] ? jsonArray[0].length : 0}</div>
+                        </div>`;
+                    
+                    if (jsonArray.length > 0) {
+                        html += '<h4>📋 컬럼 목록:</h4>';
+                        html += '<div style="background: #f3f4f6; padding: 10px; border-radius: 5px; font-size: 12px;">';
+                        jsonArray[0].forEach((col, i) => {
+                            html += `<span style="margin-right: 10px;"><strong>${i + 1}.</strong> ${col || '(빈칸)'}</span>`;
+                        });
+                        html += '</div>';
+                        
+                        html += '<h4>📄 데이터 미리보기 (처음 10행):</h4>';
+                        html += '<div style="overflow-x: auto;"><table>';
+                        html += '<thead><tr>';
+                        jsonArray[0].forEach(h => {
+                            html += `<th>${h || ''}</th>`;
+                        });
+                        html += '</tr></thead><tbody>';
+                        jsonArray.slice(1, 11).forEach(row => {
+                            html += '<tr>';
+                            row.forEach(cell => {
+                                html += `<td>${cell || ''}</td>`;
+                            });
+                            html += '</tr>';
+                        });
+                        html += '</tbody></table></div>';
+                        
+                        // JSON 샘플
+                        if (jsonObjects.length > 0) {
+                            html += '<h4>🔍 JSON 형식 (처음 3개):</h4>';
+                            html += `<pre>${JSON.stringify(jsonObjects.slice(0, 3), null, 2)}</pre>`;
+                        }
+                    }
+                    
+                    // 분석 결과
+                    if (analysis.possibleColumns.length > 0) {
+                        html += '<div class="success">';
+                        html += '<h4>🎯 감지된 컬럼:</h4><ul>';
+                        analysis.possibleColumns.forEach(col => {
+                            html += `<li><strong>${col.name}:</strong> ${col.column} (인덱스 ${col.index})</li>`;
+                        });
+                        html += '</ul></div>';
+                    }
+                    
+                    html += '</div>';
+                    
+                    output.innerHTML += html;
+                    
+                    // 매매사업자 시트면 저장
+                    if (analysis.isTradingSheet) {
+                        traderSheets.push({
+                            name: sheetName,
+                            data: jsonObjects,
+                            headers: jsonArray[0] || [],
+                            analysis: analysis
+                        });
+                    }
+                });
+                
+                // 변환 가능한 시트 요약
+                if (traderSheets.length > 0) {
+                    output.innerHTML += `<div class="success">
+                        <h3>✅ 매매사업자 시트 발견: ${traderSheets.length}개</h3>
+                        <p>다음 시트들이 변환 대상입니다:</p>
+                        <ul>${traderSheets.map(s => `<li><strong>${s.name}</strong> (${s.data.length}개 데이터)</li>`).join('')}</ul>
+                    </div>`;
+                    
+                    document.getElementById('conversionSection').style.display = 'block';
+                } else {
+                    output.innerHTML += `<div class="warning">
+                        <strong>⚠️ 매매사업자 시트를 찾을 수 없습니다.</strong>
+                        <p>각 시트의 컬럼 구조를 확인하고, 어떤 시트를 변환해야 하는지 알려주세요.</p>
+                    </div>`;
+                }
+                
+            } catch (error) {
+                output.innerHTML = `<div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; border-radius: 5px;">
+                    <strong>❌ 오류:</strong> ${error.message}
+                </div>`;
+                console.error(error);
+            }
+        }
+
+        function analyzeSheet(sheetName, jsonArray, jsonObjects) {
+            const headers = jsonArray[0] || [];
+            const possibleColumns = [];
+            let isTradingSheet = false;
+            
+            headers.forEach((header, idx) => {
+                const h = String(header).toLowerCase().replace(/\s/g, '');
+                
+                // 매매사업자 관련 컬럼 감지
+                if (h.includes('사업자') || h.includes('번호')) {
+                    possibleColumns.push({name: '사업자번호', column: header, index: idx});
+                    isTradingSheet = true;
+                }
+                if (h.includes('물건') || h.includes('부동산') || h.includes('명칭')) {
+                    possibleColumns.push({name: '물건명', column: header, index: idx});
+                }
+                if (h.includes('소재지') || h.includes('주소')) {
+                    possibleColumns.push({name: '소재지', column: header, index: idx});
+                }
+                if (h.includes('취득') && (h.includes('가액') || h.includes('금액'))) {
+                    possibleColumns.push({name: '취득가액', column: header, index: idx});
+                }
+                if (h.includes('양도') && (h.includes('가액') || h.includes('금액'))) {
+                    possibleColumns.push({name: '양도가액', column: header, index: idx});
+                }
+                if (h.includes('종소세') || (h.includes('소득세') && !h.includes('지방'))) {
+                    possibleColumns.push({name: '기납부 종소세', column: header, index: idx});
+                }
+                if (h.includes('지방') && h.includes('소득세')) {
+                    possibleColumns.push({name: '기납부 지방소득세', column: header, index: idx});
+                }
+                if (h.includes('취득일') || h.includes('취득년월일')) {
+                    possibleColumns.push({name: '취득일', column: header, index: idx});
+                }
+                if (h.includes('양도일') || h.includes('매도일')) {
+                    possibleColumns.push({name: '양도일', column: header, index: idx});
+                }
+            });
+            
+            return {
+                isTradingSheet,
+                possibleColumns,
+                dataCount: jsonObjects.length
+            };
+        }
+
+        async function convertAllSheets() {
+            const output = document.getElementById('convertOutput');
+            output.innerHTML = '<div class="info"><strong>🔄 변환 작업 시작...</strong></div>';
+            
+            try {
+                const allConvertedData = [];
+                
+                traderSheets.forEach(sheet => {
+                    output.innerHTML += `<h3>📊 ${sheet.name} 변환 중...</h3>`;
+                    
+                    // 컬럼 매핑
+                    const mapping = {};
+                    sheet.analysis.possibleColumns.forEach(col => {
+                        if (col.name === '사업자번호') mapping.businessNumber = col.index;
+                        if (col.name === '물건명') mapping.propertyName = col.index;
+                        if (col.name === '소재지') mapping.address = col.index;
+                        if (col.name === '양도가액') mapping.transferValue = col.index;
+                        if (col.name === '기납부 종소세') mapping.prepaidIncomeTax = col.index;
+                        if (col.name === '기납부 지방소득세') mapping.prepaidLocalTax = col.index;
+                        if (col.name === '취득일') mapping.acquisitionDate = col.index;
+                        if (col.name === '양도일') mapping.transferDate = col.index;
+                    });
+                    
+                    // 데이터 변환
+                    sheet.data.forEach((row, idx) => {
+                        const rowArray = sheet.headers.map(h => row[h]);
+                        const converted = {
+                            '사업자번호*': String(rowArray[mapping.businessNumber] || '').trim(),
+                            '물건명': rowArray[mapping.propertyName] || `${sheet.name}_물건${idx + 1}`,
+                            '소재지': rowArray[mapping.address] || '',
+                            '양도가액': parseNumber(rowArray[mapping.transferValue]),
+                            '취득일(YYYYMMDD)': formatDate(rowArray[mapping.acquisitionDate]),
+                            '양도일(YYYYMMDD)': formatDate(rowArray[mapping.transferDate]),
+                            '기납부 종소세': parseNumber(rowArray[mapping.prepaidIncomeTax]),
+                            '기납부 지방소득세': parseNumber(rowArray[mapping.prepaidLocalTax]),
+                            '85초과(Y/N)': 'N',
+                            '진행단계': '미확인'
+                        };
+                        
+                        if (converted['사업자번호*']) {
+                            allConvertedData.push(converted);
+                        }
+                    });
+                    
+                    output.innerHTML += `<div class="success">✅ ${sheet.name}: ${sheet.data.length}건 변환 완료</div>`;
+                });
+                
+                output.innerHTML += `<div class="success">
+                    <h3>✅ 전체 변환 완료!</h3>
+                    <p>총 ${allConvertedData.length}건의 데이터가 변환되었습니다.</p>
+                </div>`;
+                
+                // 미리보기
+                output.innerHTML += '<h3>📋 변환 결과 미리보기 (처음 10개):</h3>';
+                output.innerHTML += `<pre>${JSON.stringify(allConvertedData.slice(0, 10), null, 2)}</pre>`;
+                
+                // 엑셀 생성
+                const wb = XLSX.utils.book_new();
+                const ws1 = XLSX.utils.json_to_sheet(allConvertedData);
+                XLSX.utils.book_append_sheet(wb, ws1, '물건목록');
+                
+                const ws2 = XLSX.utils.aoa_to_sheet([
+                    ['사업자번호*', '물건명*', '번호', '비용명', '구분(취득가액/기타필요경비)', '금액', '비용인정(O/X)', '비고']
+                ]);
+                XLSX.utils.book_append_sheet(wb, ws2, '필요경비상세');
+                
+                // 다운로드
+                const fileName = `매매사업자_일괄업로드_양식_${new Date().toISOString().slice(0,10)}.xlsx`;
+                XLSX.writeFile(wb, fileName);
+                
+                output.innerHTML += `<div class="success">
+                    <h3>🎉 파일 다운로드 완료!</h3>
+                    <p><strong>파일명:</strong> ${fileName}</p>
+                    <p>이제 매매사업자 데이터 페이지에서 "일괄 업로드"를 클릭하여 업로드하세요!</p>
+                </div>`;
+                
+            } catch (error) {
+                output.innerHTML += `<div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px;">
+                    <strong>❌ 변환 오류:</strong> ${error.message}
+                </div>`;
+                console.error(error);
+            }
+        }
+
+        function parseNumber(value) {
+            if (!value) return 0;
+            const num = String(value).replace(/[^0-9.-]/g, '');
+            return parseFloat(num) || 0;
+        }
+
+        function formatDate(dateValue) {
+            if (!dateValue) return '';
+            
+            const str = String(dateValue).replace(/[^0-9]/g, '');
+            if (str.length === 8) return str;
+            
+            if (dateValue instanceof Date) {
+                const y = dateValue.getFullYear();
+                const m = String(dateValue.getMonth() + 1).padStart(2, '0');
+                const d = String(dateValue.getDate()).padStart(2, '0');
+                return `${y}${m}${d}`;
+            }
+            
+            return '';
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

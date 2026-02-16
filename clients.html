@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기장고객 관리 - 아톰세무회계</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span>아톰세무회계</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>대시보드</span>
+                </a>
+                <!-- 고객사 관리 (드롭다운) -->
+                <div class="nav-dropdown active">
+                    <a href="#" class="nav-item" onclick="toggleDropdown(event)">
+                        <i class="fas fa-building"></i>
+                        <span>고객사 관리</span>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <div class="dropdown-content" style="display: block;">
+                        <a href="clients.html" class="dropdown-item active">
+                            <i class="fas fa-briefcase"></i>
+                            <span>기장고객 관리</span>
+                        </a>
+                        <a href="clients-terminated.html" class="dropdown-item">
+                            <i class="fas fa-user-times"></i>
+                            <span>해임고객 관리</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 매매사업자 관리 (드롭다운) -->
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-item" onclick="toggleDropdown(event)">
+                        <i class="fas fa-store"></i>
+                        <span>매매사업자 관리</span>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <div class="dropdown-content">
+                        <a href="traders-data.html" class="dropdown-item">
+                            <i class="fas fa-database"></i>
+                            <span>매매사업자 데이터</span>
+                        </a>
+                        <a href="traders-checklist.html" class="dropdown-item">
+                            <i class="fas fa-check-square"></i>
+                            <span>매매사업자 체크리스트</span>
+                        </a>
+                        <a href="traders-vat.html" class="dropdown-item">
+                            <i class="fas fa-calculator"></i>
+                            <span>부가가치세 계산</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <a href="#" class="nav-item">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>세무 관리</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>통계 분석</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>설정</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="nav-item" style="width: 100%; border: none; background: none;">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>로그아웃</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="topbar">
+                <div class="topbar-left">
+                    <button class="menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="topbar-title">기장고객 관리</h1>
+                </div>
+                
+                <div class="topbar-right">
+                    <div class="topbar-search">
+                        <input type="text" id="globalSearch" placeholder="검색...">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    
+                    <div class="user-profile">
+                        <div class="user-avatar" id="userAvatar">A</div>
+                        <div class="user-info">
+                            <div class="user-name" id="userName">관리자</div>
+                            <div class="user-role" id="userRole">Admin</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Toolbar -->
+                <div class="card">
+                    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+                            <!-- Manager Filter -->
+                            <select id="managerFilter" class="px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500">
+                                <option value="">전체 담당자</option>
+                            </select>
+                            
+                            <!-- Company Name Search -->
+                            <input type="text" id="companyNameSearch" class="px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" placeholder="거래처명 검색..." style="width: 250px;">
+                        </div>
+                        
+                        <div style="display: flex; gap: 12px;">
+                            <!-- Export to Excel -->
+                            <button id="exportExcel" class="btn btn-success">
+                                <i class="fas fa-file-excel"></i> 엑셀 다운로드
+                            </button>
+                            
+                            <!-- Add New Client -->
+                            <button id="addClientBtn" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> 고객사 추가
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clients Table -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-building mr-2"></i>고객사 목록
+                            <span id="clientCount" class="badge badge-primary ml-2">0</span>
+                        </h3>
+                        
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <label style="font-size: 14px; color: #6b7280;">페이지당:</label>
+                            <select id="perPageSelect" class="px-3 py-1 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500">
+                                <option value="10">10</option>
+                                <option value="25" selected>25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table id="clientsTable">
+                            <thead>
+                                <tr>
+                                    <th style="cursor: pointer; width: 60px; position: relative;" data-sort="number">
+                                        번호 <i class="fas fa-sort"></i>
+                                        <div class="resize-handle"></div>
+                                    </th>
+                                    <th style="cursor: pointer; width: 180px; position: relative;" data-sort="company_name">
+                                        거래처명 <i class="fas fa-sort"></i>
+                                        <div class="resize-handle"></div>
+                                    </th>
+                                    <th style="cursor: pointer; width: 100px; position: relative;" data-sort="manager">
+                                        담당자 <i class="fas fa-sort"></i>
+                                        <div class="resize-handle"></div>
+                                    </th>
+                                    <th style="width: 140px; position: relative;">
+                                        사업자번호
+                                        <div class="resize-handle"></div>
+                                    </th>
+                                    <th style="cursor: pointer; width: 100px; position: relative;" data-sort="ceo_name">
+                                        대표자 <i class="fas fa-sort"></i>
+                                        <div class="resize-handle"></div>
+                                    </th>
+                                    <th style="cursor: pointer; width: 150px; position: relative;" data-sort="business_type">
+                                        업종 <i class="fas fa-sort"></i>
+                                        <div class="resize-handle"></div>
+                                    </th>
+                                    <th style="width: 130px; position: relative;">
+                                        연락처
+                                        <div class="resize-handle"></div>
+                                    </th>
+                                    <th style="width: 80px; text-align: center;">기장</th>
+                                    <th style="width: 80px; text-align: center;">부동산</th>
+                                    <th style="width: 80px; text-align: center;">수정</th>
+                                    <th style="width: 80px; text-align: center;">삭제</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clientsTableBody">
+                                <tr>
+                                    <td colspan="9" style="text-align: center; padding: 40px;">
+                                        <div class="spinner" style="margin: 0 auto;"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div id="paginationContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Modal -->
+    <div id="clientModal" class="modal-backdrop">
+        <div class="modal" style="max-width: 900px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 style="font-size: 24px; font-weight: 700;" id="modalTitle">고객사 추가</h2>
+                <button id="closeModal" style="font-size: 24px; background: none; border: none; cursor: pointer; color: #9ca3af;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form id="clientForm">
+                <input type="hidden" id="clientId">
+                
+                <!-- Basic Info -->
+                <div style="margin-bottom: 24px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #667eea;">
+                        <i class="fas fa-info-circle mr-2"></i>기본 정보
+                    </h3>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">번호 *</label>
+                            <input type="text" id="number" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" placeholder="자동 생성">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">거래처명 *</label>
+                            <input type="text" id="company_name" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">담당자 *</label>
+                            <input type="text" id="manager" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">대표자 *</label>
+                            <input type="text" id="ceo_name" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">연락처</label>
+                            <input type="text" id="phone" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" placeholder="000-0000-0000" maxlength="13">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">이메일</label>
+                            <input type="email" id="email" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">
+                                <i class="fab fa-google-drive" style="color: #34a853;"></i> 구글 드라이브 폴더 URL
+                            </label>
+                            <input type="url" id="google_drive_folder" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" placeholder="https://drive.google.com/drive/folders/...">
+                            <small style="color: #6b7280; display: block; margin-top: 4px;">
+                                고객사 관련 파일이 저장된 구글 드라이브 폴더 링크를 입력하세요.
+                            </small>
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">
+                                <i class="fas fa-building" style="color: #f59e0b;"></i> 매매사업자 부동산 폴더 URL
+                            </label>
+                            <input type="url" id="real_estate_drive_folder" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" placeholder="https://drive.google.com/drive/folders/...">
+                            <small style="color: #6b7280; display: block; margin-top: 4px;">
+                                매매사업자 부동산 관련 파일이 저장된 구글 드라이브 폴더 링크를 입력하세요.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Business Info -->
+                <div style="margin-bottom: 24px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #667eea;">
+                        <i class="fas fa-briefcase mr-2"></i>사업자 정보
+                    </h3>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">사업자번호 *</label>
+                            <input type="text" id="business_number" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" placeholder="000-00-00000" maxlength="12">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">주민등록번호</label>
+                            <input type="text" id="resident_number" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" placeholder="000000-0000000" maxlength="14">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">법인등록번호</label>
+                            <input type="text" id="corporate_number" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" placeholder="000000-0000000" maxlength="14">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">업태 *</label>
+                            <input type="text" id="business_type" required class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">종목</label>
+                            <input type="text" id="business_item" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">업종코드</label>
+                            <input type="text" id="business_code" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500">
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">우편번호</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="postal_code" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" readonly>
+                                <button type="button" id="searchPostalCode" class="btn btn-secondary" style="white-space: nowrap;">
+                                    <i class="fas fa-search"></i> 우편번호 검색
+                                </button>
+                            </div>
+                        </div>
+                        <div style="grid-column: 1 / -1;">
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">사업장 주소 *</label>
+                            <input type="text" id="address" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" placeholder="우편번호 검색 후 상세주소를 추가로 입력하세요">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tax Info -->
+                <div style="margin-bottom: 24px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #667eea;">
+                        <i class="fas fa-file-invoice-dollar mr-2"></i>세무 정보
+                    </h3>
+                    
+                    <!-- 해임여부 체크박스 (세무정보 상단) -->
+                    <div style="margin-bottom: 16px; padding: 16px; background: #fef2f2; border: 2px solid #fca5a5; border-radius: 8px;">
+                        <label style="display: flex; align-items: center; cursor: pointer; font-weight: 600; color: #991b1b;">
+                            <input type="checkbox" id="is_terminated" style="width: 20px; height: 20px; margin-right: 12px; cursor: pointer;">
+                            <i class="fas fa-user-times mr-2"></i>해임여부
+                        </label>
+                        <p style="margin-top: 8px; font-size: 13px; color: #7f1d1d;">
+                            ※ 체크 시 해임고객 관리 페이지로 이동됩니다
+                        </p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">공급가액</label>
+                            <input type="number" id="supply_amount" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" placeholder="0">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">세액 (자동 계산)</label>
+                            <input type="number" id="tax_amount" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" placeholder="0" readonly style="background-color: #f3f4f6;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-weight: 600; margin-bottom: 8px;">최초출금월</label>
+                            <input type="text" id="first_withdrawal_month" class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-purple-500" placeholder="2024-01">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Hometax Info -->
+                <div style="margin-bottom: 24px;">
+                    <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 16px; color: #667eea;">
+                        <i class="fas fa-key mr-2"></i>홈택스 정보
+                    </h3>
+                    <div style="padding: 16px; background: #fef3c7; border-radius: 8px; border: 2px solid #fbbf24; margin-bottom: 12px;">
+                        <div style="display: flex; align-items: center; gap: 8px; color: #92400e; font-size: 13px; margin-bottom: 12px;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>민감한 정보입니다. 외부 유출에 주의하세요.</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                            <div>
+                                <label style="display: block; font-weight: 600; margin-bottom: 8px;">
+                                    <i class="fas fa-user mr-1"></i>홈택스 아이디
+                                </label>
+                                <input type="text" id="hometax_id" class="w-full px-4 py-2 border-2 border-yellow-300 rounded-lg focus:outline-none focus:border-yellow-500" placeholder="홈택스 로그인 아이디">
+                            </div>
+                            <div>
+                                <label style="display: block; font-weight: 600; margin-bottom: 8px;">
+                                    <i class="fas fa-lock mr-1"></i>홈택스 비밀번호
+                                </label>
+                                <input type="password" id="hometax_password" class="w-full px-4 py-2 border-2 border-yellow-300 rounded-lg focus:outline-none focus:border-yellow-500" placeholder="홈택스 로그인 비밀번호">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Buttons -->
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" id="cancelBtn" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> 취소
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 저장
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Quick View Modal (빠른 조회) -->
+    <div id="quickViewModal" class="modal-backdrop" style="display: none;">
+        <div class="modal" style="max-width: 800px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 style="font-size: 24px; font-weight: 700;" id="quickViewTitle">고객사 정보</h2>
+                <button onclick="closeQuickView()" style="font-size: 24px; background: none; border: none; cursor: pointer; color: #9ca3af;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Loading State -->
+            <div id="quickViewLoading" style="text-align: center; padding: 60px;">
+                <div class="spinner" style="margin: 0 auto;"></div>
+            </div>
+
+            <!-- Tabs -->
+            <div id="quickViewContent" style="display: none;">
+                <div style="display: flex; gap: 12px; border-bottom: 2px solid #e5e7eb; margin-bottom: 24px;">
+                    <button class="tab-btn active" onclick="switchTab('basic')" data-tab="basic">
+                        <i class="fas fa-info-circle"></i> 기본정보
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('business')" data-tab="business">
+                        <i class="fas fa-briefcase"></i> 사업자정보
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('tax')" data-tab="tax">
+                        <i class="fas fa-file-invoice-dollar"></i> 세무정보
+                    </button>
+                </div>
+
+                <!-- Basic Info Tab -->
+                <div id="tab-basic" class="tab-content active">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                        <div class="info-item">
+                            <label>번호</label>
+                            <div id="qv-number">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>거래처명</label>
+                            <div id="qv-company_name" style="font-weight: 600; color: #667eea;">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>담당자</label>
+                            <div id="qv-manager">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>대표자</label>
+                            <div id="qv-ceo_name">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>연락처</label>
+                            <div id="qv-contact">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>이메일</label>
+                            <div id="qv-email">-</div>
+                        </div>
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <label><i class="fab fa-google-drive" style="color: #34a853;"></i> 구글 드라이브 폴더 (기장)</label>
+                            <div id="qv-google_drive_folder">-</div>
+                        </div>
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <label><i class="fas fa-building" style="color: #f59e0b;"></i> 매매사업자 부동산 폴더</label>
+                            <div id="qv-real_estate_drive_folder">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Business Info Tab -->
+                <div id="tab-business" class="tab-content">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                        <div class="info-item">
+                            <label>사업자번호</label>
+                            <div id="qv-business_number" style="font-family: monospace;">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>주민등록번호</label>
+                            <div id="qv-resident_number" style="font-family: monospace;">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>법인등록번호</label>
+                            <div id="qv-corp_number" style="font-family: monospace;">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>업태</label>
+                            <div id="qv-business_type">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>종목</label>
+                            <div id="qv-business_item">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>업종코드</label>
+                            <div id="qv-business_code">-</div>
+                        </div>
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <label>우편번호</label>
+                            <div id="qv-postal_code">-</div>
+                        </div>
+                        <div class="info-item" style="grid-column: 1 / -1;">
+                            <label>사업장 주소</label>
+                            <div id="qv-address">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tax Info Tab -->
+                <div id="tab-tax" class="tab-content">
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                        <div class="info-item">
+                            <label>공급가액</label>
+                            <div id="qv-supply_amount" style="font-weight: 600; color: #059669;">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>세액</label>
+                            <div id="qv-tax_amount" style="font-weight: 600; color: #0891b2;">-</div>
+                        </div>
+                        <div class="info-item">
+                            <label>최초출금월</label>
+                            <div id="qv-first_withdrawal_month">-</div>
+                        </div>
+                        <div class="info-item" style="grid-column: 1 / -1; background: #fef3c7; padding: 16px; border-radius: 8px; border: 2px solid #fbbf24;">
+                            <label style="color: #92400e;">홈택스 아이디</label>
+                            <div id="qv-hometax_id" style="font-family: monospace; color: #78350f; margin-bottom: 12px;">-</div>
+                            <label style="color: #92400e;">홈택스 비밀번호</label>
+                            <div id="qv-hometax_password" style="font-family: monospace; color: #78350f;">••••••••</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; padding-top: 24px; border-top: 1px solid #e5e7eb;">
+                    <button class="btn btn-secondary" onclick="closeQuickView()">
+                        <i class="fas fa-times"></i> 닫기
+                    </button>
+                    <button class="btn btn-primary" onclick="openDetailPage()">
+                        <i class="fas fa-external-link-alt"></i> 상세 페이지로 이동
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daum Postcode API -->
+    <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+    
+    <!-- Supabase Configuration and Auth -->
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-auth.js"></script>
+    <script src="js/supabase-db.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/clients.js"></script>
+    <script src="js/auto-backup.js"></script>
+    
+    <script>
+        // Check authentication and update UI
+        SupabaseAuth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // Firebase 사용자 정보로 UI 업데이트
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    document.getElementById('userName').textContent = userData.name || user.email;
+                    document.getElementById('userRole').textContent = userData.role === 'admin' ? '관리자' : '매니저';
+                    document.getElementById('userAvatar').textContent = (userData.name || user.email).charAt(0);
+                } else {
+                    // Firestore에 사용자 정보가 없으면 기본값 사용
+                    document.getElementById('userName').textContent = user.email;
+                    document.getElementById('userRole').textContent = '매니저';
+                    document.getElementById('userAvatar').textContent = user.email.charAt(0);
+                }
+            } catch (error) {
+                console.error('사용자 정보 로드 오류:', error);
+                // 오류 발생시에도 기본 정보 표시
+                document.getElementById('userName').textContent = user.email;
+                document.getElementById('userRole').textContent = '매니저';
+                document.getElementById('userAvatar').textContent = user.email.charAt(0);
+            }
+        });
+        
+        // Test if scripts loaded
+        console.log('✅ Scripts loaded successfully');
+        
+        // Auto-format input fields (숫자만 입력, 자동 포맷팅)
+        
+        // 전화번호 포맷팅 (000-0000-0000)
+        document.getElementById('phone').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/[^0-9]/g, '');
+            if (value.length > 11) value = value.slice(0, 11);
+            
+            if (value.length >= 7) {
+                e.target.value = value.slice(0, 3) + '-' + value.slice(3, 7) + '-' + value.slice(7);
+            } else if (value.length >= 3) {
+                e.target.value = value.slice(0, 3) + '-' + value.slice(3);
+            } else {
+                e.target.value = value;
+            }
+        });
+        
+        // 사업자번호 포맷팅 (000-00-00000)
+        document.getElementById('business_number').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/[^0-9]/g, '');
+            if (value.length > 10) value = value.slice(0, 10);
+            
+            if (value.length >= 5) {
+                e.target.value = value.slice(0, 3) + '-' + value.slice(3, 5) + '-' + value.slice(5);
+            } else if (value.length >= 3) {
+                e.target.value = value.slice(0, 3) + '-' + value.slice(3);
+            } else {
+                e.target.value = value;
+            }
+        });
+        
+        // 법인등록번호 포맷팅 (000000-0000000)
+        document.getElementById('corporate_number').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/[^0-9]/g, '');
+            if (value.length > 13) value = value.slice(0, 13);
+            
+            if (value.length > 6) {
+                e.target.value = value.slice(0, 6) + '-' + value.slice(6);
+            } else {
+                e.target.value = value;
+            }
+        });
+        
+        // 주민등록번호 포맷팅 (000000-0000000)
+        document.getElementById('resident_number').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/[^0-9]/g, '');
+            if (value.length > 13) value = value.slice(0, 13);
+            
+            if (value.length > 6) {
+                e.target.value = value.slice(0, 6) + '-' + value.slice(6);
+            } else {
+                e.target.value = value;
+            }
+        });
+    </script>
+</body>
+</html>

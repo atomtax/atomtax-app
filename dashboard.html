@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>대시보드 - 아톰세무회계</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span>아톰세무회계</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item active">
+                    <i class="fas fa-home"></i>
+                    <span>대시보드</span>
+                </a>
+                
+                <!-- 고객사 관리 (드롭다운) -->
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-item" onclick="toggleDropdown(event)">
+                        <i class="fas fa-building"></i>
+                        <span>고객사 관리</span>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <div class="dropdown-content">
+                        <a href="clients.html" class="dropdown-item">
+                            <i class="fas fa-briefcase"></i>
+                            <span>기장고객 관리</span>
+                        </a>
+                        <a href="clients-terminated.html" class="dropdown-item">
+                            <i class="fas fa-user-times"></i>
+                            <span>해임고객 관리</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 매매사업자 관리 (드롭다운) -->
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-item" onclick="toggleDropdown(event)">
+                        <i class="fas fa-store"></i>
+                        <span>매매사업자 관리</span>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <div class="dropdown-content">
+                        <a href="traders-data.html" class="dropdown-item">
+                            <i class="fas fa-database"></i>
+                            <span>매매사업자 데이터</span>
+                        </a>
+                        <a href="traders-checklist.html" class="dropdown-item">
+                            <i class="fas fa-check-square"></i>
+                            <span>매매사업자 체크리스트</span>
+                        </a>
+                        <a href="traders-vat.html" class="dropdown-item">
+                            <i class="fas fa-calculator"></i>
+                            <span>부가가치세 계산</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <a href="#" class="nav-item">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>세무 관리</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>통계 분석</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>설정</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="nav-item" style="width: 100%; border: none; background: none;">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>로그아웃</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="topbar">
+                <div class="topbar-left">
+                    <button class="menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="topbar-title">대시보드</h1>
+                </div>
+                
+                <div class="topbar-right">
+                    <div class="topbar-search">
+                        <input type="text" placeholder="검색...">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    
+                    <div class="user-profile">
+                        <div class="user-avatar" id="userAvatar">A</div>
+                        <div class="user-info">
+                            <div class="user-name" id="userName">관리자</div>
+                            <div class="user-role" id="userRole">Admin</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon primary">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">총 고객사</div>
+                            <div class="stat-value" id="totalClients">0</div>
+                            <div class="stat-change positive">
+                                <i class="fas fa-arrow-up"></i> 지난달 대비
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon success">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">총 공급가액</div>
+                            <div class="stat-value" id="totalSupply">0원</div>
+                            <div class="stat-change positive">
+                                <i class="fas fa-arrow-up"></i> 12% 증가
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon warning">
+                            <i class="fas fa-file-invoice"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">이번 달 처리</div>
+                            <div class="stat-value" id="monthlyProcessed">0</div>
+                            <div class="stat-change positive">
+                                <i class="fas fa-check"></i> 진행 중
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon info">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">담당자</div>
+                            <div class="stat-value" id="totalManagers">0</div>
+                            <div class="stat-change">
+                                <i class="fas fa-user-check"></i> 활성 계정
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 24px;">
+                    <!-- Business Type Chart -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-chart-pie mr-2"></i>업종별 분포
+                            </h3>
+                        </div>
+                        <div style="height: 300px;">
+                            <canvas id="businessTypeChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Monthly Trend Chart -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-chart-line mr-2"></i>월별 추이
+                            </h3>
+                        </div>
+                        <div style="height: 300px;">
+                            <canvas id="monthlyTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Clients Table -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">
+                            <i class="fas fa-list mr-2"></i>최근 등록 고객사
+                        </h3>
+                        <a href="clients.html" class="btn btn-primary">
+                            전체 보기 <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>상호</th>
+                                    <th>담당자</th>
+                                    <th>대표자</th>
+                                    <th>업종</th>
+                                    <th>공급가액</th>
+                                    <th>등록일</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recentClientsTable">
+                                <tr>
+                                    <td colspan="6" style="text-align: center; padding: 40px;">
+                                        <div class="spinner" style="margin: 0 auto;"></div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase Configuration and Auth -->
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-auth.js"></script>
+    <script src="js/supabase-db.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/auto-backup.js"></script>
+    <script>
+        // Check authentication
+        SupabaseAuth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // Display user info from Firestore
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    document.getElementById('userName').textContent = userData.name || user.email;
+                    document.getElementById('userRole').textContent = userData.role === 'admin' ? '관리자' : '매니저';
+                    document.getElementById('userAvatar').textContent = (userData.name || user.email).charAt(0).toUpperCase();
+                } else {
+                    // Firestore에 사용자 정보가 없으면 기본값 사용
+                    const displayName = user.displayName || user.email.split('@')[0];
+                    document.getElementById('userName').textContent = displayName;
+                    document.getElementById('userRole').textContent = '매니저';
+                    document.getElementById('userAvatar').textContent = displayName.charAt(0).toUpperCase();
+                }
+            } catch (error) {
+                console.error('사용자 정보 로드 오류:', error);
+                const displayName = user.displayName || user.email.split('@')[0];
+                document.getElementById('userName').textContent = displayName;
+                document.getElementById('userRole').textContent = '매니저';
+                document.getElementById('userAvatar').textContent = displayName.charAt(0).toUpperCase();
+            }
+            
+            // Load dashboard data after auth confirmed
+            loadDashboard();
+        });
+
+        // Global variables
+        let allClients = [];
+        let businessTypeChart = null;
+        let monthlyTrendChart = null;
+
+        // Load dashboard data
+        async function loadDashboard() {
+            try {
+                const response = await API.getClients();
+                allClients = response.data || [];
+                
+                // Update stats
+                updateStats();
+                
+                // Update charts
+                updateCharts();
+                
+                // Update recent clients table
+                updateRecentClients();
+                
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                showNotification('대시보드 데이터 로드 중 오류가 발생했습니다.', 'error');
+            }
+        }
+
+        // Update statistics
+        function updateStats() {
+            // Total clients
+            document.getElementById('totalClients').textContent = formatNumber(allClients.length);
+            
+            // Total supply amount
+            const totalSupply = allClients.reduce((sum, client) => {
+                return sum + (parseFloat(client.supply_amount) || 0);
+            }, 0);
+            document.getElementById('totalSupply').textContent = formatCurrency(totalSupply);
+            
+            // Monthly processed (last 30 days)
+            const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+            const recentClients = allClients.filter(client => {
+                return client.created_at && client.created_at > thirtyDaysAgo;
+            });
+            document.getElementById('monthlyProcessed').textContent = formatNumber(recentClients.length);
+            
+            // Total managers
+            const uniqueManagers = new Set(allClients.map(c => c.manager).filter(m => m));
+            document.getElementById('totalManagers').textContent = formatNumber(uniqueManagers.size);
+        }
+
+        // Update charts
+        function updateCharts() {
+            updateBusinessTypeChart();
+            updateMonthlyTrendChart();
+        }
+
+        // Business type distribution chart
+        function updateBusinessTypeChart() {
+            const businessTypes = {};
+            allClients.forEach(client => {
+                const type = client.business_type || '기타';
+                businessTypes[type] = (businessTypes[type] || 0) + 1;
+            });
+            
+            const sortedTypes = Object.entries(businessTypes)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 8); // Top 8
+            
+            const ctx = document.getElementById('businessTypeChart').getContext('2d');
+            
+            if (businessTypeChart) {
+                businessTypeChart.destroy();
+            }
+            
+            businessTypeChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: sortedTypes.map(([type]) => type),
+                    datasets: [{
+                        data: sortedTypes.map(([, count]) => count),
+                        backgroundColor: [
+                            '#667eea', '#764ba2', '#f59e0b', '#10b981',
+                            '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Monthly trend chart
+        function updateMonthlyTrendChart() {
+            // Group by month
+            const monthlyData = {};
+            allClients.forEach(client => {
+                if (client.created_at) {
+                    const date = new Date(client.created_at);
+                    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
+                }
+            });
+            
+            // Get last 6 months
+            const months = [];
+            const counts = [];
+            for (let i = 5; i >= 0; i--) {
+                const date = new Date();
+                date.setMonth(date.getMonth() - i);
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                months.push(`${date.getMonth() + 1}월`);
+                counts.push(monthlyData[monthKey] || 0);
+            }
+            
+            const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
+            
+            if (monthlyTrendChart) {
+                monthlyTrendChart.destroy();
+            }
+            
+            monthlyTrendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: '신규 고객사',
+                        data: counts,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update recent clients table
+        function updateRecentClients() {
+            const tbody = document.getElementById('recentClientsTable');
+            
+            if (allClients.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 40px; color: #9ca3af;">
+                            <i class="fas fa-inbox fa-3x mb-3" style="display: block;"></i>
+                            등록된 고객사가 없습니다.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Sort by created date (most recent first)
+            const recentClients = [...allClients]
+                .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
+                .slice(0, 5);
+            
+            tbody.innerHTML = recentClients.map(client => `
+                <tr>
+                    <td><strong>${client.company_name || '-'}</strong></td>
+                    <td>${client.manager || '-'}</td>
+                    <td>${client.ceo_name || '-'}</td>
+                    <td><span class="badge badge-primary">${client.business_type || '-'}</span></td>
+                    <td>${formatCurrency(client.supply_amount)}</td>
+                    <td>${formatDate(client.created_at)}</td>
+                </tr>
+            `).join('');
+        }
+
+        // Initialize dashboard
+        loadDashboard();
+    </script>
+</body>
+</html>

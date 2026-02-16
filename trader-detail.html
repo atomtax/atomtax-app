@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>매매사업자 상세 - 아톰세무회계</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/traders-performance.css">
+    
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        /* 매매사업자 전용 경량 스타일 */
+        .trader-container {
+            max-width: 100%;
+            margin: 0;
+            padding: 15px;
+            background: #fff;
+        }
+        
+        .trader-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 2px solid #e5e7eb;
+            margin-bottom: 20px;
+        }
+        
+        .trader-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        
+        .trader-card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .trader-card-header {
+            padding: 12px 16px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            font-weight: 600;
+            font-size: 15px;
+            color: #374151;
+        }
+        
+        .trader-card-body {
+            padding: 15px;
+        }
+        
+        .trader-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .trader-table th {
+            padding: 8px 10px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            font-weight: 600;
+            color: #374151;
+            text-align: center;
+        }
+        
+        .trader-table td {
+            padding: 6px 8px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .trader-input {
+            width: 100%;
+            padding: 5px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 3px;
+            font-size: 13px;
+            background: white;
+            color: #1f2937;
+        }
+        
+        .trader-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        /* Select dropdown */
+        .trader-input select,
+        select.trader-input {
+            background: white;
+            color: #1f2937;
+        }
+        
+        /* Option elements */
+        .trader-input option,
+        select.trader-input option {
+            background: white;
+            color: #1f2937;
+            padding: 8px;
+        }
+        
+        .trader-input[readonly] {
+            background: #f9fafb;
+            cursor: not-allowed;
+        }
+        
+        .trader-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        
+        .trader-btn:hover {
+            opacity: 0.85;
+        }
+        
+        .trader-btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .trader-btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .trader-btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .trader-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .trader-section-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #1e40af;
+        }
+        
+        .trader-totals {
+            padding: 12px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .trader-total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 14px;
+        }
+        
+        .trader-total-label {
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        .trader-total-value {
+            font-weight: 700;
+            font-size: 15px;
+        }
+        
+        .property-link {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .property-link:hover {
+            text-decoration: underline;
+        }
+        
+        /* 진행단계 색상 */
+        .status-미확인 {
+            background: #f3f4f6 !important;
+            color: #6b7280 !important;
+            border: 2px solid #e5e7eb !important;
+        }
+        
+        .status-확인 {
+            background: #dbeafe !important;
+            color: #1e40af !important;
+            border: 2px solid #93c5fd !important;
+        }
+        
+        .status-위하고입력 {
+            background: #fed7aa !important;
+            color: #c2410c !important;
+            border: 2px solid #fb923c !important;
+        }
+        
+        .status-고객안내 {
+            background: #fef3c7 !important;
+            color: #92400e !important;
+            border: 2px solid #fbbf24 !important;
+        }
+        
+        .status-신고완료 {
+            background: #d1fae5 !important;
+            color: #065f46 !important;
+            border: 2px solid #6ee7b7 !important;
+        }
+        
+        /* Select 요소 스타일 강화 */
+        select.trader-input {
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        select.trader-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        /* 서류 업로드 버튼 강조 (빨간색) */
+        .btn-upload-document {
+            background: #dc2626 !important;
+            border-color: #dc2626 !important;
+            color: white !important;
+            font-weight: 700 !important;
+            animation: pulse-red 2s infinite;
+        }
+        
+        .btn-upload-document:hover {
+            background: #b91c1c !important;
+            border-color: #b91c1c !important;
+            transform: scale(1.05);
+        }
+        
+        @keyframes pulse-red {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
+            }
+        }
+        
+        /* 숨겨진 섹션 */
+        .trader-expense-section {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .trader-expense-section.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="trader-performance">
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span>아톰세무회계</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>대시보드</span>
+                </a>
+                <a href="clients.html" class="nav-item">
+                    <i class="fas fa-building"></i>
+                    <span>고객사 관리</span>
+                </a>
+                
+                <!-- 매매사업자 관리 (드롭다운) -->
+                <div class="nav-dropdown active">
+                    <a href="#" class="nav-item" onclick="toggleDropdown(event)">
+                        <i class="fas fa-store"></i>
+                        <span>매매사업자 관리</span>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <div class="dropdown-content">
+                        <a href="traders-data.html" class="dropdown-item active">
+                            <i class="fas fa-database"></i>
+                            <span>매매사업자 데이터</span>
+                        </a>
+                        <a href="traders-checklist.html" class="dropdown-item">
+                            <i class="fas fa-check-square"></i>
+                            <span>매매사업자 체크리스트</span>
+                        </a>
+                        <a href="traders-vat.html" class="dropdown-item">
+                            <i class="fas fa-calculator"></i>
+                            <span>부가가치세 계산</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <a href="#" class="nav-item">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>세무 관리</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>통계 분석</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>설정</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="nav-item" style="width: 100%; border: none; background: none;">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>로그아웃</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="topbar">
+                <div class="topbar-left">
+                    <button class="menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="topbar-title" id="pageTitle">매매사업자 상세</h1>
+                </div>
+                
+                <div class="topbar-right">
+                    <div class="user-profile">
+                        <div class="user-avatar" id="userAvatar">A</div>
+                        <div class="user-info">
+                            <div class="user-name" id="userName">관리자</div>
+                            <div class="user-role" id="userRole">Admin</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="trader-container">
+                <!-- Back Button -->
+                <div style="margin-bottom: 15px;">
+                    <button onclick="history.back()" class="trader-btn trader-btn-secondary">
+                        <i class="fas fa-arrow-left"></i> 목록으로
+                    </button>
+                </div>
+
+                <!-- 물건 목록 -->
+                <div class="trader-card">
+                    <div class="trader-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <i class="fas fa-warehouse"></i> 물건 목록
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="openRealEstateDrive()" class="trader-btn" id="realEstateDriveBtn" style="padding: 8px 16px; font-size: 13px; background: #f59e0b; border-color: #f59e0b; color: white;">
+                                <i class="fas fa-building"></i> 부동산 폴더
+                            </button>
+                            <button onclick="window.open('traders-checklist.html', '_blank')" class="trader-btn" style="padding: 8px 16px; font-size: 13px; background: #8b5cf6; border-color: #8b5cf6; color: white;">
+                                <i class="fas fa-clipboard-list"></i> 체크리스트
+                            </button>
+                            <button onclick="downloadExcelTemplate()" class="trader-btn trader-btn-secondary" style="padding: 8px 16px; font-size: 13px;">
+                                <i class="fas fa-download"></i> 양식 다운로드
+                            </button>
+                            <button onclick="document.getElementById('excelUpload').click()" class="trader-btn trader-btn-primary" style="padding: 8px 16px; font-size: 13px;">
+                                <i class="fas fa-upload"></i> 엑셀 업로드
+                            </button>
+                            <input type="file" id="excelUpload" accept=".xlsx, .xls" style="display: none;" onchange="handleExcelUpload(event)">
+                        </div>
+                    </div>
+                    
+                    <div class="trader-card-body">
+                        <div style="overflow-x: auto;">
+                            <table class="trader-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 120px;">물건명</th>
+                                        <th style="width: 120px;">취득가액</th>
+                                        <th style="width: 120px;">기타필요경비</th>
+                                        <th style="width: 120px;">양도가액</th>
+                                        <th style="width: 120px;">양도소득</th>
+                                        <th style="width: 100px;">취득일</th>
+                                        <th style="width: 100px;">양도일</th>
+                                        <th style="width: 100px; background: #fef3c7;">신고기한</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventoryTableBody">
+                                    <tr>
+                                        <td colspan="8" style="padding: 20px; text-align: center; color: #9ca3af;">
+                                            데이터를 입력하세요.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div style="margin-top: 12px; text-align: right;">
+                            <button class="trader-btn trader-btn-primary" onclick="addInventoryRow()">
+                                <i class="fas fa-plus"></i> 행 추가
+                            </button>
+                            <button class="trader-btn trader-btn-success" style="margin-left: 8px;" onclick="saveInventoryData()">
+                                <i class="fas fa-save"></i> 저장
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 필요경비 상세 섹션 -->
+                <div id="expenseDetailSection" class="trader-expense-section">
+                    <div class="trader-card">
+                        <div class="trader-section-header">
+                            <div class="trader-section-title">
+                                <i class="fas fa-list-ul"></i> 필요경비 상세
+                            </div>
+                            <button class="trader-btn trader-btn-secondary" onclick="closeExpenseSection()" style="padding: 6px 12px; font-size: 12px;">
+                                <i class="fas fa-times"></i> 닫기
+                            </button>
+                        </div>
+                        
+                        <div class="trader-card-body">
+                            <!-- 물건명 입력 및 저장 버튼 -->
+                            <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 12px; justify-content: space-between;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <label style="font-weight: 600; color: #374151; font-size: 13px;">물건명:</label>
+                                    <input type="text" id="expensePropertyNameInput" class="trader-input" 
+                                           style="max-width: 250px; font-weight: 600;"
+                                           onchange="updatePropertyName()"
+                                           placeholder="물건명 입력">
+                                </div>
+                                <button class="trader-btn trader-btn-success" onclick="saveDetailExpenses()">
+                                    <i class="fas fa-save"></i> 저장 및 반영
+                                </button>
+                            </div>
+                            
+                            <div style="overflow-x: auto;">
+                                <table class="trader-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 40px;">no</th>
+                                            <th style="width: 180px;">비용명</th>
+                                            <th style="width: 100px;">구분</th>
+                                            <th style="width: 120px;">금액</th>
+                                            <th style="width: 90px;">예정신고<br>비용인정</th>
+                                            <th style="width: 90px;">종합소득세<br>비용인정</th>
+                                            <th>비고</th>
+                                            <th style="width: 60px;">삭제</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="expenseDetailTableBody">
+                                        <!-- 10줄이 미리 생성됨 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="trader-totals">
+                                <div class="trader-total-row">
+                                    <span class="trader-total-label">취득가액 합계:</span>
+                                    <span class="trader-total-value" style="color: #667eea;" id="detailAcquisitionTotal">0원</span>
+                                </div>
+                                <div class="trader-total-row">
+                                    <span class="trader-total-label">기타필요경비 합계:</span>
+                                    <span class="trader-total-value" style="color: #10b981;" id="detailOtherExpensesTotal">0원</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase Configuration and Auth -->
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-auth.js"></script>
+    <script src="js/supabase-db.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/auto-backup.js"></script>
+    <script src="js/trader-detail.js"></script>
+    <script>
+        // Check authentication
+        SupabaseAuth.onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+        });
+        
+        // 필요경비 섹션 표시 최적화
+        function openExpenseSection(index) {
+            currentPropertyIndex = index;
+            const property = inventoryRows[index];
+            
+            document.getElementById('expensePropertyNameInput').value = property.property_name || '물건' + (index + 1);
+            
+            initializeDetailExpenseRows(property.expenses || []);
+            renderDetailExpensesTable();
+            calculateDetailExpenseTotals();
+            
+            const section = document.getElementById('expenseDetailSection');
+            section.classList.add('active');
+            
+            // 부드러운 스크롤 대신 즉시 이동
+            section.scrollIntoView({ block: 'nearest' });
+        }
+        
+        function closeExpenseSection() {
+            document.getElementById('expenseDetailSection').classList.remove('active');
+            currentPropertyIndex = -1;
+        }
+    </script>
+
+    <!-- 보고서 모달 -->
+    <div id="reportModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; max-width: 800px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+            <!-- Report Header -->
+            <div style="padding: 20px; border-bottom: 2px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-size: 20px; font-weight: 700; color: #1f2937; margin: 0;">토지등 매매차익 예정신고 보고서</h3>
+                <button onclick="closeReportModal()" style="background: none; border: none; font-size: 24px; color: #9ca3af; cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; transition: all 0.2s;" onmouseover="this.style.background='#f3f4f6'; this.style.color='#1f2937';" onmouseout="this.style.background='none'; this.style.color='#9ca3af';">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Report Content -->
+            <div id="reportContent" style="padding: 40px; background: white;">
+                <!-- Content will be dynamically generated -->
+            </div>
+            
+            <!-- Report Actions -->
+            <div style="padding: 20px; border-top: 2px solid #f3f4f6; display: flex; gap: 12px; justify-content: flex-end;">
+                <button onclick="closeReportModal()" style="padding: 10px 20px; background: #e5e7eb; color: #1f2937; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">
+                    닫기
+                </button>
+                <button onclick="downloadPropertyReport()" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">
+                    <i class="fas fa-download"></i> PNG 다운로드
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 입력참고용 모달 -->
+    <div id="referenceModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 12px; max-width: 900px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+            <!-- Header -->
+            <div style="padding: 20px; border-bottom: 2px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-size: 20px; font-weight: 700; color: #1f2937; margin: 0;">
+                    <i class="fas fa-info-circle" style="color: #3b82f6;"></i> 입력 참고용 - 토지등 매매차익 예정신고서
+                </h3>
+                <button onclick="closeReferenceModal()" style="background: none; border: none; font-size: 24px; color: #9ca3af; cursor: pointer; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; transition: all 0.2s;" onmouseover="this.style.background='#f3f4f6'; this.style.color='#1f2937';" onmouseout="this.style.background='none'; this.style.color='#9ca3af';">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Content -->
+            <div id="referenceContent" style="padding: 30px;">
+                <!-- Content will be dynamically generated -->
+            </div>
+            
+            <!-- Actions -->
+            <div style="padding: 20px; border-top: 2px solid #f3f4f6; display: flex; gap: 12px; justify-content: flex-end;">
+                <button onclick="closeReferenceModal()" style="padding: 10px 20px; background: #e5e7eb; color: #1f2937; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">
+                    닫기
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

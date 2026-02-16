@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기장총괄표 분석</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .info-box {
+            background: #f0f9ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 13px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #5568d3;
+        }
+        .sheet-info {
+            margin: 20px 0;
+            padding: 15px;
+            background: #fef3c7;
+            border-radius: 5px;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 기장총괄표.xlsx 파일 분석</h1>
+        
+        <div class="info-box">
+            <strong>💡 분석 목적:</strong> 기장총괄표 엑셀 파일의 구조를 파악하고, 일괄업로드 양식으로 변환하기 위한 분석입니다.
+        </div>
+
+        <button class="btn" onclick="document.getElementById('fileInput').click()">📂 파일 선택</button>
+        <button class="btn" onclick="analyzeFile()">🔍 파일 분석</button>
+        <button class="btn" onclick="generateUploadTemplate()">📥 일괄업로드 양식 생성 (1-20번)</button>
+        
+        <input type="file" id="fileInput" accept=".xlsx, .xls" style="display: none;" onchange="handleFileSelect(event)">
+        
+        <div id="output"></div>
+    </div>
+
+    <script>
+        let workbook = null;
+        let selectedFile = null;
+
+        function handleFileSelect(event) {
+            selectedFile = event.target.files[0];
+            if (selectedFile) {
+                document.getElementById('output').innerHTML = `
+                    <div class="sheet-info">
+                        <strong>✅ 파일 선택됨:</strong> ${selectedFile.name} (${(selectedFile.size / 1024).toFixed(2)} KB)
+                    </div>
+                `;
+            }
+        }
+
+        async function analyzeFile() {
+            if (!selectedFile) {
+                alert('파일을 먼저 선택해주세요!');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    workbook = XLSX.read(data, {type: 'array'});
+                    
+                    let html = '<h2>📋 파일 구조 분석 결과</h2>';
+                    
+                    // 시트 목록
+                    html += `<div class="sheet-info"><strong>시트 개수:</strong> ${workbook.SheetNames.length}개</div>`;
+                    html += '<h3>시트 목록:</h3><ul>';
+                    workbook.SheetNames.forEach((name, index) => {
+                        html += `<li><strong>${index + 1}. ${name}</strong></li>`;
+                    });
+                    html += '</ul>';
+                    
+                    // 각 시트 분석
+                    workbook.SheetNames.forEach((sheetName, index) => {
+                        const worksheet = workbook.Sheets[sheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ''});
+                        
+                        html += `<div class="sheet-info">
+                            <h3>📄 시트 ${index + 1}: ${sheetName}</h3>
+                            <p><strong>행 개수:</strong> ${jsonData.length}행</p>
+                        </div>`;
+                        
+                        // 첫 10행 표시
+                        if (jsonData.length > 0) {
+                            html += '<h4>첫 10행 미리보기:</h4>';
+                            html += '<table>';
+                            jsonData.slice(0, 10).forEach((row, rowIndex) => {
+                                html += '<tr>';
+                                if (rowIndex === 0) {
+                                    row.forEach(cell => {
+                                        html += `<th>${cell || ''}</th>`;
+                                    });
+                                } else {
+                                    row.forEach(cell => {
+                                        html += `<td>${cell || ''}</td>`;
+                                    });
+                                }
+                                html += '</tr>';
+                            });
+                            html += '</table>';
+                        }
+                        
+                        // JSON 데이터 샘플 (헤더 포함)
+                        const jsonWithHeaders = XLSX.utils.sheet_to_json(worksheet, {defval: ''});
+                        if (jsonWithHeaders.length > 0) {
+                            html += '<h4>JSON 형식 (헤더 포함, 처음 3개):</h4>';
+                            html += `<pre>${JSON.stringify(jsonWithHeaders.slice(0, 3), null, 2)}</pre>`;
+                        }
+                    });
+                    
+                    document.getElementById('output').innerHTML = html;
+                } catch (error) {
+                    alert('파일 읽기 오류: ' + error.message);
+                    console.error(error);
+                }
+            };
+            
+            reader.readAsArrayBuffer(selectedFile);
+        }
+
+        function generateUploadTemplate() {
+            if (!workbook) {
+                alert('먼저 파일을 분석해주세요!');
+                return;
+            }
+
+            try {
+                // 여기서 실제 데이터 매핑 로직 구현
+                // 사용자가 분석 결과를 보고 어떤 시트의 어떤 컬럼을 사용할지 결정
+                
+                alert('분석 결과를 확인하고, 어떤 시트의 어떤 컬럼을 사용할지 알려주세요!\\n\\n예시:\\n- 시트명: ?\\n- 사업자번호 컬럼: ?\\n- 물건명 컬럼: ?\\n- 양도가액 컬럼: ?');
+                
+            } catch (error) {
+                alert('양식 생성 오류: ' + error.message);
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>

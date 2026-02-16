@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>데이터 일괄 임포트</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Papa Parse for robust CSV parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+    <div style="max-width: 1200px; margin: 40px auto; padding: 0 20px;">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-database mr-2"></i>고객사 데이터 일괄 임포트
+                </h2>
+            </div>
+            
+            <div style="padding: 24px;">
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
+                    <p style="color: #1e40af; font-weight: 600; margin-bottom: 8px;">
+                        <i class="fas fa-info-circle mr-2"></i>안내사항
+                    </p>
+                    <p style="color: #1e40af; font-size: 14px;">
+                        총괄 시트(master_sheet.csv)에서 고객사 데이터를 자동으로 불러와 등록합니다.<br>
+                        중복된 거래처명 및 사업자번호는 자동으로 건너뛰며, 진행 상황을 실시간으로 표시합니다.<br>
+                        <strong>185번 주식회사 고스서울(데이터 없음)은 자동 제외됩니다.</strong>
+                    </p>
+                </div>
+                
+                <div style="text-align: center; margin: 40px 0;">
+                    <button id="startImport" class="btn btn-primary" style="font-size: 18px; padding: 16px 32px;">
+                        <i class="fas fa-play mr-2"></i>데이터 임포트 시작
+                    </button>
+                </div>
+                
+                <div id="progressContainer" style="display: none;">
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-weight: 600; color: #374151;">진행 상황</span>
+                            <span id="progressText" style="font-weight: 600; color: #667eea;">0 / 0</span>
+                        </div>
+                        <div style="background: #e5e7eb; height: 24px; border-radius: 12px; overflow: hidden;">
+                            <div id="progressBar" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="logContainer" style="background: #1f2937; color: #e5e7eb; padding: 16px; border-radius: 8px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 13px;">
+                        <div id="logs"></div>
+                    </div>
+                </div>
+                
+                <div id="resultContainer" style="display: none; margin-top: 24px;">
+                    <div style="background: #d1fae5; border-left: 4px solid #059669; padding: 16px; border-radius: 4px; margin-bottom: 16px;">
+                        <p style="color: #047857; font-weight: 600; margin-bottom: 8px;">
+                            <i class="fas fa-check-circle mr-2"></i>임포트 완료!
+                        </p>
+                        <p style="color: #047857; font-size: 14px;" id="resultMessage"></p>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <a href="clients.html" class="btn btn-primary">
+                            <i class="fas fa-list mr-2"></i>고객사 목록 보기
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script>
+        let isImporting = false;
+        let importedCount = 0;
+        let skippedCount = 0;
+        let failedCount = 0;
+
+        function addLog(message, type = 'info') {
+            const logsContainer = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString('ko-KR');
+            const colors = {
+                info: '#60a5fa',
+                success: '#34d399',
+                warning: '#fbbf24',
+                error: '#f87171'
+            };
+            const icons = {
+                info: 'info-circle',
+                success: 'check-circle',
+                warning: 'exclamation-triangle',
+                error: 'times-circle'
+            };
+            
+            const logEntry = document.createElement('div');
+            logEntry.style.marginBottom = '4px';
+            logEntry.innerHTML = `<span style="color: #9ca3af;">[${timestamp}]</span> <i class="fas fa-${icons[type]}" style="color: ${colors[type]};"></i> ${message}`;
+            logsContainer.appendChild(logEntry);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        function updateProgress(current, total) {
+            const percent = Math.round((current / total) * 100);
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressText').textContent = `${current} / ${total}`;
+        }
+
+        async function loadCSV() {
+            try {
+                const response = await fetch('master_sheet.csv');
+                const text = await response.text();
+                
+                // Use Papa Parse for robust CSV parsing
+                return new Promise((resolve, reject) => {
+                    Papa.parse(text, {
+                        header: false,
+                        skipEmptyLines: true,
+                        complete: function(results) {
+                            try {
+                                const rows = results.data;
+                                // Skip header row
+                                const dataRows = rows.slice(1);
+                                
+                                const clients = dataRows.map((values, index) => {
+                                    // CSV 구조 (총괄 시트)
+                                    // 0: 상호(번호포함), 1: 담당자, 2: 사업자(숫자만), 3: 사업자(포맷), 
+                                    // 4: 법인등록번호, 5: 주민번호, 6: 연락처, 7: 상호(중복), 
+                                    // 8: 대표자, 9: 사업장주소, 10: 업종코드, 11: 업태, 12: 종목, 
+                                    // 13: 이메일, 14: 사회보험EDI, 15: 공급가액, 16: 세액, 
+                                    // 17: 공급가액2, 18: 최초출금월
+                                    
+                                    const companyNameWithNumber = (values[0] || '').trim();
+                                    // 번호 추출: "1. 금아실업" -> "1"
+                                    const numberMatch = companyNameWithNumber.match(/^(\d+)\./);
+                                    const number = numberMatch ? numberMatch[1] : (index + 1).toString();
+                                    // 거래처명 추출: "1. 금아실업" -> "금아실업"
+                                    const company_name = companyNameWithNumber.replace(/^\d+\.\s*/, '').trim();
+                                    
+                                    const manager = (values[1] || '').trim();
+                                    const business_number = (values[3] || values[2] || '').trim().replace(/\s+/g, ''); // 공백 제거
+                                    const corporate_number = (values[4] || '').trim();
+                                    const phone = (values[6] || '').trim();
+                                    const ceo_name = (values[8] || '').trim();
+                                    const address = (values[9] || '').trim();
+                                    const business_code = (values[10] || '').trim();
+                                    const business_type = (values[11] || '').trim();
+                                    const business_item = (values[12] || '').trim();
+                                    const email = (values[13] || '').trim();
+                                    const supply_amount = parseFloat((values[15] || '').replace(/[^\d.-]/g, '')) || 0;
+                                    const first_withdrawal_month = (values[18] || '').trim();
+                                    
+                                    return {
+                                        number: number,
+                                        company_name: company_name,
+                                        manager: manager,
+                                        business_number: business_number,
+                                        ceo_name: ceo_name,
+                                        business_type: business_type,
+                                        business_item: business_item,
+                                        business_code: business_code,
+                                        phone: phone,
+                                        email: email,
+                                        postal_code: '',
+                                        address: address,
+                                        corporate_number: corporate_number,
+                                        supply_amount: supply_amount,
+                                        tax_amount: Math.round(supply_amount * 0.1),
+                                        first_withdrawal_month: first_withdrawal_month
+                                    };
+                                }).filter(c => {
+                                    // 유효한 데이터만
+                                    return c.company_name && 
+                                           c.company_name !== '#N/A' && 
+                                           c.company_name !== '' &&
+                                           c.business_number && 
+                                           c.business_number !== '#N/A' &&
+                                           c.business_number !== '';
+                                });
+                                
+                                resolve(clients);
+                            } catch (error) {
+                                reject(error);
+                            }
+                        },
+                        error: function(error) {
+                            reject(error);
+                        }
+                    });
+                });
+            } catch (error) {
+                console.error('Error loading CSV:', error);
+                throw error;
+            }
+        }
+
+        async function importClients() {
+            if (isImporting) return;
+            
+            isImporting = true;
+            document.getElementById('startImport').disabled = true;
+            document.getElementById('progressContainer').style.display = 'block';
+            
+            try {
+                addLog('CSV 파일 로딩 중...', 'info');
+                const clients = await loadCSV();
+                addLog(`총 ${clients.length}개의 거래처 발견`, 'success');
+                
+                // Check existing clients
+                addLog('기존 거래처 확인 중...', 'info');
+                const existingResponse = await API.getClients();
+                const existingClients = existingResponse.data || [];
+                const existingNames = new Set(existingClients.map(c => c.company_name));
+                const existingBusinessNumbers = new Set(existingClients.map(c => c.business_number).filter(b => b));
+                addLog(`기존 거래처 ${existingClients.length}개`, 'info');
+                
+                // Filter out duplicates (by name AND business number)
+                const newClients = clients.filter(c => {
+                    if (existingNames.has(c.company_name)) {
+                        addLog(`⚠️ 중복 거래처명: ${c.company_name} (건너뜀)`, 'warning');
+                        skippedCount++;
+                        return false;
+                    }
+                    if (existingBusinessNumbers.has(c.business_number)) {
+                        addLog(`⚠️ 중복 사업자번호: ${c.company_name} (${c.business_number}) (건너뜀)`, 'warning');
+                        skippedCount++;
+                        return false;
+                    }
+                    return true;
+                });
+                addLog(`신규 등록 대상: ${newClients.length}개`, 'success');
+                
+                if (newClients.length === 0) {
+                    addLog('모든 거래처가 이미 등록되어 있습니다.', 'warning');
+                    showResult(0, clients.length - newClients.length, 0);
+                    return;
+                }
+                
+                // Import in batches
+                const batchSize = 10;
+                const totalBatches = Math.ceil(newClients.length / batchSize);
+                
+                for (let i = 0; i < totalBatches; i++) {
+                    const start = i * batchSize;
+                    const end = Math.min(start + batchSize, newClients.length);
+                    const batch = newClients.slice(start, end);
+                    
+                    addLog(`배치 ${i + 1}/${totalBatches} 처리 중 (${batch.length}개)...`, 'info');
+                    
+                    // Process batch
+                    for (const client of batch) {
+                        try {
+                            await API.createClient(client);
+                            importedCount++;
+                            addLog(`✓ ${client.company_name} 등록 완료`, 'success');
+                        } catch (error) {
+                            failedCount++;
+                            addLog(`✗ ${client.company_name} 등록 실패: ${error.message}`, 'error');
+                        }
+                        
+                        updateProgress(importedCount + skippedCount + failedCount, newClients.length);
+                    }
+                    
+                    // Small delay between batches
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                
+                skippedCount = clients.length - newClients.length;
+                addLog('임포트 완료!', 'success');
+                showResult(importedCount, skippedCount, failedCount);
+                
+            } catch (error) {
+                console.error('Import error:', error);
+                addLog(`오류 발생: ${error.message}`, 'error');
+            } finally {
+                isImporting = false;
+            }
+        }
+
+        function showResult(imported, skipped, failed) {
+            document.getElementById('resultContainer').style.display = 'block';
+            document.getElementById('resultMessage').innerHTML = `
+                성공: <strong>${imported}개</strong> | 
+                중복 건너뜀: <strong>${skipped}개</strong> | 
+                실패: <strong>${failed}개</strong><br>
+                총 고객사 수: <strong>${imported + skipped}개</strong>
+            `;
+        }
+
+        document.getElementById('startImport').addEventListener('click', importClients);
+    </script>
+</body>
+</html>

@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>강제 전체 삭제</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #dc2626;
+            font-size: 28px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .warning {
+            background: #fef2f2;
+            border: 2px solid #dc2626;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .warning-title {
+            color: #dc2626;
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .warning-text {
+            color: #991b1b;
+            line-height: 1.6;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #b91c1c;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #log {
+            background: #1f2937;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+            display: none;
+        }
+
+        #log.show {
+            display: block;
+        }
+
+        .log-line {
+            margin: 4px 0;
+        }
+
+        .log-success {
+            color: #10b981;
+        }
+
+        .log-error {
+            color: #ef4444;
+        }
+
+        .log-info {
+            color: #3b82f6;
+        }
+
+        .log-warning {
+            color: #f59e0b;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 30px;
+            background: #e5e7eb;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .progress-container.show {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <span style="font-size: 32px;">⚠️</span>
+            강제 전체 삭제
+        </h1>
+
+        <div class="warning">
+            <div class="warning-title">🚨 주의사항</div>
+            <div class="warning-text">
+                이 작업은 <strong>모든 고객사 데이터를 완전히 삭제</strong>합니다.<br>
+                삭제된 데이터는 복구할 수 없습니다.<br>
+                계속하시려면 아래 버튼을 클릭하세요.
+            </div>
+        </div>
+
+        <div class="stats" style="display: none;" id="stats">
+            <div class="stat-card">
+                <div class="stat-label">전체</div>
+                <div class="stat-value" id="totalCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">삭제됨</div>
+                <div class="stat-value" style="color: #dc2626;" id="deletedCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">실패</div>
+                <div class="stat-value" style="color: #f59e0b;" id="failedCount">0</div>
+            </div>
+        </div>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar">0%</div>
+        </div>
+
+        <button class="btn btn-danger" id="deleteBtn" onclick="startDelete()">
+            🗑️ 모든 데이터 삭제 시작
+        </button>
+
+        <button class="btn btn-primary" id="importBtn" onclick="location.href='import_data.html'" style="display: none;">
+            📥 데이터 임포트하기
+        </button>
+
+        <div id="log"></div>
+    </div>
+
+    <script>
+        const logDiv = document.getElementById('log');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const importBtn = document.getElementById('importBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const statsDiv = document.getElementById('stats');
+        const totalCountEl = document.getElementById('totalCount');
+        const deletedCountEl = document.getElementById('deletedCount');
+        const failedCountEl = document.getElementById('failedCount');
+
+        let totalCount = 0;
+        let deletedCount = 0;
+        let failedCount = 0;
+
+        function log(message, type = 'info') {
+            const line = document.createElement('div');
+            line.className = `log-line log-${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            line.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(line);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateProgress() {
+            const processed = deletedCount + failedCount;
+            const percentage = totalCount > 0 ? Math.round((processed / totalCount) * 100) : 0;
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = percentage + '%';
+            
+            totalCountEl.textContent = totalCount;
+            deletedCountEl.textContent = deletedCount;
+            failedCountEl.textContent = failedCount;
+        }
+
+        async function startDelete() {
+            if (!confirm('정말로 모든 데이터를 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다!')) {
+                return;
+            }
+
+            if (!confirm('마지막 확인입니다.\n\n모든 고객사 데이터가 영구적으로 삭제됩니다.\n\n계속하시겠습니까?')) {
+                return;
+            }
+
+            deleteBtn.disabled = true;
+            logDiv.classList.add('show');
+            progressContainer.classList.add('show');
+            statsDiv.style.display = 'grid';
+
+            log('삭제 작업을 시작합니다...', 'info');
+
+            try {
+                // 1단계: 모든 데이터 로드 (페이지별로)
+                log('모든 고객사 데이터를 불러오는 중...', 'info');
+                
+                let allClients = [];
+                let page = 1;
+                let hasMore = true;
+                
+                while (hasMore) {
+                    const response = await fetch(`tables/clients?limit=1000&page=${page}`);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        log(`페이지 ${page} 로드 실패: ${errorText}`, 'error');
+                        throw new Error(`데이터 로드 실패: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    const clients = result.data || [];
+                    
+                    if (clients.length === 0) {
+                        hasMore = false;
+                    } else {
+                        allClients = allClients.concat(clients);
+                        log(`페이지 ${page}: ${clients.length}개 로드 (총 ${allClients.length}개)`, 'info');
+                        page++;
+                        
+                        // 더 이상 데이터가 없으면 중단
+                        if (clients.length < 1000) {
+                            hasMore = false;
+                        }
+                    }
+                }
+                
+                totalCount = allClients.length;
+                const clients = allClients;
+
+                log(`총 ${totalCount}개의 데이터를 찾았습니다.`, 'success');
+                updateProgress();
+
+                if (totalCount === 0) {
+                    log('삭제할 데이터가 없습니다.', 'warning');
+                    deleteBtn.disabled = false;
+                    return;
+                }
+
+                // 2단계: 하나씩 삭제
+                log(`삭제를 시작합니다...`, 'info');
+
+                for (let i = 0; i < clients.length; i++) {
+                    const client = clients[i];
+                    try {
+                        const deleteResponse = await fetch(`tables/clients/${client.id}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (deleteResponse.ok || deleteResponse.status === 204) {
+                            deletedCount++;
+                            log(`✓ [${i + 1}/${totalCount}] ${client.company_name || client.id} 삭제 완료`, 'success');
+                        } else {
+                            failedCount++;
+                            log(`✗ [${i + 1}/${totalCount}] ${client.company_name || client.id} 삭제 실패 (${deleteResponse.status})`, 'error');
+                        }
+                    } catch (error) {
+                        failedCount++;
+                        log(`✗ [${i + 1}/${totalCount}] ${client.company_name || client.id} 삭제 중 오류: ${error.message}`, 'error');
+                    }
+
+                    updateProgress();
+                    
+                    // API 부하 방지를 위한 짧은 딜레이
+                    if (i % 10 === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                }
+
+                // 완료
+                log('', 'info');
+                log('='.repeat(50), 'info');
+                log(`✅ 삭제 작업이 완료되었습니다!`, 'success');
+                log(`   - 성공: ${deletedCount}개`, 'success');
+                if (failedCount > 0) {
+                    log(`   - 실패: ${failedCount}개`, 'error');
+                }
+                log('='.repeat(50), 'info');
+
+                importBtn.style.display = 'block';
+
+            } catch (error) {
+                log(`❌ 오류 발생: ${error.message}`, 'error');
+                console.error('Error:', error);
+                deleteBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

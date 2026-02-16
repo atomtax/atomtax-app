@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>엑셀 파일 자동 분석 및 변환</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <h1>자동 분석 중...</h1>
+    <div id="output"></div>
+    <script>
+        // 파일 자동 로드 및 분석
+        async function autoAnalyze() {
+            try {
+                const response = await fetch('기장총괄표_원본.xlsx');
+                const arrayBuffer = await response.arrayBuffer();
+                const data = new Uint8Array(arrayBuffer);
+                const workbook = XLSX.read(data, {type: 'array'});
+                
+                let output = document.getElementById('output');
+                output.innerHTML = '<h2>📊 파일 분석 결과</h2>';
+                
+                // 모든 시트 분석
+                output.innerHTML += `<p><strong>시트 개수:</strong> ${workbook.SheetNames.length}</p>`;
+                output.innerHTML += '<hr>';
+                
+                workbook.SheetNames.forEach((sheetName, idx) => {
+                    output.innerHTML += `<h3>시트 ${idx + 1}: ${sheetName}</h3>`;
+                    
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+                    
+                    output.innerHTML += `<p><strong>행 개수:</strong> ${jsonData.length}</p>`;
+                    
+                    // 첫 20행 표시
+                    if (jsonData.length > 0) {
+                        output.innerHTML += '<table border="1" style="border-collapse: collapse; font-size: 12px;">';
+                        jsonData.slice(0, 25).forEach((row, rowIdx) => {
+                            output.innerHTML += '<tr>';
+                            row.forEach((cell, cellIdx) => {
+                                if (rowIdx === 0) {
+                                    output.innerHTML += `<th style="padding: 5px; background: #667eea; color: white;">${cell || ''}</th>`;
+                                } else {
+                                    output.innerHTML += `<td style="padding: 5px;">${cell || ''}</td>`;
+                                }
+                            });
+                            output.innerHTML += '</tr>';
+                        });
+                        output.innerHTML += '</table>';
+                    }
+                    
+                    output.innerHTML += '<hr>';
+                });
+                
+                // JSON 형식으로도 출력
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonWithHeaders = XLSX.utils.sheet_to_json(firstSheet);
+                
+                output.innerHTML += '<h3>JSON 형식 (처음 5개):</h3>';
+                output.innerHTML += `<pre style="background: #f4f4f4; padding: 15px; overflow-x: auto;">${JSON.stringify(jsonWithHeaders.slice(0, 5), null, 2)}</pre>`;
+                
+                // 변환 로직 실행
+                output.innerHTML += '<hr><h2>🔄 일괄업로드 양식 변환 시작...</h2>';
+                convertToUploadFormat(workbook);
+                
+            } catch (error) {
+                document.getElementById('output').innerHTML = `<p style="color: red;">오류: ${error.message}</p>`;
+                console.error(error);
+            }
+        }
+        
+        function convertToUploadFormat(workbook) {
+            try {
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+                
+                // 컬럼명 자동 감지
+                const firstRow = jsonData[0];
+                const columns = Object.keys(firstRow);
+                
+                document.getElementById('output').innerHTML += `<p><strong>감지된 컬럼:</strong> ${columns.join(', ')}</p>`;
+                
+                // 컬럼 매핑 (한글 컬럼명 찾기)
+                const columnMapping = {
+                    businessNumber: columns.find(col => col.includes('사업자') || col.includes('번호')) || columns[0],
+                    propertyName: columns.find(col => col.includes('물건') || col.includes('부동산') || col.includes('명칭')) || columns[1],
+                    address: columns.find(col => col.includes('소재지') || col.includes('주소') || col.includes('위치')) || columns[2],
+                    acquisitionValue: columns.find(col => col.includes('취득') && col.includes('가액')) || columns[3],
+                    transferValue: columns.find(col => col.includes('양도') && col.includes('가액')) || columns[4],
+                    prepaidIncomeTax: columns.find(col => col.includes('종소세') || col.includes('소득세')) || columns[5],
+                    prepaidLocalTax: columns.find(col => col.includes('지방') && col.includes('소득세')) || columns[6],
+                    transferDate: columns.find(col => col.includes('양도일') || col.includes('매도일')) || columns[7]
+                };
+                
+                document.getElementById('output').innerHTML += '<h3>컬럼 매핑:</h3>';
+                document.getElementById('output').innerHTML += `<pre>${JSON.stringify(columnMapping, null, 2)}</pre>`;
+                
+                // 1-20번 데이터 추출
+                const mappedData = jsonData.slice(0, 20).map((row, idx) => {
+                    return {
+                        '사업자번호*': row[columnMapping.businessNumber] || '',
+                        '물건명': row[columnMapping.propertyName] || `물건${idx + 1}`,
+                        '소재지': row[columnMapping.address] || '',
+                        '취득가액': row[columnMapping.acquisitionValue] || 0,
+                        '기타필요경비': 0,
+                        '양도가액': row[columnMapping.transferValue] || 0,
+                        '처분비': 0,
+                        '양도소득': '',
+                        '양도일(YYYYMMDD)': row[columnMapping.transferDate] || '',
+                        '신고기한': '',
+                        '기납부 종소세': row[columnMapping.prepaidIncomeTax] || 0,
+                        '기납부 지방소득세': row[columnMapping.prepaidLocalTax] || 0,
+                        '85초과(Y/N)': 'N',
+                        '진행단계': '미확인',
+                        '비고': ''
+                    };
+                });
+                
+                document.getElementById('output').innerHTML += '<h3>변환된 데이터 (처음 5개):</h3>';
+                document.getElementById('output').innerHTML += `<pre>${JSON.stringify(mappedData.slice(0, 5), null, 2)}</pre>`;
+                
+                // 엑셀 파일 생성
+                const wb = XLSX.utils.book_new();
+                
+                // Sheet 1: 물건목록
+                const ws1 = XLSX.utils.json_to_sheet(mappedData);
+                XLSX.utils.book_append_sheet(wb, ws1, '물건목록');
+                
+                // Sheet 2: 필요경비상세 (빈 시트)
+                const expenseData = [
+                    ['사업자번호*', '물건명*', '번호', '비용명', '구분(취득가액/기타필요경비)', '금액', '비용인정(O/X)', '비고']
+                ];
+                const ws2 = XLSX.utils.aoa_to_sheet(expenseData);
+                XLSX.utils.book_append_sheet(wb, ws2, '필요경비상세');
+                
+                // 다운로드
+                XLSX.writeFile(wb, `매매사업자_일괄업로드_양식_변환_${new Date().toISOString().slice(0,10)}.xlsx`);
+                
+                document.getElementById('output').innerHTML += '<h2 style="color: green;">✅ 파일 변환 완료! 다운로드가 시작됩니다.</h2>';
+                
+            } catch (error) {
+                document.getElementById('output').innerHTML += `<p style="color: red;">변환 오류: ${error.message}</p>`;
+                console.error(error);
+            }
+        }
+        
+        // 페이지 로드 시 자동 실행
+        window.onload = autoAnalyze;
+    </script>
+</body>
+</html>

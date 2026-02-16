@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>CSV 중복 체크</title>
+</head>
+<body>
+    <h1>CSV 중복 분석</h1>
+    <div id="result"></div>
+    
+    <script>
+        async function checkDuplicates() {
+            const response = await fetch('master_sheet.csv');
+            const text = await response.text();
+            const lines = text.split('\n').filter(line => line.trim());
+            const dataLines = lines.slice(1);
+            
+            const clients = [];
+            const businessNumberMap = new Map();
+            const companyNameMap = new Map();
+            
+            dataLines.forEach((line, index) => {
+                const regex = /("(?:[^"]|"")*"|[^,]+)/g;
+                const values = [];
+                let match;
+                while ((match = regex.exec(line)) !== null) {
+                    let value = match[1].trim();
+                    if (value.startsWith('"') && value.endsWith('"')) {
+                        value = value.slice(1, -1).replace(/""/g, '"');
+                    }
+                    values.push(value);
+                }
+                
+                const companyNameWithNumber = values[0] || '';
+                const numberMatch = companyNameWithNumber.match(/^(\d+)\./);
+                const number = numberMatch ? numberMatch[1] : '';
+                const company_name = companyNameWithNumber.replace(/^\d+\.\s*/, '').trim();
+                const business_number = values[3] || values[2] || '';
+                
+                if (!company_name || company_name === '#N/A' || !business_number || business_number === '#N/A') {
+                    console.log(`Skip: ${number}. ${company_name} (no data)`);
+                    return;
+                }
+                
+                clients.push({
+                    number,
+                    company_name,
+                    business_number,
+                    line: index + 2
+                });
+                
+                // Track business numbers
+                if (!businessNumberMap.has(business_number)) {
+                    businessNumberMap.set(business_number, []);
+                }
+                businessNumberMap.get(business_number).push({number, company_name, line: index + 2});
+                
+                // Track company names
+                if (!companyNameMap.has(company_name)) {
+                    companyNameMap.set(company_name, []);
+                }
+                companyNameMap.get(company_name).push({number, business_number, line: index + 2});
+            });
+            
+            let html = `<h2>총 ${clients.length}개 유효 데이터</h2>`;
+            
+            // Check business number duplicates
+            html += '<h3>사업자번호 중복:</h3><ul>';
+            let bnDupCount = 0;
+            businessNumberMap.forEach((items, bn) => {
+                if (items.length > 1) {
+                    html += `<li><strong>${bn}</strong>: ${items.length}개 중복<ul>`;
+                    items.forEach(item => {
+                        html += `<li>${item.number}. ${item.company_name} (line ${item.line})</li>`;
+                    });
+                    html += '</ul></li>';
+                    bnDupCount += items.length - 1;
+                }
+            });
+            html += `</ul><p>사업자번호 중복 총 ${bnDupCount}개</p>`;
+            
+            // Check company name duplicates
+            html += '<h3>거래처명 중복:</h3><ul>';
+            let cnDupCount = 0;
+            companyNameMap.forEach((items, cn) => {
+                if (items.length > 1) {
+                    html += `<li><strong>${cn}</strong>: ${items.length}개 중복<ul>`;
+                    items.forEach(item => {
+                        html += `<li>${item.number}. ${item.business_number} (line ${item.line})</li>`;
+                    });
+                    html += '</ul></li>';
+                    cnDupCount += items.length - 1;
+                }
+            });
+            html += `</ul><p>거래처명 중복 총 ${cnDupCount}개</p>`;
+            
+            document.getElementById('result').innerHTML = html;
+        }
+        
+        checkDuplicates();
+    </script>
+</body>
+</html>

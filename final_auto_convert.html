@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>🔥 기장총괄표 완전 자동 변환</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 32px;
+        }
+        .status {
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 5px solid #667eea;
+        }
+        .status.loading { background: #dbeafe; border-color: #3b82f6; }
+        .status.success { background: #d1fae5; border-color: #10b981; }
+        .status.error { background: #fee2e2; border-color: #ef4444; }
+        .status h3 { margin-bottom: 10px; color: #1f2937; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 11px;
+            background: white;
+        }
+        th, td {
+            border: 1px solid #e5e7eb;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        tr:nth-child(even) { background: #f9fafb; }
+        tr:hover { background: #f3f4f6; }
+        .btn {
+            display: inline-block;
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 700;
+            margin: 20px 10px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        pre {
+            background: #1f2937;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .sheet-tabs {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .sheet-tab {
+            padding: 10px 20px;
+            background: #f3f4f6;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .sheet-tab:hover { background: #e5e7eb; }
+        .sheet-tab.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .table-container {
+            overflow-x: auto;
+            max-height: 600px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        .download-section {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border-radius: 12px;
+            margin-top: 30px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #bae6fd;
+        }
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #0369a1;
+        }
+        .stat-label {
+            color: #075985;
+            margin-top: 5px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔥 기장총괄표 → 일괄업로드 양식 완전 자동 변환</h1>
+        
+        <div id="output"></div>
+        
+        <div id="downloadSection" style="display: none;">
+            <div class="download-section">
+                <h2 style="color: #065f46; margin-bottom: 20px;">✅ 변환 완료!</h2>
+                <button class="btn" onclick="downloadExcel()">
+                    📥 엑셀 파일 다운로드 (일괄업로드 양식)
+                </button>
+                <p style="margin-top: 15px; color: #047857; font-weight: 600;">
+                    이제 매매사업자 데이터 페이지에서 "일괄 업로드" 하세요!
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let finalWorkbook = null;
+        let allSheetData = {};
+
+        async function init() {
+            const output = document.getElementById('output');
+            
+            try {
+                output.innerHTML = '<div class="status loading"><h3>🔄 파일 로드 중...</h3></div>';
+                
+                const response = await fetch('기장총괄표_원본.xlsx');
+                if (!response.ok) throw new Error('파일을 찾을 수 없습니다.');
+                
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(new Uint8Array(arrayBuffer), {type: 'array', cellDates: true});
+                
+                output.innerHTML += '<div class="status success"><h3>✅ 파일 로드 완료</h3><p>시트 개수: ' + workbook.SheetNames.length + '개</p></div>';
+                
+                // 통계
+                let html = '<div class="stats">';
+                html += `<div class="stat-card"><div class="stat-number">${workbook.SheetNames.length}</div><div class="stat-label">총 시트 수</div></div>`;
+                
+                // 시트 탭
+                html += '</div><div class="status"><h3>📊 시트 목록</h3><div class="sheet-tabs">';
+                workbook.SheetNames.forEach((name, idx) => {
+                    html += `<div class="sheet-tab ${idx === 0 ? 'active' : ''}" onclick="showSheet(${idx})">${idx + 1}. ${name}</div>`;
+                });
+                html += '</div></div>';
+                
+                output.innerHTML += html;
+                
+                // 모든 시트 데이터 저장
+                let totalRows = 0;
+                workbook.SheetNames.forEach((sheetName, idx) => {
+                    const worksheet = workbook.Sheets[sheetName];
+                    const jsonArray = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ''});
+                    const jsonObjects = XLSX.utils.sheet_to_json(worksheet, {defval: ''});
+                    
+                    allSheetData[idx] = {
+                        name: sheetName,
+                        array: jsonArray,
+                        objects: jsonObjects,
+                        headers: jsonArray[0] || []
+                    };
+                    
+                    totalRows += jsonObjects.length;
+                });
+                
+                // 전체 데이터 개수 표시
+                output.innerHTML += `<div class="status success"><h3>📈 데이터 분석 완료</h3><p>총 데이터: ${totalRows}행</p></div>`;
+                
+                // 첫 번째 시트 표시
+                showSheet(0);
+                
+                // 자동 변환 시작
+                output.innerHTML += '<div class="status loading"><h3>🔄 자동 변환 시작...</h3></div>';
+                await convertData(workbook);
+                
+            } catch (error) {
+                output.innerHTML += `<div class="status error"><h3>❌ 오류 발생</h3><p>${error.message}</p></div>`;
+                console.error(error);
+            }
+        }
+
+        function showSheet(idx) {
+            const data = allSheetData[idx];
+            if (!data) return;
+            
+            // 활성 탭 업데이트
+            document.querySelectorAll('.sheet-tab').forEach((tab, i) => {
+                tab.classList.toggle('active', i === idx);
+            });
+            
+            // 기존 시트 표시 제거
+            const existing = document.getElementById('sheetDisplay');
+            if (existing) existing.remove();
+            
+            let html = `<div id="sheetDisplay" class="status">
+                <h3>📄 시트: ${data.name} (${data.objects.length}행)</h3>
+                <h4>컬럼 (${data.headers.length}개):</h4>
+                <p style="color: #6b7280; font-size: 13px;">${data.headers.join(' | ')}</p>
+                <div class="table-container">
+                    <table>
+                        <thead><tr>`;
+            
+            data.headers.forEach((h, i) => {
+                html += `<th>${i + 1}. ${h}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            data.array.slice(1, 21).forEach(row => {
+                html += '<tr>';
+                row.forEach(cell => {
+                    html += `<td>${cell || ''}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table></div></div>';
+            
+            document.getElementById('output').insertAdjacentHTML('beforeend', html);
+        }
+
+        async function convertData(workbook) {
+            try {
+                const output = document.getElementById('output');
+                
+                // 모든 시트 데이터 합치기
+                let allData = [];
+                let mappingInfo = [];
+                
+                workbook.SheetNames.forEach((sheetName, idx) => {
+                    const data = allSheetData[idx];
+                    const headers = data.headers;
+                    
+                    // 컬럼 매핑
+                    const mapping = detectColumns(headers);
+                    mappingInfo.push({sheet: sheetName, mapping: mapping});
+                    
+                    // 데이터 변환
+                    data.objects.forEach((row, rowIdx) => {
+                        const converted = convertRow(row, headers, mapping, allData.length + 1);
+                        if (converted['사업자번호*']) { // 사업자번호가 있는 것만
+                            allData.push(converted);
+                        }
+                    });
+                });
+                
+                output.innerHTML += `<div class="status success">
+                    <h3>✅ 변환 완료</h3>
+                    <p>총 ${allData.length}건의 데이터가 변환되었습니다.</p>
+                </div>`;
+                
+                // 매핑 정보 표시
+                output.innerHTML += '<div class="status"><h3>🔍 컬럼 매핑 정보</h3><pre>' + 
+                    JSON.stringify(mappingInfo, null, 2) + '</pre></div>';
+                
+                // 변환 결과 미리보기
+                output.innerHTML += '<div class="status"><h3>📋 변환 결과 미리보기 (처음 10개)</h3><pre>' + 
+                    JSON.stringify(allData.slice(0, 10), null, 2) + '</pre></div>';
+                
+                // 엑셀 파일 생성
+                createExcelFile(allData);
+                
+                document.getElementById('downloadSection').style.display = 'block';
+                
+            } catch (error) {
+                document.getElementById('output').innerHTML += 
+                    `<div class="status error"><h3>❌ 변환 오류</h3><p>${error.message}</p></div>`;
+                console.error(error);
+            }
+        }
+
+        function detectColumns(headers) {
+            const mapping = {};
+            
+            headers.forEach((header, idx) => {
+                const h = String(header).toLowerCase().replace(/\s/g, '');
+                
+                if (!mapping.businessNumber && (h.includes('사업자') && h.includes('번호'))) {
+                    mapping.businessNumber = idx;
+                }
+                if (!mapping.businessNumber && h.includes('등록번호')) {
+                    mapping.businessNumber = idx;
+                }
+                if (!mapping.propertyName && (h.includes('물건') || h.includes('부동산') || h.includes('명칭'))) {
+                    mapping.propertyName = idx;
+                }
+                if (!mapping.address && (h.includes('소재지') || h.includes('주소') || h.includes('위치'))) {
+                    mapping.address = idx;
+                }
+                if (!mapping.acquisitionValue && h.includes('취득') && (h.includes('가액') || h.includes('금액') || h.includes('가격'))) {
+                    mapping.acquisitionValue = idx;
+                }
+                if (!mapping.transferValue && h.includes('양도') && (h.includes('가액') || h.includes('금액') || h.includes('가격'))) {
+                    mapping.transferValue = idx;
+                }
+                if (!mapping.prepaidIncomeTax && (h.includes('종소세') || (h.includes('소득세') && !h.includes('지방')))) {
+                    mapping.prepaidIncomeTax = idx;
+                }
+                if (!mapping.prepaidLocalTax && h.includes('지방') && h.includes('소득세')) {
+                    mapping.prepaidLocalTax = idx;
+                }
+                if (!mapping.transferDate && (h.includes('양도일') || h.includes('매도일') || h.includes('거래일'))) {
+                    mapping.transferDate = idx;
+                }
+            });
+            
+            return mapping;
+        }
+
+        function convertRow(row, headers, mapping, index) {
+            const rowArray = headers.map(h => row[h]);
+            
+            return {
+                '사업자번호*': String(rowArray[mapping.businessNumber] || '').trim(),
+                '물건명': rowArray[mapping.propertyName] || `물건${index}`,
+                '소재지': rowArray[mapping.address] || '',
+                '취득가액': parseNumber(rowArray[mapping.acquisitionValue]),
+                '기타필요경비': 0,
+                '양도가액': parseNumber(rowArray[mapping.transferValue]),
+                '처분비': 0,
+                '양도소득': '',
+                '양도일(YYYYMMDD)': formatDate(rowArray[mapping.transferDate]),
+                '신고기한': '',
+                '기납부 종소세': parseNumber(rowArray[mapping.prepaidIncomeTax]),
+                '기납부 지방소득세': parseNumber(rowArray[mapping.prepaidLocalTax]),
+                '85초과(Y/N)': 'N',
+                '진행단계': '미확인',
+                '비고': ''
+            };
+        }
+
+        function parseNumber(value) {
+            if (!value) return 0;
+            const num = String(value).replace(/[^0-9.-]/g, '');
+            return parseFloat(num) || 0;
+        }
+
+        function formatDate(dateValue) {
+            if (!dateValue) return '';
+            
+            const str = String(dateValue).replace(/[^0-9]/g, '');
+            if (str.length === 8) return str;
+            
+            if (dateValue instanceof Date) {
+                const y = dateValue.getFullYear();
+                const m = String(dateValue.getMonth() + 1).padStart(2, '0');
+                const d = String(dateValue.getDate()).padStart(2, '0');
+                return `${y}${m}${d}`;
+            }
+            
+            return '';
+        }
+
+        function createExcelFile(data) {
+            const wb = XLSX.utils.book_new();
+            
+            // Sheet 1: 물건목록
+            const ws1 = XLSX.utils.json_to_sheet(data);
+            XLSX.utils.book_append_sheet(wb, ws1, '물건목록');
+            
+            // Sheet 2: 필요경비상세
+            const ws2 = XLSX.utils.aoa_to_sheet([
+                ['사업자번호*', '물건명*', '번호', '비용명', '구분(취득가액/기타필요경비)', '금액', '비용인정(O/X)', '비고']
+            ]);
+            XLSX.utils.book_append_sheet(wb, ws2, '필요경비상세');
+            
+            finalWorkbook = wb;
+        }
+
+        function downloadExcel() {
+            if (!finalWorkbook) {
+                alert('변환된 파일이 없습니다!');
+                return;
+            }
+            
+            const fileName = `매매사업자_일괄업로드_양식_${new Date().toISOString().slice(0,10)}.xlsx`;
+            XLSX.writeFile(finalWorkbook, fileName);
+            
+            alert(`✅ 다운로드 완료!\n\n파일명: ${fileName}\n\n이제 매매사업자 데이터 페이지에서 "일괄 업로드"를 클릭하여 업로드하세요!`);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

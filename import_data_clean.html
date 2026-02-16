@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>데이터 임포트 - 깨끗한 버전</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+
+        .info {
+            background: #eff6ff;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .info-title {
+            color: #1e40af;
+            font-weight: 700;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .info-text {
+            color: #1e3a8a;
+            line-height: 1.6;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #059669;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #log {
+            background: #1f2937;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+            display: none;
+        }
+
+        #log.show {
+            display: block;
+        }
+
+        .log-line {
+            margin: 4px 0;
+        }
+
+        .log-success {
+            color: #10b981;
+        }
+
+        .log-error {
+            color: #ef4444;
+        }
+
+        .log-info {
+            color: #3b82f6;
+        }
+
+        .log-warning {
+            color: #f59e0b;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 30px;
+            background: #e5e7eb;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .progress-container.show {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #111827;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <span style="font-size: 32px;">📥</span>
+            데이터 임포트
+        </h1>
+        <div class="subtitle">총괄 시트에서 고객사 데이터를 가져옵니다</div>
+
+        <div class="info">
+            <div class="info-title">📋 임포트 정보</div>
+            <div class="info-text">
+                <strong>컬럼</strong>: 번호/거래처명/담당자/사업자번호/대표자/업종/연락처<br>
+                <strong>데이터 소스</strong>: master_sheet.csv<br>
+                <strong>예상 데이터</strong>: 약 185개 고객사<br>
+                <strong>중복 처리</strong>: 사업자번호 기준 중복 방지
+            </div>
+        </div>
+
+        <div class="stats" style="display: none;" id="stats">
+            <div class="stat-card">
+                <div class="stat-label">전체</div>
+                <div class="stat-value" id="totalCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">성공</div>
+                <div class="stat-value" style="color: #10b981;" id="successCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">실패</div>
+                <div class="stat-value" style="color: #ef4444;" id="failedCount">0</div>
+            </div>
+        </div>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar">0%</div>
+        </div>
+
+        <button class="btn btn-primary" id="importBtn" onclick="startImport()">
+            📥 데이터 임포트 시작
+        </button>
+
+        <button class="btn btn-success" id="viewBtn" onclick="location.href='clients.html'" style="display: none;">
+            📋 고객사 목록 보기
+        </button>
+
+        <div id="log"></div>
+    </div>
+
+    <script>
+        const logDiv = document.getElementById('log');
+        const importBtn = document.getElementById('importBtn');
+        const viewBtn = document.getElementById('viewBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const statsDiv = document.getElementById('stats');
+        const totalCountEl = document.getElementById('totalCount');
+        const successCountEl = document.getElementById('successCount');
+        const failedCountEl = document.getElementById('failedCount');
+
+        let totalCount = 0;
+        let successCount = 0;
+        let failedCount = 0;
+
+        function log(message, type = 'info') {
+            const line = document.createElement('div');
+            line.className = `log-line log-${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            line.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(line);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateProgress() {
+            const processed = successCount + failedCount;
+            const percentage = totalCount > 0 ? Math.round((processed / totalCount) * 100) : 0;
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = percentage + '%';
+            
+            totalCountEl.textContent = totalCount;
+            successCountEl.textContent = successCount;
+            failedCountEl.textContent = failedCount;
+        }
+
+        async function startImport() {
+            if (!confirm('데이터 임포트를 시작하시겠습니까?')) {
+                return;
+            }
+
+            importBtn.disabled = true;
+            logDiv.classList.add('show');
+            progressContainer.classList.add('show');
+            statsDiv.style.display = 'grid';
+
+            log('임포트 작업을 시작합니다...', 'info');
+
+            try {
+                // 1단계: CSV 파일 로드
+                log('CSV 파일을 불러오는 중...', 'info');
+                const response = await fetch('master_sheet.csv');
+                const csvText = await response.text();
+
+                // 2단계: CSV 파싱 (Papa Parse 사용)
+                log('CSV 데이터를 파싱하는 중...', 'info');
+                const parseResult = Papa.parse(csvText, {
+                    header: false,
+                    skipEmptyLines: true,
+                    encoding: 'UTF-8'
+                });
+
+                const rows = parseResult.data;
+                log(`총 ${rows.length - 1}개의 데이터를 찾았습니다.`, 'success');
+
+                // 3단계: 데이터 변환 및 저장
+                const importData = [];
+                const businessNumbers = new Set();
+
+                for (let i = 1; i < rows.length; i++) {
+                    const row = rows[i];
+                    
+                    // 컬럼 매핑 (실제 총괄 시트 구조에 맞게)
+                    // 0: 상호(번호포함), 1: 담당자, 3: 사업자번호, 6: 연락처
+                    // 8: 대표자, 9: 주소, 10: 업종코드, 11: 업태, 12: 종목, 13: 이메일, 15: 공급가액
+                    
+                    const companyNameWithNumber = (row[0] || '').trim();
+                    if (!companyNameWithNumber) continue;
+                    
+                    // 번호 추출 (예: "1. 금아실업" → 번호: "1", 거래처명: "금아실업")
+                    const numberMatch = companyNameWithNumber.match(/^(\d+)\./);
+                    const number = numberMatch ? numberMatch[1] : (i).toString();
+                    const company_name = companyNameWithNumber.replace(/^\d+\.\s*/, '').trim();
+                    
+                    const business_number = (row[3] || '').trim();
+                    
+                    // 중복 체크 (사업자번호 기준)
+                    if (business_number && businessNumbers.has(business_number)) {
+                        log(`⚠ [${i}] ${company_name} - 중복된 사업자번호 (건너뜀)`, 'warning');
+                        continue;
+                    }
+                    
+                    if (business_number) {
+                        businessNumbers.add(business_number);
+                    }
+                    
+                    const clientData = {
+                        number: number,
+                        company_name: company_name,
+                        manager: (row[1] || '').trim(),
+                        business_number: business_number,
+                        ceo_name: (row[8] || '').trim(),
+                        business_type: (row[11] || '').trim(), // 업태
+                        business_item: (row[12] || '').trim(), // 종목
+                        business_code: (row[10] || '').trim(), // 업종코드
+                        contact: (row[6] || '').trim(), // 연락처
+                        email: (row[13] || '').trim(),
+                        address: (row[9] || '').trim(),
+                        corp_number: (row[4] || '').trim(), // 법인등록번호
+                        resident_number: (row[5] || '').trim(), // 주민등록번호
+                        supply_amount: parseFloat((row[15] || '0').replace(/,/g, '')) || 0,
+                        tax_amount: parseFloat((row[16] || '0').replace(/,/g, '')) || 0,
+                        first_withdrawal_month: (row[18] || '').trim(),
+                        hometax_id: '', // 수동 입력 필요
+                        hometax_password: '' // 수동 입력 필요
+                    };
+                    
+                    importData.push({ index: i, data: clientData });
+                }
+
+                totalCount = importData.length;
+                log(`${totalCount}개의 유효한 데이터를 준비했습니다.`, 'success');
+                updateProgress();
+
+                // 4단계: API로 저장
+                log('데이터를 저장하는 중...', 'info');
+
+                for (let i = 0; i < importData.length; i++) {
+                    const item = importData[i];
+                    try {
+                        const response = await fetch('tables/clients', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(item.data)
+                        });
+
+                        if (response.ok) {
+                            successCount++;
+                            log(`✓ [${i + 1}/${totalCount}] ${item.data.company_name} 저장 완료`, 'success');
+                        } else {
+                            failedCount++;
+                            const errorText = await response.text();
+                            log(`✗ [${i + 1}/${totalCount}] ${item.data.company_name} 저장 실패: ${errorText}`, 'error');
+                        }
+                    } catch (error) {
+                        failedCount++;
+                        log(`✗ [${i + 1}/${totalCount}] ${item.data.company_name} 오류: ${error.message}`, 'error');
+                    }
+
+                    updateProgress();
+
+                    // API 부하 방지
+                    if (i % 10 === 9) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                }
+
+                // 완료
+                log('', 'info');
+                log('='.repeat(50), 'info');
+                log(`✅ 임포트가 완료되었습니다!`, 'success');
+                log(`   - 성공: ${successCount}개`, 'success');
+                if (failedCount > 0) {
+                    log(`   - 실패: ${failedCount}개`, 'error');
+                }
+                log('='.repeat(50), 'info');
+
+                viewBtn.style.display = 'block';
+
+            } catch (error) {
+                log(`❌ 오류 발생: ${error.message}`, 'error');
+                console.error('Error:', error);
+                importBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

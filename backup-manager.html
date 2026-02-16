@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>데이터 백업 관리 - 아톰세무회계</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span>아톰세무회계</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>대시보드</span>
+                </a>
+                <a href="clients.html" class="nav-item">
+                    <i class="fas fa-building"></i>
+                    <span>고객사 관리</span>
+                </a>
+                
+                <!-- 매매사업자 관리 (드롭다운) -->
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-item" onclick="toggleDropdown(event)">
+                        <i class="fas fa-store"></i>
+                        <span>매매사업자 관리</span>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <div class="dropdown-content">
+                        <a href="traders-data.html" class="dropdown-item">
+                            <i class="fas fa-database"></i>
+                            <span>매매사업자 데이터</span>
+                        </a>
+                        <a href="traders-checklist.html" class="dropdown-item">
+                            <i class="fas fa-check-square"></i>
+                            <span>매매사업자 체크리스트</span>
+                        </a>
+                        <a href="traders-vat.html" class="dropdown-item">
+                            <i class="fas fa-calculator"></i>
+                            <span>부가세 계산기</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <a href="backup-manager.html" class="nav-item active">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span>데이터 백업</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="page-header">
+                <div class="page-title">
+                    <div class="flex items-center gap-3">
+                        <div class="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg">
+                            <i class="fas fa-cloud-upload-alt text-white text-2xl"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-3xl font-bold text-gray-800">데이터 백업 관리</h1>
+                            <p class="text-gray-500 mt-1">자동 백업 및 복원 시스템</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <div class="user-info">
+                        <div class="user-avatar" id="userAvatar">U</div>
+                        <div class="user-details">
+                            <div class="user-name" id="userName">사용자</div>
+                            <div class="user-role" id="userRole">관리자</div>
+                        </div>
+                    </div>
+                    <button onclick="firebaseLogout()" class="btn-secondary">
+                        <i class="fas fa-sign-out-alt mr-2"></i>로그아웃
+                    </button>
+                </div>
+            </div>
+
+            <!-- 백업 통계 -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                <div class="stat-card">
+                    <div class="stat-icon bg-blue-500">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-label">총 백업 수</div>
+                        <div class="stat-value" id="backupCount">-</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon bg-green-500">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-label">최근 백업</div>
+                        <div class="stat-value text-sm" id="lastBackup">-</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon bg-purple-500">
+                        <i class="fas fa-hdd"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-label">총 용량</div>
+                        <div class="stat-value text-sm" id="totalSize">-</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon bg-orange-500">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-label">자동 백업</div>
+                        <div class="stat-value text-sm" id="autoBackupStatus">활성화</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 백업 액션 -->
+            <div class="card mb-6">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-tools mr-2"></i>백업 작업
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button onclick="createManualBackup()" class="btn-primary">
+                            <i class="fas fa-save mr-2"></i>수동 백업 생성
+                        </button>
+                        <button onclick="migrateData()" class="btn-secondary">
+                            <i class="fas fa-exchange-alt mr-2"></i>데이터 마이그레이션
+                        </button>
+                        <button onclick="cleanupBackups()" class="btn-danger">
+                            <i class="fas fa-trash-alt mr-2"></i>오래된 백업 정리
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 백업 목록 -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-list mr-2"></i>백업 목록
+                    </h3>
+                    <button onclick="loadBackupList()" class="btn-secondary">
+                        <i class="fas fa-sync-alt mr-2"></i>새로고침
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th>백업 설명</th>
+                                    <th style="width: 180px;">생성 시간</th>
+                                    <th style="width: 120px;">데이터 크기</th>
+                                    <th style="width: 150px;">작업</th>
+                                </tr>
+                            </thead>
+                            <tbody id="backupTableBody">
+                                <tr>
+                                    <td colspan="5" class="text-center py-8 text-gray-500">
+                                        백업을 불러오는 중...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 복원 확인 모달 -->
+    <div id="restoreModal" class="modal hidden">
+        <div class="modal-content max-w-md">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-orange-500 mr-2"></i>
+                    백업 복원
+                </h3>
+                <button onclick="closeRestoreModal()" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="text-gray-600 mb-4">
+                    이 백업을 복원하면 현재 데이터가 모두 덮어쓰여집니다.
+                </p>
+                <p class="text-sm text-gray-500 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    복원 전 현재 데이터를 백업하는 것을 권장합니다.
+                </p>
+                <div class="mt-4">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="confirmRestore" class="mr-2">
+                        <span class="text-sm text-gray-700">위험을 이해했으며 복원을 진행하겠습니다.</span>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeRestoreModal()" class="btn-secondary">취소</button>
+                <button onclick="confirmRestore()" id="confirmRestoreBtn" class="btn-danger" disabled>
+                    <i class="fas fa-undo mr-2"></i>복원하기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Configuration and Auth -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/firebase-auth.js"></script>
+    <script src="js/firebase-db.js"></script>
+    <script src="js/data-migration.js"></script>
+    <script src="js/common.js"></script>
+
+    <script>
+        let currentUserId = null;
+        let selectedBackupId = null;
+
+        // Check authentication
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            currentUserId = user.uid;
+            
+            // Display user info from Firestore
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    document.getElementById('userName').textContent = userData.name || user.email;
+                    document.getElementById('userRole').textContent = userData.role === 'admin' ? '관리자' : '매니저';
+                    document.getElementById('userAvatar').textContent = (userData.name || user.email).charAt(0).toUpperCase();
+                } else {
+                    const displayName = user.displayName || user.email.split('@')[0];
+                    document.getElementById('userName').textContent = displayName;
+                    document.getElementById('userRole').textContent = '매니저';
+                    document.getElementById('userAvatar').textContent = displayName.charAt(0).toUpperCase();
+                }
+            } catch (error) {
+                console.error('사용자 정보 로드 오류:', error);
+                const displayName = user.displayName || user.email.split('@')[0];
+                document.getElementById('userName').textContent = displayName;
+                document.getElementById('userRole').textContent = '매니저';
+                document.getElementById('userAvatar').textContent = displayName.charAt(0).toUpperCase();
+            }
+            
+            // Load data
+            loadBackupStats();
+            loadBackupList();
+            
+            // Start auto backup (every 24 hours)
+            startAutoBackup(currentUserId, 24);
+        });
+
+        // Load backup statistics
+        async function loadBackupStats() {
+            try {
+                const stats = await getBackupStats(currentUserId);
+                
+                if (stats) {
+                    document.getElementById('backupCount').textContent = stats.count || '0';
+                    
+                    if (stats.newestBackup) {
+                        document.getElementById('lastBackup').textContent = 
+                            formatDateTime(stats.newestBackup);
+                    } else {
+                        document.getElementById('lastBackup').textContent = '백업 없음';
+                    }
+                    
+                    document.getElementById('totalSize').textContent = 
+                        formatBytes(stats.totalSize || 0);
+                }
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        // Load backup list
+        async function loadBackupList() {
+            try {
+                const backups = await getBackupList(currentUserId, 50);
+                const tbody = document.getElementById('backupTableBody');
+                
+                if (backups.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center py-8 text-gray-500">
+                                백업 기록이 없습니다.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                tbody.innerHTML = backups.map((backup, index) => {
+                    const timestamp = backup.timestamp?.toDate();
+                    const dataSize = JSON.stringify(backup.data || {}).length;
+                    
+                    return `
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>
+                                <div class="font-medium text-gray-800">${backup.description || '백업'}</div>
+                                <div class="text-xs text-gray-500">${backup.id}</div>
+                            </td>
+                            <td class="text-sm">${formatDateTime(timestamp)}</td>
+                            <td class="text-sm">${formatBytes(dataSize)}</td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <button 
+                                        onclick="restoreBackup('${backup.id}')" 
+                                        class="btn-sm bg-blue-500 hover:bg-blue-600 text-white"
+                                        title="복원">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                    <button 
+                                        onclick="downloadBackup('${backup.id}')" 
+                                        class="btn-sm bg-green-500 hover:bg-green-600 text-white"
+                                        title="다운로드">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                    <button 
+                                        onclick="deleteBackup('${backup.id}')" 
+                                        class="btn-sm bg-red-500 hover:bg-red-600 text-white"
+                                        title="삭제">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('Failed to load backup list:', error);
+                showNotification('백업 목록을 불러오는데 실패했습니다.', 'error');
+            }
+        }
+
+        // Create manual backup
+        async function createManualBackup() {
+            if (!confirm('수동 백업을 생성하시겠습니까?')) return;
+            
+            try {
+                const description = prompt('백업 설명을 입력하세요 (선택사항):', 
+                    `수동 백업 - ${new Date().toLocaleString()}`);
+                
+                if (description === null) return;
+                
+                showNotification('백업을 생성하는 중...', 'info');
+                
+                const backupId = await createBackup(currentUserId, description);
+                
+                showNotification('백업이 생성되었습니다!', 'success');
+                
+                // Reload
+                loadBackupStats();
+                loadBackupList();
+                
+            } catch (error) {
+                console.error('Failed to create backup:', error);
+                showNotification('백업 생성에 실패했습니다.', 'error');
+            }
+        }
+
+        // Migrate data
+        async function migrateData() {
+            if (!confirm('localStorage의 데이터를 Firestore로 마이그레이션하시겠습니까?')) return;
+            
+            try {
+                showNotification('데이터 마이그레이션 중...', 'info');
+                
+                const result = await migrateLocalStorageToFirestore(currentUserId);
+                
+                showNotification(
+                    `마이그레이션 완료! 성공: ${result.successCount}, 실패: ${result.errorCount}`,
+                    'success'
+                );
+                
+            } catch (error) {
+                console.error('Migration failed:', error);
+                showNotification('마이그레이션에 실패했습니다.', 'error');
+            }
+        }
+
+        // Cleanup old backups
+        async function cleanupBackups() {
+            const keepCount = prompt('최근 몇 개의 백업을 유지하시겠습니까?', '30');
+            
+            if (!keepCount) return;
+            
+            const count = parseInt(keepCount);
+            if (isNaN(count) || count < 1) {
+                showNotification('올바른 숫자를 입력해주세요.', 'error');
+                return;
+            }
+            
+            if (!confirm(`최근 ${count}개를 제외한 모든 백업을 삭제하시겠습니까?`)) return;
+            
+            try {
+                showNotification('백업을 정리하는 중...', 'info');
+                
+                const deletedCount = await cleanupOldBackups(currentUserId, count);
+                
+                showNotification(`${deletedCount}개의 백업을 삭제했습니다.`, 'success');
+                
+                // Reload
+                loadBackupStats();
+                loadBackupList();
+                
+            } catch (error) {
+                console.error('Cleanup failed:', error);
+                showNotification('백업 정리에 실패했습니다.', 'error');
+            }
+        }
+
+        // Restore backup (show modal)
+        function restoreBackup(backupId) {
+            selectedBackupId = backupId;
+            document.getElementById('restoreModal').classList.remove('hidden');
+            document.getElementById('confirmRestore').checked = false;
+            document.getElementById('confirmRestoreBtn').disabled = true;
+        }
+
+        // Close restore modal
+        function closeRestoreModal() {
+            document.getElementById('restoreModal').classList.add('hidden');
+            selectedBackupId = null;
+        }
+
+        // Confirm checkbox
+        document.getElementById('confirmRestore')?.addEventListener('change', (e) => {
+            document.getElementById('confirmRestoreBtn').disabled = !e.target.checked;
+        });
+
+        // Confirm restore
+        async function confirmRestore() {
+            if (!selectedBackupId) return;
+            
+            closeRestoreModal();
+            
+            try {
+                showNotification('백업을 복원하는 중...', 'info');
+                
+                await restoreBackup(selectedBackupId);
+                
+                showNotification('백업이 복원되었습니다! 페이지를 새로고침합니다.', 'success');
+                
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Restore failed:', error);
+                showNotification('백업 복원에 실패했습니다.', 'error');
+            }
+        }
+
+        // Download backup as JSON
+        async function downloadBackup(backupId) {
+            try {
+                const backupDoc = await db.collection('backups').doc(backupId).get();
+                
+                if (!backupDoc.exists) {
+                    showNotification('백업을 찾을 수 없습니다.', 'error');
+                    return;
+                }
+                
+                const backup = backupDoc.data();
+                const json = JSON.stringify(backup, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `backup_${backupId}_${Date.now()}.json`;
+                a.click();
+                
+                URL.revokeObjectURL(url);
+                
+                showNotification('백업 파일이 다운로드되었습니다.', 'success');
+                
+            } catch (error) {
+                console.error('Download failed:', error);
+                showNotification('다운로드에 실패했습니다.', 'error');
+            }
+        }
+
+        // Delete backup
+        async function deleteBackup(backupId) {
+            if (!confirm('이 백업을 삭제하시겠습니까?')) return;
+            
+            try {
+                await db.collection('backups').doc(backupId).delete();
+                
+                showNotification('백업이 삭제되었습니다.', 'success');
+                
+                // Reload
+                loadBackupStats();
+                loadBackupList();
+                
+            } catch (error) {
+                console.error('Delete failed:', error);
+                showNotification('삭제에 실패했습니다.', 'error');
+            }
+        }
+
+        // Format bytes
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // Format date time
+        function formatDateTime(date) {
+            if (!date) return '-';
+            if (typeof date === 'string') date = new Date(date);
+            return date.toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500',
+                warning: 'bg-orange-500'
+            };
+            
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

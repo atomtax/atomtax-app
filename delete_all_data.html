@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>전체 데이터 삭제</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div style="max-width: 1200px; margin: 40px auto; padding: 0 20px;">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>전체 데이터 삭제
+                </h2>
+            </div>
+            
+            <div style="padding: 24px;">
+                <div style="background: #fee2e2; border-left: 4px solid #ef4444; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
+                    <p style="color: #991b1b; font-weight: 600; margin-bottom: 8px;">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>경고
+                    </p>
+                    <p style="color: #991b1b; font-size: 14px;">
+                        모든 고객사 데이터를 삭제합니다.<br>
+                        <strong>이 작업은 되돌릴 수 없습니다!</strong>
+                    </p>
+                </div>
+                
+                <div style="text-align: center; margin: 40px 0;">
+                    <button id="deleteAllBtn" class="btn btn-danger" style="font-size: 18px; padding: 16px 32px;">
+                        <i class="fas fa-trash-alt mr-2"></i>모든 데이터 삭제
+                    </button>
+                </div>
+                
+                <div id="progressContainer" style="display: none;">
+                    <div style="margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-weight: 600; color: #374151;">진행 상황</span>
+                            <span id="progressText" style="font-weight: 600; color: #ef4444;">0 / 0</span>
+                        </div>
+                        <div style="background: #e5e7eb; height: 24px; border-radius: 12px; overflow: hidden;">
+                            <div id="progressBar" style="background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+                    
+                    <div id="logContainer" style="background: #1f2937; color: #e5e7eb; padding: 16px; border-radius: 8px; max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 13px;">
+                        <div id="logs"></div>
+                    </div>
+                </div>
+                
+                <div id="resultContainer" style="display: none; margin-top: 24px;">
+                    <div style="background: #d1fae5; border-left: 4px solid #059669; padding: 16px; border-radius: 4px; margin-bottom: 16px;">
+                        <p style="color: #047857; font-weight: 600; margin-bottom: 8px;">
+                            <i class="fas fa-check-circle mr-2"></i>삭제 완료!
+                        </p>
+                        <p style="color: #047857; font-size: 14px;" id="resultMessage"></p>
+                    </div>
+                    
+                    <div style="text-align: center;">
+                        <a href="import_data.html" class="btn btn-primary">
+                            <i class="fas fa-upload mr-2"></i>데이터 임포트하기
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script>
+        let isProcessing = false;
+        let deletedCount = 0;
+
+        function addLog(message, type = 'info') {
+            const logsContainer = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString('ko-KR');
+            const colors = {
+                info: '#60a5fa',
+                success: '#34d399',
+                warning: '#fbbf24',
+                error: '#f87171'
+            };
+            const icons = {
+                info: 'info-circle',
+                success: 'check-circle',
+                warning: 'exclamation-triangle',
+                error: 'times-circle'
+            };
+            
+            const logEntry = document.createElement('div');
+            logEntry.style.marginBottom = '4px';
+            logEntry.innerHTML = `<span style="color: #9ca3af;">[${timestamp}]</span> <i class="fas fa-${icons[type]}" style="color: ${colors[type]};"></i> ${message}`;
+            logsContainer.appendChild(logEntry);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        function updateProgress(current, total) {
+            const percent = Math.round((current / total) * 100);
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressText').textContent = `${current} / ${total}`;
+        }
+
+        async function deleteAllData() {
+            if (isProcessing) return;
+            
+            const confirmText = prompt('정말로 모든 데이터를 삭제하시겠습니까?\n삭제하려면 "삭제"를 입력하세요.');
+            if (confirmText !== '삭제') {
+                addLog('취소되었습니다.', 'warning');
+                return;
+            }
+            
+            isProcessing = true;
+            document.getElementById('deleteAllBtn').disabled = true;
+            document.getElementById('progressContainer').style.display = 'block';
+            
+            try {
+                addLog('데이터 로딩 중...', 'info');
+                
+                // Get all data with high limit
+                const response = await fetch('tables/clients?limit=10000');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                const allClients = result.data || [];
+                
+                addLog(`총 ${allClients.length}개의 고객사 발견`, 'warning');
+                
+                if (allClients.length === 0) {
+                    addLog('삭제할 데이터가 없습니다.', 'info');
+                    showResult(0);
+                    return;
+                }
+                
+                addLog('삭제 시작...', 'warning');
+                
+                let processed = 0;
+                const total = allClients.length;
+                
+                for (const client of allClients) {
+                    try {
+                        const deleteResponse = await fetch(`tables/clients/${client.id}`, {
+                            method: 'DELETE'
+                        });
+                        
+                        if (deleteResponse.ok) {
+                            deletedCount++;
+                            addLog(`✓ ${client.company_name || client.id} 삭제 완료`, 'success');
+                        } else {
+                            addLog(`✗ ${client.company_name || client.id} 삭제 실패 (${deleteResponse.status})`, 'error');
+                        }
+                        
+                        processed++;
+                        updateProgress(processed, total);
+                        
+                        // Small delay to prevent overwhelming the API
+                        if (processed % 10 === 0) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
+                        }
+                    } catch (error) {
+                        addLog(`✗ ${client.company_name || client.id} 삭제 실패: ${error.message}`, 'error');
+                        processed++;
+                        updateProgress(processed, total);
+                    }
+                }
+                
+                addLog('모든 데이터 삭제 완료!', 'success');
+                showResult(deletedCount);
+                
+            } catch (error) {
+                console.error('Delete error:', error);
+                addLog(`오류 발생: ${error.message}`, 'error');
+                addLog(`상세: ${error.stack}`, 'error');
+            } finally {
+                isProcessing = false;
+                document.getElementById('deleteAllBtn').disabled = false;
+            }
+        }
+
+        function showResult(deleted) {
+            document.getElementById('resultContainer').style.display = 'block';
+            document.getElementById('resultMessage').innerHTML = `
+                삭제된 고객사: <strong>${deleted}개</strong><br>
+                <strong>데이터베이스가 완전히 비워졌습니다!</strong>
+            `;
+        }
+
+        document.getElementById('deleteAllBtn').addEventListener('click', deleteAllData);
+    </script>
+</body>
+</html>

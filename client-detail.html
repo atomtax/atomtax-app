@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>고객사 상세 - 아톰세무회계</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span>아톰세무회계</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>대시보드</span>
+                </a>
+                
+                <!-- 고객사 관리 (드롭다운) -->
+                <div class="nav-dropdown active">
+                    <a href="#" class="nav-item" onclick="toggleDropdown(event)">
+                        <i class="fas fa-building"></i>
+                        <span>고객사 관리</span>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <div class="dropdown-content" style="display: block;">
+                        <a href="clients.html" class="dropdown-item active">
+                            <i class="fas fa-briefcase"></i>
+                            <span>기장고객 관리</span>
+                        </a>
+                        <a href="clients-terminated.html" class="dropdown-item">
+                            <i class="fas fa-user-times"></i>
+                            <span>해임고객 관리</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 매매사업자 관리 (드롭다운) -->
+                <div class="nav-dropdown">
+                    <a href="#" class="nav-item" onclick="toggleDropdown(event)">
+                        <i class="fas fa-store"></i>
+                        <span>매매사업자 관리</span>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <div class="dropdown-content">
+                        <a href="traders-data.html" class="dropdown-item">
+                            <i class="fas fa-database"></i>
+                            <span>매매사업자 데이터</span>
+                        </a>
+                        <a href="traders-checklist.html" class="dropdown-item">
+                            <i class="fas fa-check-square"></i>
+                            <span>매매사업자 체크리스트</span>
+                        </a>
+                        <a href="traders-vat.html" class="dropdown-item">
+                            <i class="fas fa-calculator"></i>
+                            <span>부가가치세 계산</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <a href="#" class="nav-item">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>세무 관리</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>통계 분석</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>설정</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="nav-item" style="width: 100%; border: none; background: none;">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>로그아웃</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="topbar">
+                <div class="topbar-left">
+                    <button class="menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="topbar-title">고객사 상세</h1>
+                </div>
+                
+                <div class="topbar-right">
+                    <div class="user-profile">
+                        <div class="user-avatar" id="userAvatar">A</div>
+                        <div class="user-info">
+                            <div class="user-name" id="userName">관리자</div>
+                            <div class="user-role" id="userRole">Admin</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content-area">
+                <!-- Back Button -->
+                <div style="margin-bottom: 24px;">
+                    <a href="clients.html" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> 목록으로
+                    </a>
+                </div>
+
+                <!-- Client Info -->
+                <div class="card">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 class="card-title">
+                            <i class="fas fa-building mr-2"></i>
+                            <span id="companyName">고객사 정보</span>
+                        </h3>
+                        <div style="display: flex; gap: 12px;">
+                            <button id="editBtn" class="btn btn-primary">
+                                <i class="fas fa-edit"></i> 수정
+                            </button>
+                            <button id="deleteBtn" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> 삭제
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Loading State -->
+                    <div id="loadingState" style="text-align: center; padding: 60px;">
+                        <div class="spinner" style="margin: 0 auto;"></div>
+                    </div>
+
+                    <!-- Client Details -->
+                    <div id="clientDetails" style="display: none;">
+                        <!-- Basic Info -->
+                        <div style="margin-bottom: 32px;">
+                            <h4 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #667eea;">
+                                <i class="fas fa-info-circle mr-2"></i>기본 정보
+                            </h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; background: #f9fafb; padding: 20px; border-radius: 8px;">
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">번호</label>
+                                    <div style="margin-top: 4px; font-size: 16px;" id="number">-</div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">거래처명</label>
+                                    <div style="margin-top: 4px; font-size: 16px; font-weight: 600;" id="company_name">-</div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">담당자</label>
+                                    <div style="margin-top: 4px; font-size: 16px;" id="manager">-</div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">대표자</label>
+                                    <div style="margin-top: 4px; font-size: 16px;" id="ceo_name">-</div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">연락처</label>
+                                    <div style="margin-top: 4px; font-size: 16px;" id="phone">-</div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">이메일</label>
+                                    <div style="margin-top: 4px; font-size: 16px;" id="email">-</div>
+                                </div>
+                                <div style="grid-column: 1 / -1;">
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">
+                                        <i class="fab fa-google-drive" style="color: #34a853;"></i> 구글 드라이브 폴더 (기장)
+                                    </label>
+                                    <div style="margin-top: 8px;" id="google_drive_folder">-</div>
+                                </div>
+                                <div style="grid-column: 1 / -1;">
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">
+                                        <i class="fas fa-building" style="color: #f59e0b;"></i> 매매사업자 부동산 폴더
+                                    </label>
+                                    <div style="margin-top: 8px;" id="real_estate_drive_folder">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Business Info -->
+                        <div style="margin-bottom: 32px;">
+                            <h4 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #667eea;">
+                                <i class="fas fa-briefcase mr-2"></i>사업자 정보
+                            </h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; background: #f9fafb; padding: 20px; border-radius: 8px;">
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">사업자번호</label>
+                                    <div style="margin-top: 4px; font-size: 16px; font-family: monospace;" id="business_number">-</div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">주민등록번호</label>
+                                    <div style="margin-top: 4px; font-size: 16px; font-family: monospace;" id="resident_number">-</div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">법인등록번호</label>
+                                    <div style="margin-top: 4px; font-size: 16px; font-family: monospace;" id="corporate_number">-</div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">업태</label>
+                                    <div style="margin-top: 4px; font-size: 16px;" id="business_type">-</div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">종목</label>
+                                    <div style="margin-top: 4px; font-size: 16px;" id="business_item">-</div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">업종코드</label>
+                                    <div style="margin-top: 4px; font-size: 16px;" id="business_code">-</div>
+                                </div>
+                                <div style="grid-column: 1 / -1;">
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">우편번호</label>
+                                    <div style="margin-top: 4px; font-size: 16px;" id="postal_code">-</div>
+                                </div>
+                                <div style="grid-column: 1 / -1;">
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">사업장 주소</label>
+                                    <div style="margin-top: 4px; font-size: 16px;" id="address">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tax Info -->
+                        <div style="margin-bottom: 32px;">
+                            <h4 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #667eea;">
+                                <i class="fas fa-file-invoice-dollar mr-2"></i>세무 정보
+                            </h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; background: #f9fafb; padding: 20px; border-radius: 8px;">
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">공급가액</label>
+                                    <div style="margin-top: 4px; font-size: 16px; font-weight: 600; color: #059669;" id="supply_amount">-</div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">세액 (10%)</label>
+                                    <div style="margin-top: 4px; font-size: 16px; font-weight: 600; color: #0891b2;" id="tax_amount">-</div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">최초출금월</label>
+                                    <div style="margin-top: 4px; font-size: 16px;" id="first_withdrawal_month">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hometax Info -->
+                        <div style="margin-bottom: 32px;">
+                            <h4 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #667eea;">
+                                <i class="fas fa-key mr-2"></i>홈택스 정보
+                            </h4>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; background: #fef3c7; padding: 20px; border-radius: 8px; border: 2px solid #fbbf24;">
+                                <div>
+                                    <label style="font-weight: 600; color: #92400e; font-size: 12px; text-transform: uppercase;">
+                                        <i class="fas fa-user mr-1"></i>홈택스 아이디
+                                    </label>
+                                    <div style="margin-top: 4px; font-size: 16px; font-family: monospace; color: #78350f;" id="hometax_id">-</div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #92400e; font-size: 12px; text-transform: uppercase;">
+                                        <i class="fas fa-lock mr-1"></i>홈택스 비밀번호
+                                    </label>
+                                    <div style="margin-top: 4px; font-size: 16px; font-family: monospace; color: #78350f;" id="hometax_password">••••••••</div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 12px; padding: 12px; background: #fef2f2; border-radius: 6px; border-left: 4px solid #dc2626;">
+                                <div style="display: flex; align-items: center; gap: 8px; color: #991b1b; font-size: 13px;">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>민감한 정보입니다. 외부 유출에 주의하세요.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Metadata -->
+                        <div style="border-top: 1px solid #e5e7eb; padding-top: 20px;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;">
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">등록일</label>
+                                    <div style="margin-top: 4px; font-size: 14px; color: #9ca3af;" id="created_at">-</div>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #6b7280; font-size: 12px; text-transform: uppercase;">최종 수정일</label>
+                                    <div style="margin-top: 4px; font-size: 14px; color: #9ca3af;" id="updated_at">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Configuration and Auth -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/firebase-auth.js"></script>
+    <script src="js/firebase-db.js"></script>
+    <script src="js/common.js"></script>
+    <script>
+        // Check authentication
+        auth.onAuthStateChanged((user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+        });
+        
+        // Format business number (000-00-00000)
+        function formatBusinessNumber(number) {
+            if (!number) return '';
+            const cleaned = number.replace(/[^0-9]/g, '');
+            if (cleaned.length === 10) {
+                return cleaned.slice(0, 3) + '-' + cleaned.slice(3, 5) + '-' + cleaned.slice(5);
+            }
+            return number;
+        }
+
+        // Format phone number (000-0000-0000)
+        function formatPhoneNumber(number) {
+            if (!number) return '';
+            const cleaned = number.replace(/[^0-9]/g, '');
+            if (cleaned.length === 11) {
+                return cleaned.slice(0, 3) + '-' + cleaned.slice(3, 7) + '-' + cleaned.slice(7);
+            }
+            return number;
+        }
+
+        // Format resident/corp number (000000-0000000)
+        function formatIdentityNumber(number) {
+            if (!number) return '';
+            const cleaned = number.replace(/[^0-9]/g, '');
+            if (cleaned.length === 13) {
+                return cleaned.slice(0, 6) + '-' + cleaned.slice(6);
+            }
+            return number;
+        }
+        
+        // Escape HTML
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return String(text).replace(/[&<>"']/g, m => map[m]);
+        }
+        
+        // Check authentication
+        const currentUser = checkAuth();
+        if (currentUser) {
+            document.getElementById('userName').textContent = currentUser.name;
+            document.getElementById('userRole').textContent = currentUser.role === 'admin' ? '관리자' : '매니저';
+            document.getElementById('userAvatar').textContent = currentUser.name.charAt(0);
+        }
+
+        // Get client ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const clientId = urlParams.get('id');
+
+        if (!clientId) {
+            showNotification('잘못된 접근입니다.', 'error');
+            setTimeout(() => window.location.href = 'clients.html', 2000);
+        }
+
+        let clientData = null;
+
+        // Load client details
+        async function loadClientDetails() {
+            try {
+                showLoading();
+                clientData = await API.getClient(clientId);
+                
+                // Update page title
+                document.getElementById('companyName').textContent = clientData.company_name || '고객사 정보';
+                document.title = `${clientData.company_name || '고객사'} - 내부 데이터 관리 시스템`;
+                
+                // Fill in details
+                document.getElementById('number').textContent = clientData.number || '-';
+                document.getElementById('company_name').textContent = clientData.company_name || '-';
+                document.getElementById('manager').textContent = clientData.manager || '-';
+                document.getElementById('ceo_name').textContent = clientData.ceo_name || '-';
+                document.getElementById('phone').textContent = formatPhoneNumber(clientData.contact || clientData.phone) || '-';
+                document.getElementById('email').textContent = clientData.email || '-';
+                
+                // Google Drive folder
+                const driveElement = document.getElementById('google_drive_folder');
+                if (clientData.google_drive_folder) {
+                    driveElement.innerHTML = `
+                        <a href="${escapeHtml(clientData.google_drive_folder)}" target="_blank" 
+                           style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; background: #34a853; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.2s;">
+                            <i class="fab fa-google-drive"></i>
+                            <span>기장 드라이브 폴더 열기</span>
+                            <i class="fas fa-external-link-alt" style="font-size: 12px;"></i>
+                        </a>
+                    `;
+                } else {
+                    driveElement.textContent = '-';
+                }
+                
+                // Real Estate Drive folder
+                const realEstateElement = document.getElementById('real_estate_drive_folder');
+                if (clientData.real_estate_drive_folder) {
+                    realEstateElement.innerHTML = `
+                        <a href="${escapeHtml(clientData.real_estate_drive_folder)}" target="_blank" 
+                           style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; background: #f59e0b; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.2s;">
+                            <i class="fas fa-building"></i>
+                            <span>부동산 드라이브 폴더 열기</span>
+                            <i class="fas fa-external-link-alt" style="font-size: 12px;"></i>
+                        </a>
+                    `;
+                } else {
+                    realEstateElement.textContent = '-';
+                }
+                
+                document.getElementById('business_number').textContent = formatBusinessNumber(clientData.business_number) || '-';
+                document.getElementById('resident_number').textContent = formatIdentityNumber(clientData.resident_number) || '-';
+                document.getElementById('corporate_number').textContent = formatIdentityNumber(clientData.corp_number || clientData.corporate_number) || '-';
+                document.getElementById('business_type').textContent = clientData.business_type || '-';
+                document.getElementById('business_item').textContent = clientData.business_item || '-';
+                document.getElementById('business_code').textContent = clientData.business_code || '-';
+                document.getElementById('postal_code').textContent = clientData.postal_code || '-';
+                document.getElementById('address').textContent = clientData.address || '-';
+                
+                // Format numbers
+                const supplyAmount = clientData.supply_amount || 0;
+                const taxAmount = clientData.tax_amount || 0;
+                document.getElementById('supply_amount').textContent = supplyAmount.toLocaleString() + '원';
+                document.getElementById('tax_amount').textContent = taxAmount.toLocaleString() + '원';
+                document.getElementById('first_withdrawal_month').textContent = clientData.first_withdrawal_month || '-';
+                
+                // Hometax info
+                document.getElementById('hometax_id').textContent = clientData.hometax_id || '-';
+                document.getElementById('hometax_password').textContent = clientData.hometax_password || '••••••••';
+                
+                // Format dates
+                if (clientData.created_at) {
+                    const createdDate = new Date(clientData.created_at);
+                    document.getElementById('created_at').textContent = createdDate.toLocaleString('ko-KR');
+                }
+                if (clientData.updated_at) {
+                    const updatedDate = new Date(clientData.updated_at);
+                    document.getElementById('updated_at').textContent = updatedDate.toLocaleString('ko-KR');
+                }
+                
+                // Show details
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('clientDetails').style.display = 'block';
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Error loading client:', error);
+                showNotification('고객사 정보를 불러오는 중 오류가 발생했습니다.', 'error');
+                setTimeout(() => window.location.href = 'clients.html', 2000);
+                hideLoading();
+            }
+        }
+
+        // Edit client
+        function editClient() {
+            window.location.href = `clients.html?edit=${clientId}`;
+        }
+
+        // Delete client
+        async function deleteClient() {
+            if (!clientData) return;
+            
+            if (!confirm(`"${clientData.company_name}" 고객사를 삭제하시겠습니까?`)) return;
+            
+            try {
+                showLoading();
+                await API.deleteClient(clientId);
+                showNotification('고객사가 삭제되었습니다.', 'success');
+                setTimeout(() => window.location.href = 'clients.html', 1500);
+            } catch (error) {
+                console.error('Error deleting client:', error);
+                showNotification('삭제 중 오류가 발생했습니다.', 'error');
+                hideLoading();
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            loadClientDetails();
+            
+            document.getElementById('editBtn').addEventListener('click', editClient);
+            document.getElementById('deleteBtn').addEventListener('click', deleteClient);
+        });
+    </script>
+</body>
+</html>

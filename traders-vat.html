@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>부가가치세 계산 - 아톰세무회계</title>
+    
+    <!-- Preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/fontawesome.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/solid.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Preload CSS -->
+    <link rel="preload" href="css/style.css" as="style">
+    
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        .calculator-card {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .calculator-icon {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            font-size: 48px;
+            color: white;
+        }
+        
+        .calculator-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 0 0 12px 0;
+        }
+        
+        .calculator-description {
+            font-size: 16px;
+            color: #6b7280;
+            margin: 0 0 32px 0;
+            line-height: 1.6;
+        }
+        
+        .feature-list {
+            text-align: left;
+            margin: 32px 0;
+            padding: 24px;
+            background: #f9fafb;
+            border-radius: 12px;
+        }
+        
+        .feature-list h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #374151;
+            margin: 0 0 16px 0;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: start;
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #4b5563;
+        }
+        
+        .feature-item i {
+            color: #10b981;
+            margin-right: 12px;
+            margin-top: 2px;
+            font-size: 16px;
+        }
+        
+        .btn-open-calculator {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 40px;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .btn-open-calculator:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+        
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 32px;
+            text-align: left;
+        }
+        
+        .info-box h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e40af;
+            margin: 0 0 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .info-box p {
+            font-size: 14px;
+            color: #1e3a8a;
+            margin: 0;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span>아톰세무회계</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="dashboard.html" class="nav-item">
+                    <i class="fas fa-home"></i>
+                    <span>대시보드</span>
+                </a>
+                <a href="clients.html" class="nav-item">
+                    <i class="fas fa-building"></i>
+                    <span>고객사 관리</span>
+                </a>
+                
+                <!-- 매매사업자 관리 (드롭다운) -->
+                <div class="nav-dropdown active">
+                    <a href="#" class="nav-item" onclick="toggleDropdown(event)">
+                        <i class="fas fa-store"></i>
+                        <span>매매사업자 관리</span>
+                        <i class="fas fa-chevron-down dropdown-arrow"></i>
+                    </a>
+                    <div class="dropdown-content">
+                        <a href="traders-data.html" class="dropdown-item">
+                            <i class="fas fa-database"></i>
+                            <span>매매사업자 데이터</span>
+                        </a>
+                        <a href="traders-checklist.html" class="dropdown-item">
+                            <i class="fas fa-check-square"></i>
+                            <span>매매사업자 체크리스트</span>
+                        </a>
+                        <a href="traders-vat.html" class="dropdown-item active">
+                            <i class="fas fa-calculator"></i>
+                            <span>부가가치세 계산</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <a href="#" class="nav-item">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>세무 관리</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>통계 분석</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <i class="fas fa-cog"></i>
+                    <span>설정</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button id="logoutBtn" class="nav-item" style="width: 100%; border: none; background: none;">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>로그아웃</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="top-bar-left">
+                    <button id="menuToggle" class="menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1>부가가치세 계산</h1>
+                </div>
+                <div class="top-bar-right">
+                    <div class="user-profile">
+                        <i class="fas fa-user-circle"></i>
+                        <span id="userName">관리자</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calculator Card -->
+            <div class="content-area">
+                <div class="calculator-card">
+                    <div class="calculator-icon">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    
+                    <h1 class="calculator-title">🏢 건물분 부가가치세 계산기</h1>
+                    <p class="calculator-description">
+                        매매사업자용 부가가치세를 자동으로 계산합니다.<br>
+                        주소 검색부터 OCR 자동 추출까지 간편하게 이용하세요.
+                    </p>
+                    
+                    <button class="btn-open-calculator" onclick="openCalculator()">
+                        <i class="fas fa-external-link-alt"></i>
+                        계산기 열기 (새 창)
+                    </button>
+                    
+                    <div class="feature-list">
+                        <h3>주요 기능</h3>
+                        <div class="feature-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span><strong>자동 주소 검색</strong> - Daum 주소검색 API로 간편하게 주소 입력</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span><strong>OCR 자동 추출</strong> - 건축물대장을 업로드하면 준공연도, 연면적, 구조를 자동으로 인식</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span><strong>토지공시지가 조회</strong> - 주소 기반으로 개별공시지가 최근자 조회 안내</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span><strong>건물기준시가 자동 계산</strong> - 구조지수, 경과연수, 잔가율을 반영한 자동 계산</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span><strong>정확한 수식 적용</strong> - 엑셀 기준 수식으로 매매가에 vat 포함/미포함 계산</span>
+                        </div>
+                        <div class="feature-item">
+                            <i class="fas fa-check-circle"></i>
+                            <span><strong>PDF 다운로드</strong> - 계산 결과를 PDF로 저장하여 보관</span>
+                        </div>
+                    </div>
+                    
+                    <div class="info-box">
+                        <h4>
+                            <i class="fas fa-info-circle"></i>
+                            사용 안내
+                        </h4>
+                        <p>
+                            • 계산기는 <strong>새 창</strong>으로 열립니다. 여러 계산을 동시에 진행할 수 있습니다.<br>
+                            • <strong>로그인 없이</strong> 링크를 공유하여 다른 사람도 사용할 수 있습니다.<br>
+                            • 각 계산은 <strong>독립적으로</strong> 동작하여 다른 사용자에게 영향을 주지 않습니다.<br>
+                            • 새로고침 시 입력한 데이터가 <strong>초기화</strong>되니 필요한 경우 PDF로 저장하세요.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Configuration and Auth -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/firebase-auth.js"></script>
+    <script src="js/firebase-db.js"></script>
+    <script src="js/common.js"></script>
+    <script>
+        // 계산기 새 창으로 열기
+        function openCalculator() {
+            const width = 1200;
+            const height = 900;
+            const left = (screen.width - width) / 2;
+            const top = (screen.height - height) / 2;
+            
+            window.open(
+                'vat-calculator-standalone.html',
+                'VATCalculator',
+                `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+            );
+        }
+        
+        // Check authentication
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    document.getElementById('userName').textContent = userData.name || user.email;
+                } else {
+                    const displayName = user.displayName || user.email.split('@')[0];
+                    document.getElementById('userName').textContent = displayName;
+                }
+            } catch (error) {
+                console.error('사용자 정보 로드 오류:', error);
+                const displayName = user.displayName || user.email.split('@')[0];
+                document.getElementById('userName').textContent = displayName;
+            }
+        });
+        
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await firebaseLogout();
+        });
+    </script>
+</body>
+</html>
