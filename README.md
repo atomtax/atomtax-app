@@ -6,6 +6,79 @@
 
 ---
 
+## 🔥 최신 업데이트 (2026-02-21 23:00)
+
+### ✅ 매매사업자 상세 페이지 - 테이블 레이아웃 긴급 수정
+
+**상태**: ✅ **테이블 오버플로우 문제 해결 완료**
+
+**문제**:
+- 테이블 헤더 일부(필요경비 상세, 양도소득금액, 신고여부, 작업)가 빨간색 박스처럼 튀어나옴
+- 원인: `table-layout: fixed` + 일부 칼럼 너비 미지정으로 인한 레이아웃 깨짐
+
+**해결 방법**:
+1. **`table-layout: fixed` 제거** → 자동 너비 조정으로 변경
+2. **개별 칼럼 너비 지정 제거** → 내용에 따라 자동 조정
+3. **최소 너비만 지정** (`min-width: 70px`) → 너무 좁아지는 것 방지
+4. **소재지 칼럼 최소 너비** (`min-width: 150px`) → 긴 주소 표시
+
+**로컬 테스트 결과**:
+```
+테이블 너비:     1,198 px
+컨테이너 너비:   1,238 px
+상태:           ✅ 정상 (오버플로우 없음)
+칼럼 정렬:      12개 칼럼 모두 정상 표시
+```
+
+**파일 변경**:
+- `trader-detail.html`: CSS 스타일 수정 (4개 블록)
+- `README.md`: 최신 업데이트 기록 추가
+- `TABLE_OVERFLOW_FIX_2026-02-21.md`: 상세 수정 문서
+- `LOCAL_TEST_RESULT.md`: 로컬 테스트 결과
+
+**결과**:
+- ✅ 테이블 헤더가 정상적으로 정렬됨
+- ✅ 칼럼 너비가 내용에 맞게 자동 조정됨
+- ✅ 오버플로우/튀어나옴 현상 사라짐
+- ✅ 모든 기능 정상 작동 (보고서, 엑셀 업로드 등)
+
+---
+
+## ✅ 최근 업데이트 (2026-02-21)
+
+### 🔧 수정 완료
+1. **대표자 필드 통합**
+   - Supabase DB: `representative`, `ceo_name` 두 필드 모두 업데이트
+   - UI 표시: 둘 다 사용 (호환성 보장)
+   - Excel 업로드: "대표자" 컬럼 → 두 필드 모두 저장
+
+2. **매매사업자 데이터 로드 수정**
+   - `trader-detail.js`: RESTful API → Supabase API로 전환
+   - `traders-data.html`: Fallback API 제거, Supabase 단일화
+   - 테스트 모드 제거, 실제 DB 데이터 사용
+
+3. **매매사업자 체크리스트 인증 수정**
+   - `traders-checklist.html`: Supabase 인증 로직 보강
+   - 인증 상태 로그 추가 (디버깅용)
+
+4. **캐시 문제 해결** ⭐
+   - 모든 JS 파일에 버전 파라미터 추가 (`?v=20260221`)
+   - 브라우저 캐시 무효화 강제 적용
+   - 파일: trader-detail.html, traders-data.html, traders-checklist.html
+
+5. **매매사업자 목록 UI 표시 문제 해결** 🎉
+   - `tradersGridContainer` 초기 `display: none` → `display: block` 수정
+   - 데이터 로드는 성공했으나 CSS로 숨겨져 있던 문제 해결
+   - 61개 매매사업자 정상 표시
+
+6. **매매사업자 상세 페이지 캐시 문제 해결** ⭐
+   - 데이터는 정상 조회되지만 캐시된 이전 JS로 Preview 모드 표시되던 문제
+   - **Hotfix 적용**: trader-detail.html에 인라인 스크립트 추가
+   - 외부 JS 파일 우회, Supabase 직접 호출로 즉시 동작
+   - Netlify 재배포 없이도 정상 작동
+
+---
+
 ## 🎯 주요 기능
 
 ### 1. 고객사 관리 (Clients Management)
@@ -51,20 +124,6 @@
   - 🔓 오픈소스 (자체 호스팅 가능)
   - 📊 더 나은 데이터 무결성 (Foreign Key, Unique 제약조건)
 
-#### Firebase (이전) - 더 이상 사용하지 않음
-- **Provider**: Google Firebase
-- **Project ID**: atomtax-cffe3
-- **마이그레이션 완료 날짜**: 2026-02-16
-
-#### 마이그레이션 파일
-- ✅ `sql/supabase-schema.sql` - 데이터베이스 스키마 (실행 완료)
-- ✅ `js/supabase-config.js` - Supabase 설정 (API Keys 입력 완료)
-- ✅ `js/supabase-auth.js` - 인증 모듈 (사용 중)
-- ✅ `js/supabase-db.js` - 데이터베이스 API (사용 중)
-- ✅ `SUPABASE_MIGRATION_GUIDE.md` - 마이그레이션 가이드
-
-**마이그레이션 완료!** ✅
-
 ---
 
 ## 📂 프로젝트 구조
@@ -86,25 +145,20 @@
 │   ├── supabase-config.js             # Supabase 설정 (현재 사용)
 │   ├── supabase-auth.js               # Supabase 인증 (현재 사용)
 │   ├── supabase-db.js                 # Supabase DB API (현재 사용)
-│   │
-│   ├── firebase-config.js             # Firebase 설정 (레거시)
-│   ├── firebase-auth.js               # Firebase 인증 (레거시)
-│   ├── firebase-db.js                 # Firebase DB API (레거시)
-│   │
 │   ├── clients.js                     # 고객사 관리 로직
 │   ├── trader-detail.js               # 매매사업자 상세 로직
 │   ├── common.js                      # 공통 유틸리티
-│   └── data-migration.js              # 데이터 마이그레이션 도구
+│   └── auto-backup.js                 # 자동 백업
 │
 ├── css/
 │   ├── style.css                      # 메인 스타일
-│   └── trader-detail.css              # 매매사업자 페이지 스타일
+│   └── traders-performance.css        # 매매사업자 페이지 스타일
 │
 └── docs/
-    ├── SUPABASE_MIGRATION_GUIDE.md    # Supabase 마이그레이션 가이드
-    ├── CLIENT_MANAGEMENT_UPDATE.md    # 고객사 관리 업데이트
-    ├── REFERENCE_DATA_FEATURE.md      # 입력참고용 기능
-    └── VAT_CALCULATOR_UPDATE.md       # 부가세 계산기 업데이트
+    ├── TABLE_OVERFLOW_FIX_2026-02-21.md
+    ├── LOCAL_TEST_RESULT.md
+    ├── SUPABASE_MIGRATION_GUIDE.md
+    └── ...
 ```
 
 ---
@@ -132,159 +186,7 @@ http-server -p 8080
 
 **기본 계정:**
 - Email: `mail@atomtax.co.kr`
-- Password: (Firebase Auth에 등록된 비밀번호)
-
-### 3. 데이터 백업 (마이그레이션 전 필수)
-
-Firebase 데이터를 백업하려면:
-```javascript
-// 브라우저 콘솔에서 실행
-await backupAllData();
-// → firebase_backup_YYYY-MM-DD.json 다운로드됨
-```
-
----
-
-## 📊 데이터 모델
-
-### Firebase Firestore (현재)
-
-#### Collections
-
-**1. users**
-```javascript
-{
-  uid: string,
-  email: string,
-  name: string,
-  role: string,
-  createdAt: timestamp,
-  updatedAt: timestamp
-}
-```
-
-**2. clients**
-```javascript
-{
-  id: string,
-  number: string,
-  company_name: string,
-  business_number: string,
-  representative: string,
-  manager: string,
-  phone: string,
-  address: string,
-  business_type: string,
-  business_item: string,
-  start_date: date,
-  end_date: date,
-  contract_amount: number,
-  supply_amount: number,
-  tax_amount: number,
-  is_terminated: boolean,
-  termination_date: date,
-  notes: string,
-  createdAt: timestamp,
-  updatedAt: timestamp
-}
-```
-
-**3. trader_inventory (일부는 localStorage)**
-```javascript
-// LocalStorage: trader_inventory_{clientId}
-{
-  property_name: string,
-  address: string,
-  detailed_address: string,
-  land_area: number,
-  building_area: number,
-  acquisition_value: number,
-  other_expenses: number,
-  transfer_value: number,
-  transfer_income: number,
-  disposal_cost: number,
-  acquisition_date: date,
-  transfer_date: date,
-  report_deadline: date,
-  prepaid_income_tax: number,
-  prepaid_local_tax: number,
-  over_85: string,
-  progress_stage: string,
-  remarks: string,
-  expenses: [
-    {
-      no: number,
-      expense_name: string,
-      category: string,
-      amount: number,
-      cost_approved: string,
-      note: string
-    }
-  ]
-}
-```
-
-### Supabase PostgreSQL (마이그레이션 대상)
-
-자세한 스키마는 `sql/supabase-schema.sql` 참고
-
-**테이블:**
-- users
-- clients (Foreign Key, Unique constraints)
-- trader_inventory (clients와 JOIN)
-- expenses (trader_inventory와 JOIN)
-- documents (서류 업로드)
-
----
-
-## 🔐 인증 및 보안
-
-### 현재 (Firebase)
-- Firebase Authentication (Email/Password)
-- Firestore Security Rules
-
-### 마이그레이션 후 (Supabase)
-- Supabase Auth (Email/Password)
-- Row Level Security (RLS) Policies
-- 더 세밀한 권한 관리
-
----
-
-## 📈 최근 업데이트
-
-### 2026-02-16 ⭐ **Supabase 마이그레이션 완료**
-- ✅ Firebase → Supabase 완전 전환
-  - PostgreSQL 데이터베이스 스키마 생성
-  - Supabase Auth 설정 완료
-  - HTML 파일 SDK 교체 (6개 파일)
-  - JavaScript 모듈 업데이트
-  - 관리자 계정 생성 (mail@atomtax.co.kr)
-- ✅ 프로젝트 URL: https://vdjyynwmnypuxvlhrcbk.supabase.co
-- ✅ 5개 테이블 생성: users, clients, trader_inventory, expenses, documents
-- ✅ Row Level Security (RLS) 정책 적용
-
-### 2026-02-15
-- ✅ Supabase 마이그레이션 준비
-  - 스키마 설계 및 SQL 파일 작성
-  - Supabase 설정·인증·DB 모듈 작성
-  - 상세 마이그레이션 가이드 작성
-- ✅ 고객사 관리 개선
-  - 모달 백그라운드 클릭 방지
-  - 번호 중복 체크 (해임고객 제외)
-- ✅ 매매사업자 기능 추가
-  - Excel 업로드 시 기존 데이터 보존
-  - 기납부 종소세·지방소득세 추가
-  - 입력참고용 보고서 자동 생성
-- ✅ 건물분 부가세 계산기 업데이트
-  - 상세 위치 입력 필드 추가
-  - 건물기준시가 전체 금액 입력 방식으로 변경
-  - PNG 다운로드 기능 추가
-
-### 2026-02-14
-- ✅ 필요경비 상세 줄별 삭제 기능
-- ✅ 진행 단계별 색상 표시
-- ✅ 비용명 드롭박스 변경
-- ✅ OCR 서류 업로드 개선
+- Password: (Supabase Auth에 등록된 비밀번호)
 
 ---
 
@@ -311,54 +213,66 @@ await backupAllData();
 <!-- Other Libraries -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 ```
 
 ---
 
-## 📝 다음 단계
+## 🌐 **배포 정보**
 
-### 완료된 마이그레이션 단계 ✅
-1. ✅ Supabase 프로젝트 생성
-2. ✅ 데이터베이스 스키마 실행
-3. ✅ 관리자 계정 생성
-4. ✅ HTML/JS 코드 Supabase로 전환
-5. ✅ 테스트 및 검증
+### **Production URL**
+- 🌍 **사이트**: https://atomtax-app.netlify.app
+- ✅ **상태**: Live & Running
+- 📅 **최종 업데이트**: 2026-02-21
 
-### 권장 다음 작업
-- [ ] 실제 고객 데이터 입력 및 테스트
-- [ ] 서류 업로드 기능 Supabase Storage 연동
-- [ ] 실시간 협업 기능 (Supabase Realtime)
-- [ ] 알림 시스템
-- [ ] 모바일 반응형 최적화
-- [ ] 다크 모드
+### **GitHub Repository**
+- 📦 **저장소**: https://github.com/atomtax/atomtax-app
+- 🔄 **자동 배포**: Netlify 연동 완료
 
----
-
-## 📞 문제 해결
-
-### Firebase 연결 실패
-- Firebase 설정 확인: `js/firebase-config.js`
-- 네트워크 연결 확인
-- Firebase Console에서 프로젝트 상태 확인
-
-### LocalStorage 데이터 손실
-- 브라우저 캐시 삭제 시 데이터 손실 가능
-- **해결책**: Supabase 마이그레이션으로 영구 저장
-
-### Excel 업로드 실패
-- 파일 형식 확인 (.xlsx)
-- 양식 일치 여부 확인
-- 브라우저 콘솔에서 에러 메시지 확인
+### **호스팅**
+- 🏠 **플랫폼**: Netlify
+- 🚀 **자동 배포**: GitHub main 브랜치 push 시
+- 🔒 **HTTPS**: 자동 적용
+- ⚡ **CDN**: 글로벌 배포
 
 ---
 
-## 🔗 유용한 링크
+## 🔐 **로그인 정보**
 
-- [Supabase Dashboard](https://supabase.com/dashboard)
-- [Firebase Console](https://console.firebase.google.com)
-- [마이그레이션 가이드](./SUPABASE_MIGRATION_GUIDE.md)
-- [Daum Postcode API](https://postcode.map.daum.net/guide)
+- **Email**: `mail@atomtax.co.kr`
+- **Password**: (Supabase Dashboard에서 관리)
+
+---
+
+## 📊 **데이터 현황**
+
+- **고객 데이터**: 187개 (Supabase PostgreSQL)
+- **매매사업자**: 61개
+- **백업 시스템**: 자동 백업 (auto-backup.js)
+- **자동 백업**: Console에서 `autoBackup()` 실행
+- **백업 주기**: 매주 권장
+
+---
+
+## 🔄 **개발 워크플로우**
+
+```
+1. GenSpark/로컬에서 코드 수정
+   ↓
+2. GitHub에 Push
+   ↓
+3. Netlify 자동 배포 (1-2분)
+   ↓
+4. https://atomtax-app.netlify.app 업데이트 완료!
+```
+
+---
+
+## 📞 **지원 및 문서**
+
+- 📖 [테이블 오버플로우 수정](./TABLE_OVERFLOW_FIX_2026-02-21.md)
+- 🧪 [로컬 테스트 결과](./LOCAL_TEST_RESULT.md)
+- 📖 [Supabase 마이그레이션 가이드](./SUPABASE_MIGRATION_COMPLETE.md)
+- 🔧 [개발 가이드](./SUPABASE_DEVELOPMENT_GUIDE.md)
 
 ---
 
@@ -369,5 +283,9 @@ await backupAllData();
 ---
 
 **제작:** Claude AI + 아톰세무회계  
-**최종 업데이트:** 2026-02-15  
-**버전:** 2.0.0 (Supabase Migration Ready)
+**최종 업데이트:** 2026-02-21  
+**버전:** 2.2.0 (테이블 레이아웃 수정) 🚀
+
+---
+
+**🎉 배포 완료 및 운영 중!**
