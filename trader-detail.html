@@ -498,15 +498,60 @@
     <script src="js/supabase-db.js"></script>
     <script src="js/common.js"></script>
     <script src="js/auto-backup.js"></script>
-    <script src="js/trader-detail.js"></script>
     <script>
+        // 🔥 HOTFIX: Inline script to bypass cached trader-detail.js
+        console.log('🔥 Hotfix script loaded - bypassing external JS');
+        
+        // Get client ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const clientId = urlParams.get('id');
+        
+        if (!clientId) {
+            console.warn('⚠️ No client ID - redirecting to traders list');
+            window.location.href = 'traders-data.html';
+        }
+        
+        // Load client data directly using Supabase
+        async function loadClientDataHotfix() {
+            try {
+                console.log('🔍 Loading client data:', clientId);
+                
+                const { data: client, error } = await supabaseClient
+                    .from('clients')
+                    .select('*')
+                    .eq('id', clientId)
+                    .single();
+                
+                if (error) throw error;
+                
+                console.log('✅ Client data loaded:', client.company_name);
+                
+                // Update page title
+                document.getElementById('pageTitle').textContent = client.company_name;
+                document.title = `${client.company_name} - 매매사업자 상세`;
+                
+            } catch (error) {
+                console.error('❌ Failed to load client data:', error);
+                alert('데이터 로드 실패: ' + error.message);
+            }
+        }
+        
         // Check authentication
-        SupabaseAuth.onAuthStateChanged((user) => {
+        SupabaseAuth.onAuthStateChanged(async (user) => {
             if (!user) {
                 window.location.href = 'index.html';
                 return;
             }
+            
+            // Load client data after auth check
+            if (clientId) {
+                await loadClientDataHotfix();
+            }
         });
+    </script>
+    <script src="js/trader-detail.js"></script>
+    <script>
+
         
         // 필요경비 섹션 표시 최적화
         function openExpenseSection(index) {
