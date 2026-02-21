@@ -15,25 +15,25 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <style>
-        /* 매매사업자 전용 경량 스타일 */
+        /* 매매사업자 전용 스타일 - 디자인 개선 */
         .trader-container {
             max-width: 100%;
             margin: 0;
-            padding: 15px;
-            background: #fff;
+            padding: 20px;
+            background: #f9fafb;
         }
         
         .trader-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 0;
+            padding: 15px 0;
             border-bottom: 2px solid #e5e7eb;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
         
         .trader-title {
-            font-size: 20px;
+            font-size: 22px;
             font-weight: 700;
             color: #1f2937;
         }
@@ -41,56 +41,86 @@
         .trader-card {
             background: #fff;
             border: 1px solid #e5e7eb;
-            border-radius: 4px;
-            margin-bottom: 20px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
         
         .trader-card-header {
-            padding: 12px 16px;
-            background: #f9fafb;
+            padding: 16px 20px;
+            background: linear-gradient(to bottom, #f9fafb, #f3f4f6);
             border-bottom: 1px solid #e5e7eb;
             font-weight: 600;
             font-size: 15px;
             color: #374151;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
         }
         
         .trader-card-body {
-            padding: 15px;
+            padding: 20px;
+            overflow-x: auto;
         }
         
         .trader-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 13px;
+            background: white;
         }
         
         .trader-table th {
-            padding: 8px 10px;
-            background: #f9fafb;
+            padding: 12px 8px;
+            background: linear-gradient(to bottom, #f9fafb, #f3f4f6);
             border: 1px solid #e5e7eb;
             font-weight: 600;
             color: #374151;
             text-align: center;
+            white-space: nowrap;
+            font-size: 12px;
+            min-width: 70px;
         }
         
+        /* 칼럼 너비는 자동 조정 (table-layout: fixed 제거) */
+        
         .trader-table td {
-            padding: 6px 8px;
+            padding: 8px 6px;
             border: 1px solid #e5e7eb;
+            vertical-align: middle;
+            text-align: center;
+            min-width: 70px;
+        }
+        
+        .trader-table td:nth-child(2) {
+            text-align: left;
+            padding-left: 10px;
+            min-width: 150px;
+        }
+        
+        .trader-table tbody tr:hover {
+            background: #f9fafb;
         }
         
         .trader-input {
             width: 100%;
-            padding: 5px 8px;
+            padding: 6px 8px;
             border: 1px solid #d1d5db;
-            border-radius: 3px;
-            font-size: 13px;
+            border-radius: 4px;
+            font-size: 12px;
             background: white;
             color: #1f2937;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-sizing: border-box;
         }
         
         .trader-input:focus {
             outline: none;
             border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         
         /* Select dropdown */
@@ -98,6 +128,7 @@
         select.trader-input {
             background: white;
             color: #1f2937;
+            cursor: pointer;
         }
         
         /* Option elements */
@@ -111,20 +142,29 @@
         .trader-input[readonly] {
             background: #f9fafb;
             cursor: not-allowed;
+            color: #6b7280;
         }
         
         .trader-btn {
             padding: 8px 16px;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            transition: opacity 0.2s;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
         
         .trader-btn:hover {
-            opacity: 0.85;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .trader-btn:active {
+            transform: translateY(0);
         }
         
         .trader-btn-primary {
@@ -132,9 +172,17 @@
             color: white;
         }
         
+        .trader-btn-primary:hover {
+            background: #5568d3;
+        }
+        
         .trader-btn-success {
             background: #10b981;
             color: white;
+        }
+        
+        .trader-btn-success:hover {
+            background: #059669;
         }
         
         .trader-btn-secondary {
@@ -142,36 +190,48 @@
             color: white;
         }
         
+        .trader-btn-secondary:hover {
+            background: #4b5563;
+        }
+        
         .trader-section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 15px;
-            background: #eff6ff;
-            border: 1px solid #bfdbfe;
-            border-radius: 4px;
-            margin-bottom: 15px;
+            padding: 12px 18px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 8px;
+            margin-bottom: 18px;
+            color: white;
         }
         
         .trader-section-title {
             font-weight: 600;
-            font-size: 14px;
-            color: #1e40af;
+            font-size: 15px;
+            color: white;
         }
         
         .trader-totals {
-            padding: 12px;
-            background: #f9fafb;
+            padding: 16px 20px;
+            background: linear-gradient(to bottom, #f9fafb, #f3f4f6);
             border: 1px solid #e5e7eb;
-            border-radius: 4px;
-            margin-top: 10px;
+            border-radius: 8px;
+            margin-top: 16px;
         }
         
         .trader-total-row {
             display: flex;
             justify-content: space-between;
-            padding: 6px 0;
+            padding: 8px 0;
             font-size: 14px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .trader-total-row:last-child {
+            border-bottom: none;
+            padding-top: 12px;
+            margin-top: 4px;
+            font-size: 16px;
         }
         
         .trader-total-label {
@@ -189,9 +249,11 @@
             text-decoration: none;
             font-weight: 600;
             cursor: pointer;
+            transition: color 0.2s;
         }
         
         .property-link:hover {
+            color: #5568d3;
             text-decoration: underline;
         }
         
@@ -200,30 +262,50 @@
             background: #f3f4f6 !important;
             color: #6b7280 !important;
             border: 2px solid #e5e7eb !important;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            display: inline-block;
         }
         
         .status-확인 {
             background: #dbeafe !important;
             color: #1e40af !important;
             border: 2px solid #93c5fd !important;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            display: inline-block;
         }
         
         .status-위하고입력 {
             background: #fed7aa !important;
             color: #c2410c !important;
             border: 2px solid #fb923c !important;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            display: inline-block;
         }
         
         .status-고객안내 {
             background: #fef3c7 !important;
             color: #92400e !important;
             border: 2px solid #fbbf24 !important;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            display: inline-block;
         }
         
         .status-신고완료 {
             background: #d1fae5 !important;
             color: #065f46 !important;
             border: 2px solid #6ee7b7 !important;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            display: inline-block;
         }
         
         /* Select 요소 스타일 강화 */
@@ -236,6 +318,28 @@
         select.trader-input:focus {
             outline: none;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        /* 아이콘 버튼 */
+        .icon-btn {
+            padding: 6px 8px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #6b7280;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 28px;
+        }
+        
+        .icon-btn:hover {
+            background: #f9fafb;
+            border-color: #667eea;
+            color: #667eea;
         }
         
         /* 서류 업로드 버튼 강조 (빨간색) */
@@ -270,6 +374,77 @@
         
         .trader-expense-section.active {
             display: block;
+        }
+        
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #9ca3af;
+        }
+        
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            display: block;
+            color: #d1d5db;
+        }
+        
+        .empty-state p {
+            font-size: 16px;
+            margin: 8px 0;
+        }
+        
+        /* 작업 칼럼 버튼 그룹 */
+        .action-buttons {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: nowrap;
+        }
+        
+        /* 테이블 내 버튼 크기 조정 */
+        .trader-table .icon-btn {
+            min-width: 32px;
+            height: 32px;
+            padding: 4px 6px;
+            font-size: 13px;
+        }
+        
+        .trader-table .icon-btn i {
+            font-size: 13px;
+        }
+        
+        /* 액션 칼럼 중앙 정렬 */
+        .trader-table td:last-child {
+            text-align: center;
+            vertical-align: middle;
+        }
+        
+        /* 상단 버튼 그룹 스타일 */
+        .header-buttons {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        /* 작은 화면에서도 깨지지 않도록 */
+        @media (max-width: 1400px) {
+            .trader-table {
+                font-size: 12px;
+            }
+            
+            .trader-table th,
+            .trader-table td {
+                padding: 6px 4px;
+            }
+            
+            .trader-input {
+                font-size: 11px;
+                padding: 4px 6px;
+            }
         }
     </style>
 </head>
@@ -371,21 +546,22 @@
 
                 <!-- 물건 목록 -->
                 <div class="trader-card">
-                    <div class="trader-card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <i class="fas fa-warehouse"></i> 물건 목록
+                    <div class="trader-card-header">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-warehouse"></i>
+                            <span>물건 목록</span>
                         </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button onclick="openRealEstateDrive()" class="trader-btn" id="realEstateDriveBtn" style="padding: 8px 16px; font-size: 13px; background: #f59e0b; border-color: #f59e0b; color: white;">
+                        <div class="header-buttons">
+                            <button onclick="openRealEstateDrive()" class="trader-btn" id="realEstateDriveBtn" style="background: #f59e0b; color: white;">
                                 <i class="fas fa-building"></i> 부동산 폴더
                             </button>
-                            <button onclick="window.open('traders-checklist.html', '_blank')" class="trader-btn" style="padding: 8px 16px; font-size: 13px; background: #8b5cf6; border-color: #8b5cf6; color: white;">
+                            <button onclick="window.open('traders-checklist.html', '_blank')" class="trader-btn" style="background: #8b5cf6; color: white;">
                                 <i class="fas fa-clipboard-list"></i> 체크리스트
                             </button>
-                            <button onclick="downloadExcelTemplate()" class="trader-btn trader-btn-secondary" style="padding: 8px 16px; font-size: 13px;">
+                            <button onclick="downloadExcelTemplate()" class="trader-btn trader-btn-secondary">
                                 <i class="fas fa-download"></i> 양식 다운로드
                             </button>
-                            <button onclick="document.getElementById('excelUpload').click()" class="trader-btn trader-btn-primary" style="padding: 8px 16px; font-size: 13px;">
+                            <button onclick="document.getElementById('excelUpload').click()" class="trader-btn trader-btn-primary">
                                 <i class="fas fa-upload"></i> 엑셀 업로드
                             </button>
                             <input type="file" id="excelUpload" accept=".xlsx, .xls" style="display: none;" onchange="handleExcelUpload(event)">
@@ -397,20 +573,26 @@
                             <table class="trader-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 120px;">물건명</th>
-                                        <th style="width: 120px;">취득가액</th>
-                                        <th style="width: 120px;">기타필요경비</th>
-                                        <th style="width: 120px;">양도가액</th>
-                                        <th style="width: 120px;">양도소득</th>
-                                        <th style="width: 100px;">취득일</th>
-                                        <th style="width: 100px;">양도일</th>
-                                        <th style="width: 100px; background: #fef3c7;">신고기한</th>
+                                        <th>No</th>
+                                        <th>소재지</th>
+                                        <th>면적(㎡)</th>
+                                        <th>취득가액</th>
+                                        <th>취득일자</th>
+                                        <th>양도가액</th>
+                                        <th>양도일자</th>
+                                        <th>필요경비</th>
+                                        <th>필요경비<br>상세</th>
+                                        <th>양도소득금액</th>
+                                        <th>신고여부</th>
+                                        <th>작업</th>
                                     </tr>
                                 </thead>
                                 <tbody id="inventoryTableBody">
                                     <tr>
-                                        <td colspan="8" style="padding: 20px; text-align: center; color: #9ca3af;">
-                                            데이터를 입력하세요.
+                                        <td colspan="12" style="padding: 20px; text-align: center; color: #9ca3af;">
+                                            <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 16px; display: block;"></i>
+                                            <p style="font-size: 16px; margin: 0;">등록된 물건이 없습니다.</p>
+                                            <p style="font-size: 14px; margin-top: 8px; color: #9ca3af;">엑셀 파일을 업로드하여 물건을 등록하세요.</p>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -420,9 +602,6 @@
                         <div style="margin-top: 12px; text-align: right;">
                             <button class="trader-btn trader-btn-primary" onclick="addInventoryRow()">
                                 <i class="fas fa-plus"></i> 행 추가
-                            </button>
-                            <button class="trader-btn trader-btn-success" style="margin-left: 8px;" onclick="saveInventoryData()">
-                                <i class="fas fa-save"></i> 저장
                             </button>
                         </div>
                     </div>
@@ -499,8 +678,8 @@
     <script src="js/common.js?v=1708491000"></script>
     <script src="js/auto-backup.js?v=1708491000"></script>
     
-    <!-- Load NEW complete trader-detail script -->
-    <script src="js/trader-detail-new.js?v=<?php echo time(); ?>"></script>
+    <!-- Load trader-detail script -->
+    <script src="js/trader-detail.js?v=20260221"></script>
     
     <script>
         // Close modal when clicking outside
