@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>긴급 데이터 복구</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Pretendard', -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+        h1 { color: #333; margin-bottom: 20px; font-size: 28px; }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6); }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .log {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            display: none;
+        }
+        .log-entry { margin: 5px 0; padding: 5px; }
+        .log-success { color: #28a745; }
+        .log-error { color: #dc3545; }
+        .log-info { color: #0056b3; }
+        .summary {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ 긴급 데이터 복구</h1>
+        <p style="margin-bottom: 20px; color: #666;">매매사업자 데이터를 자동으로 복구합니다</p>
+        <button id="restoreBtn" class="btn">🚀 지금 복구 시작</button>
+        <div class="log" id="log"></div>
+        <div class="summary" id="summary"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            logDiv.style.display = 'block';
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        const traderData = [
+            ['디앤옥션','8412301923','성윤지','703011','sukces0419@naver.com'],
+            ['중앙매매','5065001012','이희태','703011','dlgmlxo7200@naver.com'],
+            ['화진','4079106940','한남희','703011','hjhnh625@naver.com'],
+            ['대성세민','2190710886','여성민','703011','ysmfly@naver.com'],
+            ['러브유매매사업자','5709401846','백종여','703011','0429tls@naver.com'],
+            ['서로윈컴퍼니','4619401668','정재현','703011','dump1011@naver.com'],
+            ['제이컨설팅','5046200738','정혜실','703011','junghyesil@gmail.com'],
+            ['천마산개발','8501002474','신우원','703012','shinsuho@naver.com'],
+            ['양지열','2713701437','양지열','703011','wlduf96@gmail.com'],
+            ['진부동산','2520603162','김진아','703011','xjinaa@naver.com'],
+            ['아방드르','7929801459','박다글','703012','dageul@naver.com'],
+            ['리치하루','7361902109','김현학','703011','cksdnl7@naver.com'],
+            ['진유현','3581502503','진유현','703011','jazzbi21@naver.com'],
+            ['러브미매매하우스','2099305400','이영민','703011','0429tls@naver.com'],
+            ['더블유앤에이','2795400822','이건욱','703012','rjsdnr8@naver.com'],
+            ['토브','2024501417','윤순덕','703011','estatepro2406@gmail.com'],
+            ['김기대','1800802649','김기대','703012','bigkimkidae@gmail.com'],
+            ['부자아빠','3569701479','최진후','703011','jinhoo1125@naver.com'],
+            ['화유그라운드','1564201414','신우경','703011','woowooff@naver.com'],
+            ['미미동산','2922401939','이미정','703011','aailun@naver.com'],
+            ['애쓰지','2183701469','윤성길','703011','tjdrlf44@naver.com'],
+            ['지윤숙','7441102593','지윤숙','703011','ysjji53@naver.com'],
+            ['컴플리트블리스','1193401332','김은주','703011','yfulzoekim@gmail.com'],
+            ['구리옥션','7959501777','최진영','703011','team561@naver.com'],
+            ['피비앤제이','2391902194','정애리','703011','pbandj2502@gmail.com'],
+            ['백마','6842801631','황하나','703011','hhh5730@naver.com'],
+            ['지복','8723101903','이지은','703011','cheonho811@gmail.com'],
+            ['청인','8123301467','김지은','703011','kje4402@naver.com'],
+            ['에스제이인베스트먼트','4390203252','송혜지','703011','shj8879@naver.com'],
+            ['보나하우스','6272002039','이민희','703011','mineee1205@gmail.com'],
+            ['겟잇리치','8710803083','김민석','703012','archims@naver.com'],
+            ['이룸','4712302117','이유리','703011','yiut54345@naver.com'],
+            ['보뗌므','6376800608','권은혜','703011','ehhhh6680@naver.com'],
+            ['엠케이','4619001938','백명균','703011','bmk1091@gmail.com'],
+            ['에셋업','2299701935','최한엽','703011','chyoup94@daum.net'],
+            ['디아틀리에','1678603755','김성훈','703011','jesus21ksh@gmail.com'],
+            ['에이블루트','5598803695','박지혜','703011','hay1758@gmail.com'],
+            ['빈스비전플래닝','8521003106','오병준','703011','vinstagram@naver.com'],
+            ['임장토끼','6772002581','김은영','703011','kimeenyoung@naver.com'],
+            ['김재경','1111336394','김재경','703011','amykim1@naver.com'],
+            ['조이앤코','5260203726','조동우','703011','jiqweji@naver.com'],
+            ['동화랜드','7283301497','이일화','703011','1dlfghk2@naver.com'],
+            ['리더스옥션','6262502031','황은주','703011','landa1219@naver.com'],
+            ['주식회사한칸','7478603094','고원재','703011','kwj1350@naver.com'],
+            ['만심','6629901887','임연심','703011','fbanswjd@naver.com'],
+            ['드림문홀딩스','2304201459','유문정','703011','fbanswjd@naver.com'],
+            ['플로라향부동산','4471602474','이향숙','703011','mmjj6139@naver.com'],
+            ['현스옥션','8495500841','현미경','703011','hyoun180618@naver.com'],
+            ['디유인베스트','3590503490','신윤주','703012','cmyj012@naver.com'],
+            ['로아에스테이트','8749801896','이태성','703011','yisiljangnim@naver.com'],
+            ['와글와글','5361003086','홍은주','703011','yyy5419@naver.com'],
+            ['누헤부경','8940103281','이보람','703011','8220ss@naver.com'],
+            ['시무곳','8030403103','정유증','703011','otcoat@naver.com'],
+            ['이금룡주택매매','5469302035','이금룡','703011','ryonqsamo@naver.com'],
+            ['더리프','6364701138','김서희','703011','propulsion7@naver.com'],
+            ['나인루트','8751502390','최희구','703011','propulsion7@naver.com'],
+            ['해','1669102529','김진영','703011','jimjin81@naver.com'],
+            ['핵심부동산','6689901833','윤다혜','703011','awesomemina@naver.com'],
+            ['리치경매','7714501081','이자비','703011','jabi4860@naver.com'],
+            ['태산리얼티','7761902354','신태우','703011','stw2001@naver.com'],
+            ['열칸','4961802465','이사야','703011','kwj1350@naver.com'],
+            ['케이에스에이치에스','4120799651','홍근선','703011','keunsunh@daum.net'],
+            ['리노벨로','3279102139','강계림','703011','11ansgallry@naver.com'],
+            ['예진투자','1093029636','이예진','703011','']
+        ];
+
+        async function restore() {
+            const btn = document.getElementById('restoreBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ 복구 중...';
+            
+            try {
+                log('🚀 복구 시작', 'info');
+                log(`📋 매매사업자: ${traderData.length}개`, 'info');
+                
+                const { data: clients, error } = await supabase.from('clients').select('*');
+                if (error) throw error;
+                
+                log(`✅ Supabase: ${clients.length}개`, 'success');
+                
+                let updated = 0;
+                for (const [name, bizNum, rep, code, email] of traderData) {
+                    const client = clients.find(c => c.business_number?.replace(/-/g, '') === bizNum.replace(/-/g, ''));
+                    if (client) {
+                        const updateData = {};
+                        if (rep && !client.representative) updateData.representative = rep;
+                        if (code && !client.business_code) updateData.business_code = code;
+                        if (email && !client.email) updateData.email = email;
+                        
+                        if (Object.keys(updateData).length > 0) {
+                            const { error: updateError } = await supabase.from('clients').update(updateData).eq('id', client.id);
+                            if (updateError) throw updateError;
+                            updated++;
+                            log(`✅ ${name}`, 'success');
+                        }
+                    }
+                }
+                
+                log(`🎉 완료! ${updated}개 업데이트`, 'success');
+                
+                document.getElementById('summary').style.display = 'block';
+                document.getElementById('summary').innerHTML = `
+                    <h3>✅ 복구 완료!</h3>
+                    <p>총 ${updated}개 고객사 업데이트 완료</p>
+                    <p style="margin-top: 10px;"><strong>이제 <a href="traders-data.html" style="color: #667eea;">매매사업자 페이지</a>를 새로고침하세요!</strong></p>
+                `;
+                
+                btn.textContent = '✅ 복구 완료!';
+                btn.style.background = '#28a745';
+                
+            } catch (error) {
+                log(`❌ 오류: ${error.message}`, 'error');
+                btn.textContent = '❌ 복구 실패';
+                btn.style.background = '#dc3545';
+                btn.disabled = false;
+            }
+        }
+
+        document.getElementById('restoreBtn').addEventListener('click', restore);
+    </script>
+</body>
+</html>
