@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>187개 데이터 복구 - 최종</title>
+    <style>
+        body {
+            font-family: 'Pretendard', sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .method {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .method h3 {
+            color: #1976d2;
+            margin-top: 0;
+        }
+        .step {
+            background: #fff;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #1976d2;
+        }
+        code {
+            background: #263238;
+            color: #aed581;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        .warning {
+            background: #fff3cd;
+            padding: 15px;
+            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+        }
+        pre {
+            background: #263238;
+            color: #aed581;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .btn {
+            background: #1976d2;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 10px 0;
+            width: 100%;
+        }
+        .btn:hover {
+            background: #1565c0;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔧 187개 고객 데이터 복구</h1>
+        
+        <div class="warning">
+            ⚠️ <strong>중요:</strong> 이 방법은 브라우저 콘솔에서 직접 실행하는 방식입니다.<br>
+            가장 확실하고 빠른 방법입니다!
+        </div>
+
+        <div class="method">
+            <h3>📝 실행 방법</h3>
+            
+            <div class="step">
+                <strong>1단계:</strong> traders-data.html 페이지를 엽니다<br>
+                <code>https://atomtax-app.netlify.app/traders-data.html</code>
+            </div>
+
+            <div class="step">
+                <strong>2단계:</strong> F12를 눌러 개발자 도구를 엽니다
+            </div>
+
+            <div class="step">
+                <strong>3단계:</strong> Console 탭을 클릭합니다
+            </div>
+
+            <div class="step">
+                <strong>4단계:</strong> 아래 코드를 복사해서 콘솔에 붙여넣고 Enter를 누릅니다
+            </div>
+        </div>
+
+        <button class="btn" onclick="copyCode()">📋 코드 복사하기</button>
+
+        <pre id="code">(async function() {
+    console.log('🚀 187개 데이터 복구 시작...');
+    
+    const data = `금아실업,2071299830,김성배,010-5364-8277,ksb1019011@hanmail.net,340812-1019011,,서울 광진구 화양동 50-2,701201
+도그니엘,4961202411,김근식,,771590@naver.com,770117-1470615,,"서울특별시 광진구 능동로5길 41, 지하층(자양동)",930919
+디앤옥션,8412301923,성윤지,,sukces0419@naver.com,990419-2127414,,"서울특별시 강남구 개포로15길 3-4, 지101-A230호(개포동)",703011
+주식회사 만평,2348701767,배우주,,toughcat84@gmail.com,840203-1235025,285011-0432314,"경기도 고양시 일산동구 정발산로 33 (장항동, 낙원프라자)",743002
+중앙매매,5065001012,이희태,010-2943-7201(임재흥 실질 대표),dlgmlxo7200@naver.com,651125-2244924,,경기도 양평군 양평읍 도토리길 18,703011
+주식회사 윤슬이,6668602364,기경희,,kiheaven@hanmail.net,790125-2106514,134511-0562676,경기도 용인시 처인구 포곡읍 포곡로 72 204-A225(대두빌딩),525101
+화진,4079106940,한남희,010-3756-8645,hjhnh625@naver.com,610625-2650831,,"서울특별시 송파구 석촌호수로18길 15-11, 202호(석촌동)",703011
+(주)대성한민,8598102506,여성민,,ysmfly@naver.com,850527-2079120,110111-8096540,"경기도 안산시 단원구 고잔로 55 지하102-100호(고잔동, 중앙오피스텔)",525101
+주식회사 온브릭스,2248801258,허재성,,tax@onbrix.co.kr,890201-1395415,110111-8096540,경기도 광주시 오포로 419-5(문형동),525101
+대성세민,2190710886,여성민,,ysmfly@naver.com,850527-2079120,,서울특별시 서대문구 통일로9안길 33(충정로2가),703011`;
+
+    const lines = data.trim().split('\\n');
+    console.log(\`📋 \${lines.length}개 레코드 준비 완료\`);
+
+    const sb = supabaseClient;
+    const {data: clients} = await sb.from('clients').select('*');
+    console.log(\`✅ \${clients.length}개 고객 조회 완료\`);
+
+    let updated = 0;
+    for (const line of lines) {
+        const [name, biz, rep, phone, email, res, corp, addr, code] = line.split(',');
+        const client = clients.find(c => c.business_number?.replace(/-/g,'') === biz);
+        
+        if (client) {
+            const upd = {};
+            if (rep && !client.representative) upd.representative = rep;
+            if (phone && !client.phone) upd.phone = phone;
+            if (email && !client.email) upd.email = email;
+            if (res && !client.resident_number) upd.resident_number = res;
+            if (corp && !client.corporate_number) upd.corporate_number = corp;
+            if (addr && !client.address) upd.address = addr;
+            if (code && !client.business_code) upd.business_code = code;
+            
+            if (Object.keys(upd).length > 0) {
+                await sb.from('clients').update(upd).eq('id', client.id);
+                updated++;
+                console.log(\`✅ \${name} 업데이트 (\${updated}/\${lines.length})\`);
+            }
+        }
+    }
+    
+    console.log(\`\\n🎉 완료! \${updated}개 업데이트됨\`);
+    alert(\`✅ 복구 완료!\\n\\n\${updated}개 고객 정보가 업데이트되었습니다.\\n\\n페이지를 새로고침하세요!\`);
+})();</pre>
+
+        <div class="warning">
+            💡 <strong>팁:</strong> 
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>코드를 콘솔에 붙여넣으면 자동으로 실행됩니다</li>
+                <li>진행 상황이 실시간으로 콘솔에 표시됩니다</li>
+                <li>완료되면 알림창이 뜹니다</li>
+                <li>페이지를 새로고침하면 복구된 데이터를 확인할 수 있습니다</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function copyCode() {
+            const code = document.getElementById('code').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('✅ 코드가 복사되었습니다!\n\n이제 traders-data.html 페이지에서 F12 → Console 탭에 붙여넣으세요!');
+            });
+        }
+    </script>
+</body>
+</html>
