@@ -493,88 +493,32 @@
     </div>
 
     <!-- Supabase Configuration and Auth -->
-    <script src="js/supabase-config.js"></script>
-    <script src="js/supabase-auth.js"></script>
-    <script src="js/supabase-db.js"></script>
-    <script src="js/common.js"></script>
-    <script src="js/auto-backup.js"></script>
+    <script src="js/supabase-config.js?v=1708491000"></script>
+    <script src="js/supabase-auth.js?v=1708491000"></script>
+    <script src="js/supabase-db.js?v=1708491000"></script>
+    <script src="js/common.js?v=1708491000"></script>
+    <script src="js/auto-backup.js?v=1708491000"></script>
+    
+    <!-- Load NEW complete trader-detail script -->
+    <script src="js/trader-detail-new.js?v=<?php echo time(); ?>"></script>
+    
     <script>
-        // 🔥 HOTFIX: Inline script to bypass cached trader-detail.js
-        console.log('🔥 Hotfix script loaded - bypassing external JS');
-        
-        // Get client ID from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const clientId = urlParams.get('id');
-        
-        if (!clientId) {
-            console.warn('⚠️ No client ID - redirecting to traders list');
-            window.location.href = 'traders-data.html';
-        }
-        
-        // Load client data directly using Supabase
-        async function loadClientDataHotfix() {
-            try {
-                console.log('🔍 Loading client data:', clientId);
-                
-                const { data: client, error } = await supabaseClient
-                    .from('clients')
-                    .select('*')
-                    .eq('id', clientId)
-                    .single();
-                
-                if (error) throw error;
-                
-                console.log('✅ Client data loaded:', client.company_name);
-                
-                // Update page title
-                document.getElementById('pageTitle').textContent = client.company_name;
-                document.title = `${client.company_name} - 매매사업자 상세`;
-                
-            } catch (error) {
-                console.error('❌ Failed to load client data:', error);
-                alert('데이터 로드 실패: ' + error.message);
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const expenseModal = document.getElementById('expenseModal');
+            const reportModal = document.getElementById('reportModal');
+            const referenceModal = document.getElementById('referenceModal');
+            
+            if (event.target === expenseModal) {
+                closeExpenseModal();
             }
-        }
-        
-        // Check authentication
-        SupabaseAuth.onAuthStateChanged(async (user) => {
-            if (!user) {
-                window.location.href = 'index.html';
-                return;
+            if (event.target === reportModal) {
+                reportModal.style.display = 'none';
             }
-            
-            // Load client data after auth check
-            if (clientId) {
-                await loadClientDataHotfix();
+            if (event.target === referenceModal) {
+                referenceModal.style.display = 'none';
             }
-        });
-    </script>
-    <script src="js/trader-detail.js"></script>
-    <script>
-
-        
-        // 필요경비 섹션 표시 최적화
-        function openExpenseSection(index) {
-            currentPropertyIndex = index;
-            const property = inventoryRows[index];
-            
-            document.getElementById('expensePropertyNameInput').value = property.property_name || '물건' + (index + 1);
-            
-            initializeDetailExpenseRows(property.expenses || []);
-            renderDetailExpensesTable();
-            calculateDetailExpenseTotals();
-            
-            const section = document.getElementById('expenseDetailSection');
-            section.classList.add('active');
-            
-            // 부드러운 스크롤 대신 즉시 이동
-            section.scrollIntoView({ block: 'nearest' });
-        }
-        
-        function closeExpenseSection() {
-            document.getElementById('expenseDetailSection').classList.remove('active');
-            currentPropertyIndex = -1;
-        }
+        };
     </script>
 
     <!-- 보고서 모달 -->
