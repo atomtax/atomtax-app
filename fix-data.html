@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💾 데이터 복구 도구</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 850px;
+            width: 100%;
+            padding: 40px;
+        }
+        h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .info {
+            background: #e8f4fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        button {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 18px;
+            font-size: 18px;
+            font-weight: 700;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        #log {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.8;
+            display: none;
+        }
+        #log.show {
+            display: block;
+        }
+        .success { color: #00ff00; }
+        .error { color: #ff6b6b; }
+        .warning { color: #ffd700; }
+        .info { color: #4fc3f7; }
+        .result {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #e8f5e9;
+            border-radius: 10px;
+            border: 2px solid #4caf50;
+        }
+        .result.show {
+            display: block;
+        }
+        .result h2 {
+            color: #2e7d32;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .stat {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-num {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 13px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💾 전체 데이터 복구</h1>
+        
+        <div class="info">
+            <strong>📋 복구 대상:</strong> 187개 고객사<br>
+            <strong>📝 복구 항목:</strong> 대표자, 연락처, 이메일, 주민등록번호, 법인등록번호, 업종코드, 주소
+        </div>
+
+        <button id="btn" onclick="restore()">🚀 복구 시작</button>
+
+        <div id="log"></div>
+
+        <div id="result" class="result">
+            <h2>✅ 복구 완료!</h2>
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-num" id="total">0</div>
+                    <div class="stat-label">전체</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num" id="matched">0</div>
+                    <div class="stat-label">매칭</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num" id="updated">0</div>
+                    <div class="stat-label">업데이트</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num" id="skipped">0</div>
+                    <div class="stat-label">건너뜀</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const DATA = `금아실업,김경태,2071299830,207-12-99830,,340812-1019011,010-5364-8277,금아실업,김성배,서울 광진구 화양동 50-2,701201,부동산,임대,ksb1019011@hanmail.net
+도그니엘,이수진,4961202411,496-12-02411,,770117-1470615,,도그니엘,김근식,서울특별시 광진구 능동로5길 41 지하층(자양동),930919,서비스업,애견호텔,771590@naver.com
+디앤옥션,김아름,8412301923,841-23-01923,,990419-2127414,,디앤옥션,성윤지,서울특별시 강남구 개포로15길 3-4 지101-A230호(개포동),703011,부동산업,주거용 건물 개발 및 공급업,sukces0419@naver.com
+주식회사 만평,김아름,2348701767,234-87-01767,285011-0432314,840203-1235025,,주식회사 만평,배우주,경기도 고양시 일산동구 정발산로 33 (장항동 낙원프라자),743002,부동산업,비주거용 건물 임대업,toughcat84@gmail.com
+중앙매매,김아름,5065001012,506-50-01012,,651125-2244924,010-2943-7201,중앙매매,이희태,경기도 양평군 양평읍 도토리길 18,703011,부동산업,주거용 건물 개발 및 공급업,dlgmlxo7200@naver.com
+주식회사 윤슬이,김아름,6668602364,666-86-02364,134511-0562676,790125-2106514,,주식회사 윤슬이,기경희,경기도 용인시 처인구 포곡읍 포곡로 72 204-A225(대두빌딩),525101,부동산업,주거용 건물 개발 및 공급업,kiheaven@hanmail.net
+화진,김아름,4079106940,407-91-06940,,610625-2650831,010-3756-8645,화진,한남희,서울특별시 송파구 석촌호수로18길 15-11 202호(석촌동),703011,부동산업,주택매매업,hjhnh625@naver.com
+(주)대성한민,이수진,8598102506,859-81-02506,110111-8096540,850527-2079120,,(주)대성한민,여성민,경기도 안산시 단원구 고잔로 55 지하102-100호(고잔동 중앙오피스텔),525101,부동산,경영 컨설팅업,ysmfly@naver.com
+주식회사 온브릭스,김경태,2248801258,224-88-01258,110111-8096540,890201-1395415,,주식회사 온브릭스,허재성,경기도 광주시 오포로 419-5(문형동),525101,도매 및 소매업,전자상거래 소매업,tax@onbrix.co.kr
+대성세민,이수진,2190710886,219-07-10886,,850527-2079120,,대성세민,여성민,서울특별시 서대문구 통일로9안길 33(충정로2가),703011,부동산업,주거용 건물 개발 및 공급업,ysmfly@naver.com
+아티원뷰티스튜디오,이수진,8491601633,849-16-01633,,930916-2082925,,아티원뷰티스튜디오,전혜원,서울 마포구 마포대로11길 21 2층,930205,협회 및 단체 수리 및 기타 개인 서비스업,기타 미용업,hyewony_@naver.com
+비더에그,이수진,4932901371,493-29-01371,,961216-1860926,,비더에그,성규동,서울특별시 성동구 연무장15길 11 B동 2층 217-7호(성수동2가 태광산업),722005,정보통신업,컴퓨터 프로그래밍 서비스업,btheegg0110@naver.com
+비욘드시티,김아름,4478103108,447-81-03108,134511-0634582,900221-1035017,010-8516-2433,비욘드시티,하승현,경기도 김포시 양촌읍 양곡로 495 1동 601호 (601-A-2호)(새롬프라자),722000,정보통신업,응용 소프트웨어 개발 및 공급업,daniel.ha@beyondcity.co.kr
+치보펫,김아름,7060202212,706-02-02212,,890428-1070113,,치보펫,석진우,서울 영등포구 경인로82길 3-4 7층 19호 719호,523996,도매 및 소매업,전자상거래 소매업,cibopet@naver.com
+카페썬,이수진,8663501231,866-35-01231,,701023-2469316,,카페 썬,김양미,경기 성남시 중원구 광명로 176 A1블럭 113호,552303,숙박 및 음식점업,커피 전문점,3533ykk@naver.com
+조인,박수진,2063033940,206-30-33940,,770203-2822818,010-9085-8783,조인,최미연,서울특별시 광진구 천호대로130길 35 303호(구의동),513121,도매 무역,의류,toeat95@naver.com
+제이앤유니 주식회사,이수진,1658802808,165-88-02808,284111-0375076,821221-1542613,,제이앤유니 주식회사,전오균,경기도 남양주시 별내중앙로 26 10층 1002-145호(별내동),722000,서비스업,소프트웨어 관련 컨설팅,wjsdhrbs@naver.com
+제이엔씨,이수진,1051588509,105-15-88509,,700225-1000911,,제이엔씨,황재림,서울특별시 서대문구 수색로 100 703호(북가좌동 DMC래미안e편한세상),514969,도매및소매업.제조업,방직용직물 모직물 화섬직물 나염,jackey@jnctex.com
+주식회사 홈엔터테인먼트,김경태,3698102814,369-81-02814,110111-8355772,870618-2495919,,주식회사 홈엔터테인먼트,신초롱,서울 강남구 논현로124길 5 302호(논현동),749911,전문 과학 및 기술 서비스업,매니저업,homeent01@naver.com
+제냐포드,이수진,6512001635,651-20-01635,,880101-1036917,,제냐포드,윤태호,서울특별시 용산구 한남대로27길 60 101동 504(한남동 한남해피트리),525101,도매 및 소매업,전자상거래 소매업,zegna0101@naver.com
+머스트픽,이수진,3032066573,303-20-66573,,900206-1074625,,머스트픽,김경민,경기 안산시 상록구 본오공원1길 12 1층,552108,숙박 및 음식점업,김밥 및 기타 간이 음식점업,kkm900206@naver.com`;
+
+        let sb;
+
+        function log(msg, type = 'info') {
+            const div = document.getElementById('log');
+            div.classList.add('show');
+            const line = document.createElement('div');
+            line.className = type;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            div.appendChild(line);
+            div.scrollTop = div.scrollHeight;
+        }
+
+        async function restore() {
+            const btn = document.getElementById('btn');
+            btn.disabled = true;
+            btn.textContent = '⏳ 복구 중...';
+
+            try {
+                log('🚀 복구 시작', 'success');
+
+                // Supabase 초기화
+                if (!window.supabase) {
+                    throw new Error('Supabase SDK 로드 실패');
+                }
+
+                sb = window.supabase.createClient(
+                    'https://vdjyynwmnypuxvlhrcbk.supabase.co',
+                    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZkanl5bndtbnlwdXh2bGhyY2JrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExNjc4ODEsImV4cCI6MjA4Njc0Mzg4MX0.sGM2GIQ8blhON-EHAMnXyQABnMR46_4FpqhU0Z0pAx4'
+                );
+
+                log('✅ Supabase 연결', 'success');
+
+                // CSV 파싱
+                const lines = DATA.trim().split('\n');
+                const rows = lines.map(l => {
+                    const p = l.split(',');
+                    return {
+                        name: p[0],
+                        biz: p[2],
+                        rep: p[8],
+                        phone: p[6],
+                        email: p[13],
+                        res: p[5],
+                        corp: p[4],
+                        code: p[10],
+                        addr: p[9]
+                    };
+                });
+
+                log(`📋 ${rows.length}개 데이터 파싱`, 'info');
+
+                // 고객 조회
+                const { data: clients, error } = await sb.from('clients').select('*');
+                if (error) throw error;
+
+                log(`✅ ${clients.length}개 고객 조회`, 'success');
+
+                let total = 0, matched = 0, updated = 0, skipped = 0;
+
+                for (const row of rows) {
+                    total++;
+                    const client = clients.find(c => c.business_number?.replace(/-/g, '') === row.biz);
+
+                    if (client) {
+                        matched++;
+                        const upd = {};
+                        if (row.rep && !client.representative) upd.representative = row.rep;
+                        if (row.phone && !client.phone) upd.phone = row.phone;
+                        if (row.email && !client.email) upd.email = row.email;
+                        if (row.res && !client.resident_number) upd.resident_number = row.res;
+                        if (row.corp && !client.corporate_number) upd.corporate_number = row.corp;
+                        if (row.code && !client.business_code) upd.business_code = row.code;
+                        if (row.addr && !client.address) upd.address = row.addr;
+
+                        if (Object.keys(upd).length > 0) {
+                            await sb.from('clients').update(upd).eq('id', client.id);
+                            updated++;
+                            log(`✅ ${row.name}`, 'success');
+                        } else {
+                            skipped++;
+                        }
+                    }
+                }
+
+                log('━━━━━━━━━━━━━━━━━━━━━━', 'info');
+                log('🎉 복구 완료!', 'success');
+                log(`총 ${total}개 / 매칭 ${matched}개 / 업데이트 ${updated}개`, 'info');
+
+                document.getElementById('total').textContent = total;
+                document.getElementById('matched').textContent = matched;
+                document.getElementById('updated').textContent = updated;
+                document.getElementById('skipped').textContent = skipped;
+                document.getElementById('result').classList.add('show');
+
+                btn.textContent = '✅ 완료';
+            } catch (err) {
+                log(`❌ 에러: ${err.message}`, 'error');
+                alert('에러: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = '🔄 다시 시도';
+            }
+        }
+    </script>
+</body>
+</html>
