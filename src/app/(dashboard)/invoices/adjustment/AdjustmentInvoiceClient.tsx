@@ -1,11 +1,9 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
-import { flushSync } from 'react-dom'
-import { useReactToPrint } from 'react-to-print'
+import { useState, useTransition } from 'react'
 import { Plus, Printer, Trash2, Pencil } from 'lucide-react'
 import type { Client, AdjustmentInvoice, AdjustmentInvoiceInsert } from '@/types/database'
-import { calculateCorporateSettlementFee } from '@/lib/utils/fee-calculator'
+import { calculateAdjustmentFee, calculateFinalFee } from '@/lib/calculators/fee-schedule'
 import { formatCurrency, formatDate, formatBusinessNumber } from '@/lib/utils/format'
 import {
   createAdjustmentInvoiceAction,
@@ -56,16 +54,15 @@ export default function AdjustmentInvoiceClient({ clients, initialInvoices }: Pr
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormState>(defaultForm())
   const [deleteTarget, setDeleteTarget] = useState<AdjustmentInvoice | null>(null)
-  const [printingInvoice, setPrintingInvoice] = useState<AdjustmentInvoice | null>(null)
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
-  const printRef = useRef<HTMLDivElement>(null)
 
-  const finalFee =
-    form.settlement_fee +
-    form.adjustment_fee +
-    form.tax_credit_additional +
-    form.faithful_report_fee -
-    form.discount
+  const finalFee = calculateFinalFee({
+    settlementFee: form.settlement_fee,
+    adjustmentFee: form.adjustment_fee,
+    taxCreditAdditional: form.tax_credit_additional,
+    faithfulReportFee: form.faithful_report_fee,
+    discount: form.discount,
+  })
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -73,30 +70,32 @@ export default function AdjustmentInvoiceClient({ clients, initialInvoices }: Pr
 
   const handleClientSelect = (clientId: string) => {
     const client = clients.find((c) => c.id === clientId)
+    const businessType: 'corporate' | 'individual' =
+      client?.business_type_category === '법인' ? 'corporate' : 'individual'
     setForm((prev) => ({
       ...prev,
       client_id: clientId,
       client_name: client?.company_name ?? '',
       business_number: client?.business_number ?? '',
-      business_type:
-        client?.business_type_category === '법인' ? 'corporate' : 'individual',
+      business_type: businessType,
+      adjustment_fee: prev.revenue > 0 ? calculateAdjustmentFee(prev.revenue, businessType) : prev.adjustment_fee,
     }))
   }
 
   const handleRevenueChange = (revenue: number) => {
-    const newSettlementFee =
-      form.business_type === 'corporate'
-        ? Math.round(calculateCorporateSettlementFee(revenue))
-        : form.settlement_fee
-    setForm((prev) => ({ ...prev, revenue, settlement_fee: newSettlementFee }))
+    setForm((prev) => ({
+      ...prev,
+      revenue,
+      adjustment_fee: revenue > 0 ? calculateAdjustmentFee(revenue, prev.business_type) : prev.adjustment_fee,
+    }))
   }
 
   const handleBusinessTypeChange = (bt: 'corporate' | 'individual') => {
-    const newSettlementFee =
-      bt === 'corporate'
-        ? Math.round(calculateCorporateSettlementFee(form.revenue))
-        : 0
-    setForm((prev) => ({ ...prev, business_type: bt, settlement_fee: newSettlementFee }))
+    setForm((prev) => ({
+      ...prev,
+      business_type: bt,
+      adjustment_fee: prev.revenue > 0 ? calculateAdjustmentFee(prev.revenue, bt) : prev.adjustment_fee,
+    }))
   }
 
   const openNew = () => {
@@ -179,18 +178,9 @@ export default function AdjustmentInvoiceClient({ clients, initialInvoices }: Pr
     })
   }
 
-  const handlePrint = useReactToPrint({ contentRef: printRef })
-
-  const handlePrintInvoice = (invoice: AdjustmentInvoice) => {
-    flushSync(() => setPrintingInvoice(invoice))
-    handlePrint()
+  const handlePrint = (invoice: AdjustmentInvoice) => {
+    window.open(`/invoices/adjustment/${invoice.id}/print`, '_blank')
   }
-
-  const today = new Date().toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
 
   return (
     <div>
@@ -247,7 +237,7 @@ export default function AdjustmentInvoiceClient({ clients, initialInvoices }: Pr
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
                       <button
-                        onClick={() => handlePrintInvoice(inv)}
+                        onClick={() => handlePrint(inv)}
                         className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
                         title="인쇄"
                       >
@@ -307,8 +297,8 @@ export default function AdjustmentInvoiceClient({ clients, initialInvoices }: Pr
                 onChange={(e) => handleBusinessTypeChange(e.target.value as 'corporate' | 'individual')}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg outline-none focus:border-indigo-500 bg-white"
               >
-                <option value="corporate">법인</option>
-                <option value="individual">개인</option>
+                <option value="corporate">법인·의료사업자</option>
+                <option value="individual">개인사업자</option>
               </select>
             </div>
 
@@ -346,7 +336,10 @@ export default function AdjustmentInvoiceClient({ clients, initialInvoices }: Pr
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">매출액</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                수입금액
+                <span className="text-xs text-gray-400 ml-1">(조정료 자동계산)</span>
+              </label>
               <input
                 type="number"
                 value={form.revenue || ''}
@@ -362,20 +355,16 @@ export default function AdjustmentInvoiceClient({ clients, initialInvoices }: Pr
             <p className="text-sm font-medium text-gray-700 mb-3">수수료 항목</p>
             <div className="space-y-3">
               {[
-                {
-                  key: 'settlement_fee' as const,
-                  label: '결산조정료',
-                  hint: form.business_type === 'corporate' ? '매출액 기준 자동계산' : '직접 입력',
-                },
-                { key: 'adjustment_fee' as const, label: '조정료', hint: '' },
-                { key: 'tax_credit_additional' as const, label: '세액공제 추가', hint: '' },
-                { key: 'faithful_report_fee' as const, label: '성실신고 확인료', hint: '' },
+                { key: 'settlement_fee' as const, label: '결산보수', hint: '기본' },
+                { key: 'adjustment_fee' as const, label: '조정료', hint: '수입금액 기준 자동산출' },
+                { key: 'tax_credit_additional' as const, label: '세액공제 추가', hint: '가산' },
+                { key: 'faithful_report_fee' as const, label: '성실신고 확인료', hint: '가산' },
                 { key: 'discount' as const, label: '할인 (차감)', hint: '' },
               ].map(({ key, label, hint }) => (
                 <div key={key} className="flex items-center gap-3">
-                  <label className="w-36 text-sm text-gray-600 shrink-0">
+                  <label className="w-40 text-sm text-gray-600 shrink-0">
                     {label}
-                    {hint && <span className="text-xs text-gray-400 block">{hint}</span>}
+                    {hint && <span className="text-xs text-gray-400 ml-1">· {hint}</span>}
                   </label>
                   <input
                     type="number"
@@ -392,7 +381,7 @@ export default function AdjustmentInvoiceClient({ clients, initialInvoices }: Pr
 
           {/* 합계 */}
           <div className="bg-indigo-50 rounded-lg px-4 py-3 flex items-center justify-between">
-            <span className="text-sm font-semibold text-indigo-900">최종 청구금액</span>
+            <span className="text-sm font-semibold text-indigo-900">최종 청구금액 (부가세 별도)</span>
             <span className="text-lg font-bold text-indigo-700">{formatCurrency(finalFee)}</span>
           </div>
 
@@ -419,128 +408,6 @@ export default function AdjustmentInvoiceClient({ clients, initialInvoices }: Pr
           </div>
         </div>
       </Modal>
-
-      {/* 인쇄 레이아웃 */}
-      <div style={{ display: 'none' }}>
-        <div ref={printRef} style={{ fontFamily: 'serif', padding: '40px', color: '#000' }}>
-          {printingInvoice && (
-            <>
-              {/* 헤더 */}
-              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                <div style={{ fontSize: '14px', color: '#555', marginBottom: '8px' }}>아톰세무회계</div>
-                <h1 style={{ fontSize: '24px', fontWeight: 'bold', letterSpacing: '8px', margin: '0 0 4px' }}>
-                  조정료 청구서
-                </h1>
-                <div style={{ borderBottom: '2px solid #000', marginTop: '12px' }} />
-              </div>
-
-              {/* 청구일 */}
-              <div style={{ textAlign: 'right', marginBottom: '24px', fontSize: '13px' }}>
-                청구일: {today}
-              </div>
-
-              {/* 고객 정보 */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px', fontSize: '13px' }}>
-                <tbody>
-                  <tr>
-                    <td style={{ padding: '6px 0', width: '120px', color: '#555' }}>고객명</td>
-                    <td style={{ padding: '6px 0', fontWeight: 'bold' }}>{printingInvoice.client_name}</td>
-                    <td style={{ padding: '6px 0', width: '120px', color: '#555' }}>구분</td>
-                    <td style={{ padding: '6px 0' }}>
-                      {printingInvoice.business_type === 'corporate' ? '법인' : '개인'}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={{ padding: '6px 0', color: '#555' }}>사업자번호</td>
-                    <td style={{ padding: '6px 0' }}>{formatBusinessNumber(printingInvoice.business_number)}</td>
-                    <td style={{ padding: '6px 0', color: '#555' }}>사업연도</td>
-                    <td style={{ padding: '6px 0' }}>{printingInvoice.year}년도</td>
-                  </tr>
-                  {printingInvoice.revenue > 0 && (
-                    <tr>
-                      <td style={{ padding: '6px 0', color: '#555' }}>매출액</td>
-                      <td colSpan={3} style={{ padding: '6px 0' }}>
-                        {formatCurrency(printingInvoice.revenue)}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-
-              {/* 수수료 명세 */}
-              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px', fontSize: '13px' }}>
-                <thead>
-                  <tr style={{ borderTop: '2px solid #000', borderBottom: '1px solid #ccc' }}>
-                    <th style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 'bold' }}>항목</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 'bold' }}>금액</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {printingInvoice.settlement_fee > 0 && (
-                    <tr style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{ padding: '8px 12px' }}>결산조정료</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-                        {formatCurrency(printingInvoice.settlement_fee)}
-                      </td>
-                    </tr>
-                  )}
-                  {printingInvoice.adjustment_fee > 0 && (
-                    <tr style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{ padding: '8px 12px' }}>조정료</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-                        {formatCurrency(printingInvoice.adjustment_fee)}
-                      </td>
-                    </tr>
-                  )}
-                  {printingInvoice.tax_credit_additional > 0 && (
-                    <tr style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{ padding: '8px 12px' }}>세액공제 추가</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-                        {formatCurrency(printingInvoice.tax_credit_additional)}
-                      </td>
-                    </tr>
-                  )}
-                  {printingInvoice.faithful_report_fee > 0 && (
-                    <tr style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{ padding: '8px 12px' }}>성실신고 확인료</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right' }}>
-                        {formatCurrency(printingInvoice.faithful_report_fee)}
-                      </td>
-                    </tr>
-                  )}
-                  {printingInvoice.discount > 0 && (
-                    <tr style={{ borderBottom: '1px solid #eee' }}>
-                      <td style={{ padding: '8px 12px' }}>할인</td>
-                      <td style={{ padding: '8px 12px', textAlign: 'right', color: '#e00' }}>
-                        -{formatCurrency(printingInvoice.discount)}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-                <tfoot>
-                  <tr style={{ borderTop: '2px solid #000' }}>
-                    <td style={{ padding: '10px 12px', fontWeight: 'bold', fontSize: '15px' }}>
-                      최종 청구금액
-                    </td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 'bold', fontSize: '15px' }}>
-                      {formatCurrency(printingInvoice.final_fee)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-
-              {/* 하단 */}
-              <div style={{ marginTop: '48px', textAlign: 'center', fontSize: '13px', color: '#555' }}>
-                위 금액을 청구합니다.
-              </div>
-              <div style={{ marginTop: '32px', textAlign: 'right', fontSize: '14px' }}>
-                <div style={{ fontWeight: 'bold' }}>아톰세무회계</div>
-                <div style={{ marginTop: '4px', color: '#555' }}>대표자 (인)</div>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
 
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />

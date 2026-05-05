@@ -1,12 +1,10 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
-import { flushSync } from 'react-dom'
-import { useReactToPrint } from 'react-to-print'
+import { useState, useTransition } from 'react'
 import { Plus, Printer, Trash2, Pencil } from 'lucide-react'
 import type { Client, CorporateTaxReport, CorporateTaxReportInsert } from '@/types/database'
-import { calculateCorporateTax, calculateLocalTax } from '@/lib/utils/fee-calculator'
-import { formatCurrency, formatNumber, formatDate } from '@/lib/utils/format'
+import { calculateCorporateTax, calculateLocalTax } from '@/lib/calculators/corporate-tax'
+import { formatCurrency, formatDate } from '@/lib/utils/format'
 import { upsertCorporateTaxReportAction, deleteCorporateTaxReportAction } from './actions'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
@@ -86,16 +84,14 @@ export default function CorporateTaxClient({ clients, initialReports }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<FormState>(defaultForm())
   const [deleteTarget, setDeleteTarget] = useState<CorporateTaxReport | null>(null)
-  const [printingReport, setPrintingReport] = useState<CorporateTaxReport | null>(null)
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
-  const printRef = useRef<HTMLDivElement>(null)
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
   // 자동 계산
-  const calcTax = form.net_profit != null ? Math.round(calculateCorporateTax(form.net_profit)) : null
+  const calcTax = form.net_profit != null ? calculateCorporateTax(form.net_profit, form.year) : null
   const localTax = calcTax != null ? calculateLocalTax(calcTax) : null
   const determinedTax =
     calcTax != null
@@ -204,21 +200,12 @@ export default function CorporateTaxClient({ clients, initialReports }: Props) {
     })
   }
 
-  const handlePrint = useReactToPrint({ contentRef: printRef })
-
   const handlePrintReport = (report: CorporateTaxReport) => {
-    flushSync(() => setPrintingReport(report))
-    handlePrint()
+    window.open(`/reports/corporate-tax/${report.id}/print`, '_blank')
   }
 
   const clientName = (clientId: string) =>
     clients.find((c) => c.id === clientId)?.company_name ?? '-'
-
-  const today = new Date().toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  })
 
   return (
     <div>
@@ -484,126 +471,6 @@ export default function CorporateTaxClient({ clients, initialReports }: Props) {
           </div>
         </div>
       </Modal>
-
-      {/* 인쇄 레이아웃 */}
-      <div style={{ display: 'none' }}>
-        <div ref={printRef} style={{ fontFamily: 'serif', padding: '40px', color: '#000', fontSize: '13px' }}>
-          {printingReport && (() => {
-            const pClient = clients.find((c) => c.id === printingReport.client_id)
-            return (
-              <>
-                {/* 헤더 */}
-                <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                  <div style={{ fontSize: '13px', color: '#555', marginBottom: '8px' }}>아톰세무회계</div>
-                  <h1 style={{ fontSize: '22px', fontWeight: 'bold', letterSpacing: '4px', margin: '0 0 4px' }}>
-                    법인세 신고 현황
-                  </h1>
-                  <div style={{ fontSize: '15px', marginTop: '4px', color: '#333' }}>
-                    {printingReport.year}년도
-                  </div>
-                  <div style={{ borderBottom: '2px solid #000', marginTop: '12px' }} />
-                </div>
-
-                {/* 고객 정보 */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
-                  <tbody>
-                    <tr>
-                      <td style={{ padding: '5px 0', width: '120px', color: '#555' }}>상호명</td>
-                      <td style={{ padding: '5px 0', fontWeight: 'bold' }}>{pClient?.company_name ?? '-'}</td>
-                      <td style={{ padding: '5px 0', width: '120px', color: '#555' }}>사업자번호</td>
-                      <td style={{ padding: '5px 0' }}>{pClient?.business_number ?? '-'}</td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                {/* 세금 계산 */}
-                <div style={{ marginBottom: '20px' }}>
-                  <p style={{ fontWeight: 'bold', borderBottom: '1px solid #999', paddingBottom: '4px', marginBottom: '8px' }}>
-                    ■ 세금 계산 내역
-                  </p>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <tbody>
-                      {[
-                        { label: '매출액', value: printingReport.revenue },
-                        { label: '당기순이익 (과세표준)', value: printingReport.net_profit },
-                        { label: '당기결손금', value: printingReport.current_loss },
-                        { label: '이월결손금', value: printingReport.carryforward_loss },
-                        { label: '산출세액', value: printingReport.calculated_tax },
-                        { label: '지방소득세 (10%)', value: printingReport.local_tax },
-                        { label: '농어촌특별세', value: printingReport.rural_tax },
-                        { label: '중간예납세액', value: printingReport.tax_payment },
-                        { label: '기납부세액', value: printingReport.prepaid_tax },
-                      ]
-                        .filter((row) => row.value != null && row.value !== 0)
-                        .map((row) => (
-                          <tr key={row.label} style={{ borderBottom: '1px solid #eee' }}>
-                            <td style={{ padding: '6px 8px', color: '#444' }}>{row.label}</td>
-                            <td style={{ padding: '6px 8px', textAlign: 'right' }}>
-                              {formatCurrency(row.value)}
-                            </td>
-                          </tr>
-                        ))}
-                      <tr style={{ borderTop: '2px solid #000' }}>
-                        <td style={{ padding: '8px 8px', fontWeight: 'bold' }}>결정세액</td>
-                        <td style={{ padding: '8px 8px', textAlign: 'right', fontWeight: 'bold', fontSize: '15px' }}>
-                          {formatCurrency(printingReport.determined_tax)}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* 세액공제 */}
-                <div style={{ marginBottom: '16px' }}>
-                  <p style={{ fontWeight: 'bold', borderBottom: '1px solid #999', paddingBottom: '4px', marginBottom: '8px' }}>
-                    ■ 세액공제
-                  </p>
-                  <p>세액공제 적용: {printingReport.has_tax_credit ? '있음' : '없음'}</p>
-                  {printingReport.has_tax_credit && (
-                    <>
-                      {printingReport.tax_credit_type && <p>유형: {printingReport.tax_credit_type}</p>}
-                      {printingReport.tax_credit_increase != null && (
-                        <p>해당연도 증가금액: {formatCurrency(printingReport.tax_credit_increase)}</p>
-                      )}
-                      {printingReport.tax_credit_carryforward != null && (
-                        <p>이월공제금액: {formatCurrency(printingReport.tax_credit_carryforward)}</p>
-                      )}
-                      {printingReport.tax_credit_note && <p>비고: {printingReport.tax_credit_note}</p>}
-                    </>
-                  )}
-                </div>
-
-                {/* 성실신고 */}
-                <div style={{ marginBottom: '16px' }}>
-                  <p style={{ fontWeight: 'bold', borderBottom: '1px solid #999', paddingBottom: '4px', marginBottom: '8px' }}>
-                    ■ 성실신고
-                  </p>
-                  <p>성실신고 확인: {printingReport.requires_faithful_report ? '해당' : '해당 없음'}</p>
-                  {printingReport.faithful_report_note && (
-                    <p>비고: {printingReport.faithful_report_note}</p>
-                  )}
-                </div>
-
-                {/* 추가사항 */}
-                {printingReport.additional_notes && (
-                  <div style={{ marginBottom: '16px' }}>
-                    <p style={{ fontWeight: 'bold', borderBottom: '1px solid #999', paddingBottom: '4px', marginBottom: '8px' }}>
-                      ■ 추가사항
-                    </p>
-                    <p style={{ whiteSpace: 'pre-wrap' }}>{printingReport.additional_notes}</p>
-                  </div>
-                )}
-
-                {/* 하단 */}
-                <div style={{ marginTop: '40px', textAlign: 'right' }}>
-                  <p style={{ color: '#555', marginBottom: '4px' }}>작성일: {today}</p>
-                  <p style={{ fontWeight: 'bold', fontSize: '14px' }}>아톰세무회계</p>
-                </div>
-              </>
-            )
-          })()}
-        </div>
-      </div>
 
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
