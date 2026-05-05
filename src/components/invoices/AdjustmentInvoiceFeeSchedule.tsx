@@ -32,20 +32,11 @@ export default function AdjustmentInvoiceFeeSchedule() {
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={OFFICE.nameplateImage}
-            alt={OFFICE.name}
-            style={{ height: '60px', width: 'auto', maxWidth: '220px', objectFit: 'contain' }}
-            onError={(e) => {
-              const el = e.currentTarget
-              el.style.display = 'none'
-              const fallback = el.nextElementSibling as HTMLElement
-              if (fallback) fallback.style.display = 'block'
-            }}
-          />
-          <div style={{ display: 'none', fontSize: '18px', fontWeight: 'bold', background: 'linear-gradient(135deg,#667eea,#764ba2)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            {OFFICE.name}
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#0f172a', letterSpacing: '0.2em' }}>
+            {OFFICE.name.split('').join(' ')}
+          </div>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+            {OFFICE.representativeTitle} {OFFICE.representative.split('').join(' ')}
           </div>
         </div>
       </div>

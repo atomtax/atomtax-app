@@ -61,22 +61,17 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
           <div style={{ fontSize: '13px', color: '#6b7280' }}>No. {invoiceNo}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={OFFICE.nameplateImage}
-            alt={OFFICE.name}
-            style={{ height: '72px', width: 'auto', maxWidth: '260px', objectFit: 'contain' }}
-            onError={(e) => {
-              const el = e.currentTarget
-              el.style.display = 'none'
-              const fallback = el.nextElementSibling as HTMLElement
-              if (fallback) fallback.style.display = 'block'
-            }}
-          />
-          <div style={{ display: 'none', fontSize: '22px', fontWeight: 'bold', background: 'linear-gradient(135deg,#667eea,#764ba2)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            {OFFICE.name}
+          <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '4px', letterSpacing: '0.05em' }}>
+            {OFFICE.address}
           </div>
-          <div style={{ fontSize: '12px', color: '#4b5563', marginTop: '6px' }}>T. {OFFICE.phone}</div>
+          <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#0f172a', letterSpacing: '0.2em' }}>
+            {OFFICE.name.split('').join(' ')}
+          </div>
+          <div style={{ fontSize: '13px', color: '#4b5563', marginTop: '4px' }}>
+            <span style={{ color: '#9ca3af', marginRight: '6px' }}>{OFFICE.representativeTitle}</span>
+            <span style={{ fontWeight: 'bold', letterSpacing: '0.3em' }}>{OFFICE.representative.split('').join(' ')}</span>
+          </div>
+          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>T. {OFFICE.phone}</div>
         </div>
       </div>
 

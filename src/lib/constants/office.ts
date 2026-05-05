@@ -8,7 +8,6 @@ export const OFFICE = {
   account: '146-910369-94207',
   accountHolder: '김경태(아톰세무회계)',
   stampImage: '/stamp.png',
-  nameplateImage: '/nameplate.png',
 } as const
 
 export const formatAccount = () =>
