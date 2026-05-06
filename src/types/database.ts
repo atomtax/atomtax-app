@@ -76,6 +76,12 @@ export interface AdjustmentInvoice {
   discount: number
   final_fee: number
   year: number | null
+  payment_method: '자동이체' | '직접입금' | '미확인'
+  is_paid: boolean
+  paid_at: string | null
+  supply_amount: number
+  vat_amount: number
+  total_amount: number
   created_at: string
   updated_at: string
 }

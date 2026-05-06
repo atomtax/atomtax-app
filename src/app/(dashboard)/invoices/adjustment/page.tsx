@@ -1,11 +1,29 @@
-import { getClients } from '@/lib/db/clients'
-import { getAdjustmentInvoices } from '@/lib/db/invoices'
-import AdjustmentInvoiceClient from './AdjustmentInvoiceClient'
+import { listClients } from '@/lib/db/clients'
+import { listAdjustmentInvoices } from '@/lib/db/adjustment-invoices'
+import AdjustmentInvoiceManager from '@/components/invoices/AdjustmentInvoiceManager'
 
-export default async function AdjustmentInvoicePage() {
+export default async function AdjustmentInvoicePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ year?: string; type?: string }>
+}) {
+  const params = await searchParams
+  const year = params.year ? parseInt(params.year) : new Date().getFullYear()
+  const businessType = (params.type === 'individual' ? 'individual' : 'corporate') as
+    | 'corporate'
+    | 'individual'
+
   const [clients, invoices] = await Promise.all([
-    getClients(),
-    getAdjustmentInvoices(),
+    listClients({ businessTypeCategory: businessType === 'corporate' ? '법인' : '개인' }),
+    listAdjustmentInvoices({ year, businessType }),
   ])
-  return <AdjustmentInvoiceClient clients={clients} initialInvoices={invoices} />
+
+  return (
+    <AdjustmentInvoiceManager
+      initialClients={clients}
+      initialInvoices={invoices}
+      initialYear={year}
+      initialBusinessType={businessType}
+    />
+  )
 }

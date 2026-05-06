@@ -13,6 +13,12 @@ export function formatDate(value: string | null | undefined): string {
   return value.slice(0, 10)
 }
 
+/** 쉼표 포함 문자열 → 숫자로 변환 */
+export function parseNumberInput(value: string): number {
+  const n = parseInt(value.replace(/,/g, '').replace(/원$/, ''), 10)
+  return isNaN(n) ? 0 : n
+}
+
 export function formatBusinessNumber(value: string | null | undefined): string {
   if (!value) return '-'
   const digits = value.replace(/\D/g, '')

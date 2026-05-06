@@ -15,6 +15,23 @@ export async function getClients(): Promise<Client[]> {
   return data ?? []
 }
 
+export async function listClients(opts?: {
+  businessTypeCategory?: '법인' | '개인'
+}): Promise<Client[]> {
+  const supabase = await createClient()
+  let query = supabase
+    .from('clients')
+    .select('*')
+    .eq('is_terminated', false)
+    .order('company_name')
+  if (opts?.businessTypeCategory) {
+    query = query.eq('business_type_category', opts.businessTypeCategory)
+  }
+  const { data, error } = await query
+  if (error) throw new Error(error.message)
+  return data ?? []
+}
+
 export async function getTerminatedClients(): Promise<Client[]> {
   const supabase = await createClient()
   const { data, error } = await supabase

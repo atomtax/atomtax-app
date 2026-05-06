@@ -49,6 +49,57 @@ export function calculateAdjustmentFee(
   return Math.round(bracket.base + excess * bracket.excessRate)
 }
 
+export function calculateSupplyAmount(input: {
+  settlementFee: number
+  adjustmentFee: number
+  taxCreditAdditional: number
+  faithfulReportFee: number
+  discount: number
+}): number {
+  return Math.max(
+    0,
+    input.settlementFee +
+      input.adjustmentFee +
+      input.taxCreditAdditional +
+      input.faithfulReportFee -
+      input.discount
+  )
+}
+
+export function calculateVAT(supplyAmount: number): number {
+  return Math.round(supplyAmount * 0.1)
+}
+
+export function calculateTotalAmount(supplyAmount: number, vatAmount: number): number {
+  return supplyAmount + vatAmount
+}
+
+export function calculateInvoiceRow(input: {
+  revenue: number
+  businessType: 'corporate' | 'individual'
+  settlementFee: number
+  taxCreditAdditional: number
+  faithfulReportFee: number
+  discount: number
+}): {
+  adjustmentFee: number
+  supplyAmount: number
+  vatAmount: number
+  totalAmount: number
+} {
+  const adjustmentFee = calculateAdjustmentFee(input.revenue, input.businessType)
+  const supplyAmount = calculateSupplyAmount({
+    settlementFee: input.settlementFee,
+    adjustmentFee,
+    taxCreditAdditional: input.taxCreditAdditional,
+    faithfulReportFee: input.faithfulReportFee,
+    discount: input.discount,
+  })
+  const vatAmount = calculateVAT(supplyAmount)
+  const totalAmount = calculateTotalAmount(supplyAmount, vatAmount)
+  return { adjustmentFee, supplyAmount, vatAmount, totalAmount }
+}
+
 export function calculateFinalFee(input: {
   settlementFee: number
   adjustmentFee: number

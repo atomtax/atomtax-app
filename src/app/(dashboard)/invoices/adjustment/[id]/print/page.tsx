@@ -1,22 +1,27 @@
 import { notFound } from 'next/navigation'
-import { getAdjustmentInvoiceById } from '@/lib/db/invoices'
+import { getAdjustmentInvoiceById } from '@/lib/db/adjustment-invoices'
 import AdjustmentInvoicePrint from '@/components/invoices/AdjustmentInvoicePrint'
 import AdjustmentInvoiceFeeSchedule from '@/components/invoices/AdjustmentInvoiceFeeSchedule'
 import PrintButton from '@/components/print/PrintButton'
+import AutoPrintTrigger from '@/components/print/AutoPrintTrigger'
 
 interface Props {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ auto?: string }>
 }
 
-export default async function AdjustmentInvoicePrintPage({ params }: Props) {
+export default async function AdjustmentInvoicePrintPage({ params, searchParams }: Props) {
   const { id } = await params
+  const sp = await searchParams
+  const auto = sp.auto === '1'
+
   const invoice = await getAdjustmentInvoiceById(id)
   if (!invoice) notFound()
 
   return (
     <>
       <div className="no-print fixed top-4 right-4 z-50 flex gap-2">
-        <PrintButton label="인쇄 / PDF 저장" />
+        <PrintButton label="PDF 다운로드 / 인쇄" />
         <a
           href="/invoices/adjustment"
           className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors"
@@ -26,6 +31,7 @@ export default async function AdjustmentInvoicePrintPage({ params }: Props) {
       </div>
       <AdjustmentInvoicePrint invoice={invoice} />
       <AdjustmentInvoiceFeeSchedule />
+      {auto && <AutoPrintTrigger />}
     </>
   )
 }
