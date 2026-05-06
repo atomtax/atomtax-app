@@ -77,7 +77,6 @@ export function calculateTotalAmount(supplyAmount: number, vatAmount: number): n
 export function calculateInvoiceRow(input: {
   revenue: number
   businessType: 'corporate' | 'individual'
-  settlementFee: number
   taxCreditAdditional: number
   faithfulReportFee: number
   discount: number
@@ -89,7 +88,7 @@ export function calculateInvoiceRow(input: {
 } {
   const adjustmentFee = calculateAdjustmentFee(input.revenue, input.businessType)
   const supplyAmount = calculateSupplyAmount({
-    settlementFee: input.settlementFee,
+    settlementFee: 0,
     adjustmentFee,
     taxCreditAdditional: input.taxCreditAdditional,
     faithfulReportFee: input.faithfulReportFee,

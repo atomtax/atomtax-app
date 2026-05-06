@@ -1,7 +1,7 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import type { AdjustmentInvoice } from '@/types/database'
 
 type UpsertPayload = {
   id: string | null
@@ -29,7 +29,7 @@ export async function saveInvoiceBatch(input: {
   businessType: 'corporate' | 'individual'
   upserts: UpsertPayload[]
   deleteIds: string[]
-}): Promise<void> {
+}): Promise<{ refreshedInvoices: AdjustmentInvoice[] }> {
   const supabase = await createClient()
 
   const inserts = input.upserts
@@ -60,5 +60,13 @@ export async function saveInvoiceBatch(input: {
     if (error) throw new Error(`DELETE 실패: ${error.message}`)
   }
 
-  revalidatePath('/invoices/adjustment')
+  const { data, error: fetchError } = await supabase
+    .from('adjustment_invoices')
+    .select('*')
+    .eq('year', input.year)
+    .eq('business_type', input.businessType)
+    .order('client_name')
+  if (fetchError) throw new Error(`조회 실패: ${fetchError.message}`)
+
+  return { refreshedInvoices: (data ?? []) as AdjustmentInvoice[] }
 }

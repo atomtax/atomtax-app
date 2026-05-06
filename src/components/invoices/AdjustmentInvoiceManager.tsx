@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
+import * as XLSX from 'xlsx'
 import { Save, Plus, Download, Upload, Printer, RefreshCw } from 'lucide-react'
 import type { Client, AdjustmentInvoice } from '@/types/database'
 import { calculateInvoiceRow } from '@/lib/calculators/fee-schedule'
@@ -18,7 +19,6 @@ export type RowState = {
   clientId: string | null
   clientName: string
   revenue: number
-  settlementFee: number
   adjustmentFee: number
   taxCreditAdditional: number
   faithfulReportFee: number
@@ -70,14 +70,13 @@ export default function AdjustmentInvoiceManager({
 
   const totals = useMemo(() => {
     const acc = {
-      revenue: 0, settlementFee: 0, adjustmentFee: 0,
+      revenue: 0, adjustmentFee: 0,
       taxCreditAdditional: 0, faithfulReportFee: 0, discount: 0,
       supplyAmount: 0, vatAmount: 0, totalAmount: 0,
       paidCount: 0, unpaidCount: 0,
     }
     for (const r of visibleRows) {
       acc.revenue += r.revenue
-      acc.settlementFee += r.settlementFee
       acc.adjustmentFee += r.adjustmentFee
       acc.taxCreditAdditional += r.taxCreditAdditional
       acc.faithfulReportFee += r.faithfulReportFee
@@ -116,7 +115,6 @@ export default function AdjustmentInvoiceManager({
         const calc = calculateInvoiceRow({
           revenue: next.revenue,
           businessType,
-          settlementFee: next.settlementFee,
           taxCreditAdditional: next.taxCreditAdditional,
           faithfulReportFee: next.faithfulReportFee,
           discount: next.discount,
@@ -149,7 +147,7 @@ export default function AdjustmentInvoiceManager({
       businessNumber: c.business_number ?? '',
       clientId: c.id,
       clientName: c.company_name,
-      revenue: 0, settlementFee: 0, adjustmentFee: 0,
+      revenue: 0, adjustmentFee: 0,
       taxCreditAdditional: 0, faithfulReportFee: 0, discount: 0,
       supplyAmount: 0, vatAmount: 0, totalAmount: 0,
       paymentMethod: '미확인',
@@ -168,7 +166,7 @@ export default function AdjustmentInvoiceManager({
         businessNumber: '',
         clientId: null,
         clientName: '',
-        revenue: 0, settlementFee: 0, adjustmentFee: 0,
+        revenue: 0, adjustmentFee: 0,
         taxCreditAdditional: 0, faithfulReportFee: 0, discount: 0,
         supplyAmount: 0, vatAmount: 0, totalAmount: 0,
         paymentMethod: '미확인',
@@ -189,16 +187,13 @@ export default function AdjustmentInvoiceManager({
 
     startTransition(async () => {
       try {
-        await saveInvoiceBatch({
+        const { refreshedInvoices } = await saveInvoiceBatch({
           year,
           businessType,
           upserts: dirtyRows.map((r) => rowToPayload(r, year, businessType)),
           deleteIds: deletedRows.map((r) => r.dbId!),
         })
-        router.refresh()
-        setRows((prev) =>
-          prev.filter((r) => !r.isDeleted).map((r) => ({ ...r, isDirty: false }))
-        )
+        setRows(refreshedInvoices.map(invoiceToRow))
         alert(`저장 완료 — 변경 ${dirtyRows.length}건, 삭제 ${deletedRows.length}건`)
       } catch (err) {
         alert(`저장 실패: ${err instanceof Error ? err.message : String(err)}`)
@@ -242,28 +237,25 @@ export default function AdjustmentInvoiceManager({
   }
 
   function handleExcelDownload() {
-    import('xlsx').then((XLSX) => {
-      const data = visibleRows.map((r) => ({
-        고객사명: r.clientName,
-        사업자번호: r.businessNumber,
-        매출액: r.revenue,
-        결산수수료: r.settlementFee,
-        세무조정료: r.adjustmentFee,
-        세액공제: r.taxCreditAdditional,
-        성실신고: r.faithfulReportFee,
-        할인: r.discount,
-        최종수수료: r.supplyAmount,
-        부가세: r.vatAmount,
-        최종청구액: r.totalAmount,
-        납부방법: r.paymentMethod,
-        납부여부: r.isPaid ? '완료' : '미납',
-      }))
-      const ws = XLSX.utils.json_to_sheet(data)
-      const wb = XLSX.utils.book_new()
-      const sheetName = `${year}년_${businessType === 'corporate' ? '법인' : '개인'}`
-      XLSX.utils.book_append_sheet(wb, ws, sheetName)
-      XLSX.writeFile(wb, `조정료청구서_${sheetName}.xlsx`)
-    })
+    const data = visibleRows.map((r) => ({
+      고객사명: r.clientName,
+      사업자번호: r.businessNumber,
+      매출액: r.revenue,
+      세무조정료: r.adjustmentFee,
+      세액공제: r.taxCreditAdditional,
+      성실신고: r.faithfulReportFee,
+      할인: r.discount,
+      최종수수료: r.supplyAmount,
+      부가세: r.vatAmount,
+      최종청구액: r.totalAmount,
+      납부방법: r.paymentMethod,
+      납부여부: r.isPaid ? '완료' : '미납',
+    }))
+    const ws = XLSX.utils.json_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    const sheetName = `${year}년_${businessType === 'corporate' ? '법인' : '개인'}`
+    XLSX.utils.book_append_sheet(wb, ws, sheetName)
+    XLSX.writeFile(wb, `조정료청구서_${sheetName}.xlsx`)
   }
 
   const dirtyCount = rows.filter((r) => r.isDirty && !r.isDeleted).length
@@ -399,7 +391,6 @@ export default function AdjustmentInvoiceManager({
               </th>
               <th className="text-left p-2">고객사명</th>
               <th className="text-right p-2">매출액</th>
-              <th className="text-right p-2">결산수수료</th>
               <th className="text-right p-2">세무조정료</th>
               <th className="text-right p-2">세액공제</th>
               <th className="text-right p-2">성실신고</th>
@@ -424,7 +415,7 @@ export default function AdjustmentInvoiceManager({
             ))}
             {visibleRows.length === 0 && (
               <tr>
-                <td colSpan={14} className="text-center py-12 text-gray-400 text-sm">
+                <td colSpan={13} className="text-center py-12 text-gray-400 text-sm">
                   데이터가 없습니다.{' '}
                   <button onClick={handleLoadClients} className="text-indigo-600 underline">
                     고객사 불러오기
@@ -443,7 +434,6 @@ export default function AdjustmentInvoiceManager({
               <tr>
                 <td colSpan={2} className="p-2 text-right text-gray-600">합 계</td>
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.revenue)}</td>
-                <td className="p-2 text-right tabular-nums">{formatCurrency(totals.settlementFee)}</td>
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.adjustmentFee)}</td>
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.taxCreditAdditional)}</td>
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.faithfulReportFee)}</td>
@@ -493,7 +483,6 @@ function invoiceToRow(inv: AdjustmentInvoice): RowState {
     clientId: inv.client_id,
     clientName: inv.client_name,
     revenue: inv.revenue ?? 0,
-    settlementFee: inv.settlement_fee ?? 0,
     adjustmentFee: inv.adjustment_fee ?? 0,
     taxCreditAdditional: inv.tax_credit_additional ?? 0,
     faithfulReportFee: inv.faithful_report_fee ?? 0,
@@ -521,7 +510,7 @@ function rowToPayload(
     client_name: row.clientName,
     business_number: row.businessNumber || null,
     revenue: row.revenue,
-    settlement_fee: row.settlementFee,
+    settlement_fee: 0,
     adjustment_fee: row.adjustmentFee,
     tax_credit_additional: row.taxCreditAdditional,
     faithful_report_fee: row.faithfulReportFee,

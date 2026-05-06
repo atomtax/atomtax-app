@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import * as XLSX from 'xlsx'
 import { X } from 'lucide-react'
 import type { Client } from '@/types/database'
 import { calculateInvoiceRow } from '@/lib/calculators/fee-schedule'
@@ -31,7 +32,6 @@ export default function ExcelImportModal({
     setParsing(true)
     setError(null)
     try {
-      const XLSX = await import('xlsx')
       const buffer = await file.arrayBuffer()
       const wb = XLSX.read(buffer)
       const ws = wb.Sheets[wb.SheetNames[0]]
@@ -50,14 +50,12 @@ export default function ExcelImportModal({
         const businessNumber = String(r['사업자번호'] ?? '')
         const matched = existingClients.find((c) => c.business_number === businessNumber)
         const revenue = Number(r['매출액'] ?? 0)
-        const settlementFee = Number(r['결산수수료'] ?? 0)
         const taxCreditAdditional = Number(r['세액공제'] ?? 0)
         const faithfulReportFee = Number(r['성실신고'] ?? 0)
         const discount = Number(r['할인'] ?? 0)
         const calc = calculateInvoiceRow({
           revenue,
           businessType,
-          settlementFee,
           taxCreditAdditional,
           faithfulReportFee,
           discount,
@@ -70,7 +68,6 @@ export default function ExcelImportModal({
           clientId: matched?.id ?? null,
           clientName: String(r['고객사명'] ?? matched?.company_name ?? ''),
           revenue,
-          settlementFee,
           adjustmentFee: calc.adjustmentFee,
           taxCreditAdditional,
           faithfulReportFee,
