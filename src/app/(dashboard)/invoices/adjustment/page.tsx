@@ -20,6 +20,7 @@ export default async function AdjustmentInvoicePage({
 
   return (
     <AdjustmentInvoiceManager
+      key={`${year}-${businessType}`}
       initialClients={clients}
       initialInvoices={invoices}
       initialYear={year}

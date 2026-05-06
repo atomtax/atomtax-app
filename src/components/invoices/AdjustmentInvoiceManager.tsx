@@ -115,7 +115,7 @@ export default function AdjustmentInvoiceManager({
     setRows((prev) =>
       prev.map((r) => {
         if (r.rowId !== rowId) return r
-        const next = { ...r, [field]: value, isDirty: true }
+        const next = { ...r, [field]: value, isDirty: field !== 'selected' ? true : r.isDirty }
         const calc = calculateInvoiceRow({
           revenue: next.revenue,
           businessType,
@@ -561,8 +561,38 @@ export default function AdjustmentInvoiceManager({
           existingClients={initialClients}
           onClose={() => setExcelModalOpen(false)}
           onImported={(newRows) => {
-            setRows((prev) => [...prev, ...newRows])
+            setRows((prev) => {
+              const newRowsByBN = new Map<string, RowState>()
+              for (const r of newRows) {
+                if (r.businessNumber) newRowsByBN.set(r.businessNumber, r)
+              }
+              const updated = prev.map((r) => {
+                if (!r.isDeleted && r.businessNumber && newRowsByBN.has(r.businessNumber)) {
+                  const nr = newRowsByBN.get(r.businessNumber)!
+                  newRowsByBN.delete(r.businessNumber)
+                  return {
+                    ...r,
+                    revenue: nr.revenue,
+                    settlementFee: nr.settlementFee,
+                    adjustmentFee: nr.adjustmentFee,
+                    taxCreditAdditional: nr.taxCreditAdditional,
+                    faithfulReportFee: nr.faithfulReportFee,
+                    discount: nr.discount,
+                    supplyAmount: nr.supplyAmount,
+                    vatAmount: nr.vatAmount,
+                    totalAmount: nr.totalAmount,
+                    paymentMethod: nr.paymentMethod,
+                    isPaid: nr.isPaid,
+                    clientName: nr.clientName || r.clientName,
+                    isDirty: true,
+                  }
+                }
+                return r
+              })
+              return [...updated, ...Array.from(newRowsByBN.values())]
+            })
             setExcelModalOpen(false)
+            alert(`엑셀 업로드 완료: ${newRows.length}건 처리됨`)
           }}
         />
       )}

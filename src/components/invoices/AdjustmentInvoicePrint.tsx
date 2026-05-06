@@ -20,19 +20,12 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
     invoice.tax_credit_additional +
     invoice.faithful_report_fee
 
+  const supplyAmount = invoice.supply_amount ?? Math.max(0, subtotal - invoice.discount)
+  const vatAmount = invoice.vat_amount ?? Math.round(supplyAmount * 0.1)
+  const totalAmount = invoice.total_amount ?? invoice.final_fee
+
   const businessTypeLabel =
     invoice.business_type === 'corporate' ? '법인·의료사업자' : '개인사업자'
-
-  const lineItems = [
-    { label: '결산보수', note: '자동산출', amount: invoice.settlement_fee },
-    { label: '조정료', note: '자동산출', amount: invoice.adjustment_fee },
-    ...(invoice.tax_credit_additional > 0
-      ? [{ label: '세액공제 추가', note: '가산', amount: invoice.tax_credit_additional }]
-      : []),
-    ...(invoice.faithful_report_fee > 0
-      ? [{ label: '성실신고 확인료', note: '가산', amount: invoice.faithful_report_fee }]
-      : []),
-  ]
 
   return (
     <A4Page>
@@ -44,13 +37,13 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
           marginLeft: '-15mm',
           marginRight: '-15mm',
           marginTop: '-15mm',
-          marginBottom: '32px',
+          marginBottom: '28px',
           width: 'calc(100% + 30mm)',
         }}
       />
 
       {/* 헤더 */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px' }}>
         <div>
           <div style={{ fontSize: '10px', letterSpacing: '0.3em', color: '#6b7280', marginBottom: '4px' }}>
             INVOICE
@@ -103,13 +96,13 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
         </div>
       </div>
 
-      {/* 수입금액 별도 박스 */}
+      {/* 수입금액 박스 */}
       <div style={{
         background: '#f8fafc',
         border: '1px solid #e2e8f0',
         borderRadius: '8px',
-        padding: '16px 20px',
-        marginBottom: '32px',
+        padding: '14px 20px',
+        marginBottom: '24px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -123,8 +116,8 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
         </div>
       </div>
 
-      {/* 명세 테이블 */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '0' }}>
+      {/* 통합 명세 테이블 */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
         <thead>
           <tr style={{ background: '#0f172a', color: 'white' }}>
             <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: '500' }}>항목</th>
@@ -133,20 +126,43 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
           </tr>
         </thead>
         <tbody>
-          {lineItems.map((item, i) => (
-            <tr key={i} style={{ borderBottom: '1px solid #e2e8f0' }}>
-              <td style={{ padding: '12px 16px', fontSize: '13px', color: '#0f172a' }}>{item.label}</td>
-              <td style={{ padding: '12px 16px', fontSize: '11px', color: '#6b7280' }}>{item.note}</td>
-              <td style={{ padding: '12px 16px', fontSize: '13px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                {formatCurrency(item.amount)}
+          <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+            <td style={{ padding: '11px 16px', fontSize: '13px', color: '#0f172a' }}>결산보수</td>
+            <td style={{ padding: '11px 16px', fontSize: '11px', color: '#6b7280' }}>자동산출</td>
+            <td style={{ padding: '11px 16px', fontSize: '13px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+              {formatCurrency(invoice.settlement_fee)}
+            </td>
+          </tr>
+          <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+            <td style={{ padding: '11px 16px', fontSize: '13px', color: '#0f172a' }}>조정료</td>
+            <td style={{ padding: '11px 16px', fontSize: '11px', color: '#6b7280' }}>자동산출</td>
+            <td style={{ padding: '11px 16px', fontSize: '13px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+              {formatCurrency(invoice.adjustment_fee)}
+            </td>
+          </tr>
+          {invoice.tax_credit_additional > 0 && (
+            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '11px 16px', fontSize: '13px', color: '#0f172a' }}>세액공제 추가</td>
+              <td style={{ padding: '11px 16px', fontSize: '11px', color: '#6b7280' }}>가산</td>
+              <td style={{ padding: '11px 16px', fontSize: '13px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                {formatCurrency(invoice.tax_credit_additional)}
               </td>
             </tr>
-          ))}
+          )}
+          {invoice.faithful_report_fee > 0 && (
+            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+              <td style={{ padding: '11px 16px', fontSize: '13px', color: '#0f172a' }}>성실신고 확인료</td>
+              <td style={{ padding: '11px 16px', fontSize: '11px', color: '#6b7280' }}>가산</td>
+              <td style={{ padding: '11px 16px', fontSize: '13px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                {formatCurrency(invoice.faithful_report_fee)}
+              </td>
+            </tr>
+          )}
         </tbody>
         <tfoot>
           <tr style={{ borderTop: '2px solid #0f172a' }}>
-            <td colSpan={2} style={{ padding: '12px 16px', textAlign: 'right', fontSize: '13px', fontWeight: '500', color: '#374151' }}>소 계</td>
-            <td style={{ padding: '12px 16px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: '500' }}>
+            <td colSpan={2} style={{ padding: '11px 16px', textAlign: 'right', fontSize: '13px', fontWeight: '500', color: '#374151' }}>소 계</td>
+            <td style={{ padding: '11px 16px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: '500' }}>
               {formatCurrency(subtotal)}
             </td>
           </tr>
@@ -158,36 +174,37 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
               </td>
             </tr>
           )}
+          <tr style={{ borderTop: '1px solid #cbd5e1' }}>
+            <td colSpan={2} style={{ padding: '11px 16px', textAlign: 'right', fontSize: '13px', fontWeight: '500', color: '#374151' }}>공급가액</td>
+            <td style={{ padding: '11px 16px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: '500' }}>
+              {formatCurrency(supplyAmount)}
+            </td>
+          </tr>
+          <tr>
+            <td colSpan={2} style={{ padding: '11px 16px', textAlign: 'right', fontSize: '13px', color: '#4b5563' }}>
+              부가가치세 <span style={{ fontSize: '11px', color: '#9ca3af' }}>(10%)</span>
+            </td>
+            <td style={{ padding: '11px 16px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+              {formatCurrency(vatAmount)}
+            </td>
+          </tr>
+          <tr style={{
+            background: 'linear-gradient(135deg, #667eea, #764ba2)',
+            printColorAdjust: 'exact',
+            WebkitPrintColorAdjust: 'exact',
+          } as React.CSSProperties}>
+            <td colSpan={2} style={{ padding: '14px 16px', textAlign: 'right', fontSize: '15px', fontWeight: 'bold', color: 'white' }}>
+              최종 청구액
+            </td>
+            <td style={{ padding: '14px 16px', textAlign: 'right', fontSize: '20px', fontWeight: 'bold', color: 'white', fontVariantNumeric: 'tabular-nums' }}>
+              ₩ {formatCurrency(totalAmount)}
+            </td>
+          </tr>
         </tfoot>
       </table>
 
-      {/* 최종 청구액 */}
-      <div style={{
-        background: 'linear-gradient(135deg, #0f172a, #334155)',
-        borderRadius: '12px',
-        padding: '24px',
-        margin: '0 0 24px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        color: 'white',
-        printColorAdjust: 'exact',
-        WebkitPrintColorAdjust: 'exact',
-      } as React.CSSProperties}>
-        <div>
-          <div style={{ fontSize: '10px', letterSpacing: '0.3em', color: '#94a3b8', marginBottom: '4px' }}>TOTAL DUE</div>
-          <div style={{ fontSize: '16px', fontWeight: '500' }}>최종 청구액</div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '36px', fontWeight: 'bold', fontVariantNumeric: 'tabular-nums' }}>
-            ₩ {formatCurrency(invoice.final_fee)}
-          </div>
-          <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>(부가세 별도)</div>
-        </div>
-      </div>
-
       {/* 결제 정보 */}
-      <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '20px', marginBottom: '32px' }}>
+      <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '20px', marginBottom: '28px' }}>
         <div style={{ fontSize: '10px', letterSpacing: '0.2em', color: '#9ca3af', marginBottom: '12px' }}>PAYMENT · 입금 안내</div>
         <div style={{
           background: 'linear-gradient(90deg, #667eea, #764ba2)',
@@ -201,7 +218,7 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
           printColorAdjust: 'exact',
           WebkitPrintColorAdjust: 'exact',
         } as React.CSSProperties}>
-          자동이체 또는 직접입금 모두 가능합니다
+          자동이체 또는 직접입금 선택하셔서 카톡채널에 말씀 부탁드립니다
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -222,7 +239,7 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
       </div>
 
       {/* 푸터 */}
-      <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div style={{ fontSize: '11px', color: '#6b7280', lineHeight: '1.8' }}>
           본 청구서는 {OFFICE.name}이(가) 발행하였습니다.<br />
           청구 내역 관련 문의: {OFFICE.phone}
