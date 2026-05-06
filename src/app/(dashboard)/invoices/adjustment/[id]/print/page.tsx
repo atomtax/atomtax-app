@@ -3,17 +3,13 @@ import { getAdjustmentInvoiceById } from '@/lib/db/adjustment-invoices'
 import AdjustmentInvoicePrint from '@/components/invoices/AdjustmentInvoicePrint'
 import AdjustmentInvoiceFeeSchedule from '@/components/invoices/AdjustmentInvoiceFeeSchedule'
 import PrintButton from '@/components/print/PrintButton'
-import AutoPrintTrigger from '@/components/print/AutoPrintTrigger'
 
 interface Props {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ auto?: string }>
 }
 
-export default async function AdjustmentInvoicePrintPage({ params, searchParams }: Props) {
+export default async function AdjustmentInvoicePrintPage({ params }: Props) {
   const { id } = await params
-  const sp = await searchParams
-  const auto = sp.auto === '1'
 
   const invoice = await getAdjustmentInvoiceById(id)
   if (!invoice) notFound()
@@ -31,7 +27,6 @@ export default async function AdjustmentInvoicePrintPage({ params, searchParams 
       </div>
       <AdjustmentInvoicePrint invoice={invoice} />
       <AdjustmentInvoiceFeeSchedule />
-      {auto && <AutoPrintTrigger />}
     </>
   )
 }

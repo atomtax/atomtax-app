@@ -3,14 +3,16 @@
 import { useState, useMemo, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import * as XLSX from 'xlsx'
-import { Save, Plus, Download, Upload, Printer, RefreshCw } from 'lucide-react'
+import { Save, Plus, Download, Upload, Printer, RefreshCw, Trash2 } from 'lucide-react'
 import type { Client, AdjustmentInvoice } from '@/types/database'
 import { calculateInvoiceRow } from '@/lib/calculators/fee-schedule'
 import { saveInvoiceBatch } from '@/app/actions/adjustment-invoices'
+import { downloadInvoice, downloadInvoicesBatch } from '@/lib/utils/invoice-export'
 import { formatCurrency } from '@/lib/utils/format'
 import InvoiceRow from './InvoiceRow'
 import InvoicePreviewModal from './InvoicePreviewModal'
 import ExcelImportModal from './ExcelImportModal'
+import BatchExportModal from './BatchExportModal'
 
 export type RowState = {
   rowId: string
@@ -19,6 +21,7 @@ export type RowState = {
   clientId: string | null
   clientName: string
   revenue: number
+  settlementFee: number
   adjustmentFee: number
   taxCreditAdditional: number
   faithfulReportFee: number
@@ -53,13 +56,13 @@ export default function AdjustmentInvoiceManager({
   const [businessType, setBusinessType] = useState<'corporate' | 'individual'>(initialBusinessType)
   const [managerFilter, setManagerFilter] = useState('all')
 
-  const [rows, setRows] = useState<RowState[]>(() =>
-    initialInvoices.map(invoiceToRow)
-  )
+  const [rows, setRows] = useState<RowState[]>(() => initialInvoices.map(invoiceToRow))
 
-  const [previewDbId, setPreviewDbId] = useState<string | null>(null)
-  const [previewClientName, setPreviewClientName] = useState('')
+  const [previewRowId, setPreviewRowId] = useState<string | null>(null)
   const [excelModalOpen, setExcelModalOpen] = useState(false)
+  const [batchExportModalOpen, setBatchExportModalOpen] = useState(false)
+  const [batchExporting, setBatchExporting] = useState(false)
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | undefined>()
 
   const visibleRows = useMemo(() => rows.filter((r) => !r.isDeleted), [rows])
 
@@ -70,13 +73,14 @@ export default function AdjustmentInvoiceManager({
 
   const totals = useMemo(() => {
     const acc = {
-      revenue: 0, adjustmentFee: 0,
+      revenue: 0, settlementFee: 0, adjustmentFee: 0,
       taxCreditAdditional: 0, faithfulReportFee: 0, discount: 0,
       supplyAmount: 0, vatAmount: 0, totalAmount: 0,
       paidCount: 0, unpaidCount: 0,
     }
     for (const r of visibleRows) {
       acc.revenue += r.revenue
+      acc.settlementFee += r.settlementFee
       acc.adjustmentFee += r.adjustmentFee
       acc.taxCreditAdditional += r.taxCreditAdditional
       acc.faithfulReportFee += r.faithfulReportFee
@@ -119,6 +123,7 @@ export default function AdjustmentInvoiceManager({
           faithfulReportFee: next.faithfulReportFee,
           discount: next.discount,
         })
+        next.settlementFee = calc.settlementFee
         next.adjustmentFee = calc.adjustmentFee
         next.supplyAmount = calc.supplyAmount
         next.vatAmount = calc.vatAmount
@@ -147,7 +152,7 @@ export default function AdjustmentInvoiceManager({
       businessNumber: c.business_number ?? '',
       clientId: c.id,
       clientName: c.company_name,
-      revenue: 0, adjustmentFee: 0,
+      revenue: 0, settlementFee: 0, adjustmentFee: 0,
       taxCreditAdditional: 0, faithfulReportFee: 0, discount: 0,
       supplyAmount: 0, vatAmount: 0, totalAmount: 0,
       paymentMethod: '미확인',
@@ -166,7 +171,7 @@ export default function AdjustmentInvoiceManager({
         businessNumber: '',
         clientId: null,
         clientName: '',
-        revenue: 0, adjustmentFee: 0,
+        revenue: 0, settlementFee: 0, adjustmentFee: 0,
         taxCreditAdditional: 0, faithfulReportFee: 0, discount: 0,
         supplyAmount: 0, vatAmount: 0, totalAmount: 0,
         paymentMethod: '미확인',
@@ -208,6 +213,22 @@ export default function AdjustmentInvoiceManager({
     )
   }
 
+  function handleBatchDelete() {
+    const selectedRows = rows.filter((r) => r.selected && !r.isDeleted)
+    if (selectedRows.length === 0) {
+      alert('삭제할 청구서를 선택해주세요.')
+      return
+    }
+    const ok = confirm(
+      `선택한 ${selectedRows.length}건의 청구서를 정말 삭제하시겠습니까?\n(저장 버튼을 눌러야 DB에 반영됩니다)`
+    )
+    if (!ok) return
+    const selectedRowIds = new Set(selectedRows.map((r) => r.rowId))
+    setRows((prev) =>
+      prev.map((r) => (selectedRowIds.has(r.rowId) ? { ...r, isDeleted: true } : r))
+    )
+  }
+
   function handlePrintPreview(rowId: string) {
     const row = rows.find((r) => r.rowId === rowId)
     if (!row) return
@@ -215,8 +236,33 @@ export default function AdjustmentInvoiceManager({
       alert('먼저 저장한 후에 인쇄할 수 있습니다.')
       return
     }
-    setPreviewDbId(row.dbId)
-    setPreviewClientName(row.clientName)
+    setPreviewRowId(rowId)
+  }
+
+  async function handleDownloadSinglePDF(rowId: string) {
+    const row = rows.find((r) => r.rowId === rowId)
+    if (!row || !row.dbId) {
+      alert('먼저 저장한 후에 다운로드할 수 있습니다.')
+      return
+    }
+    try {
+      await downloadInvoice(row.dbId, `조정료청구서_${row.clientName}_${year}`, 'pdf')
+    } catch (err) {
+      alert(`PDF 다운로드 실패: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
+  async function handleDownloadSinglePNG(rowId: string) {
+    const row = rows.find((r) => r.rowId === rowId)
+    if (!row || !row.dbId) {
+      alert('먼저 저장한 후에 다운로드할 수 있습니다.')
+      return
+    }
+    try {
+      await downloadInvoice(row.dbId, `조정료청구서_${row.clientName}_${year}`, 'png')
+    } catch (err) {
+      alert(`PNG 다운로드 실패: ${err instanceof Error ? err.message : String(err)}`)
+    }
   }
 
   function handleBatchPrint() {
@@ -229,11 +275,37 @@ export default function AdjustmentInvoiceManager({
       alert('저장되지 않은 행이 있습니다. 먼저 저장해주세요.')
       return
     }
-    selected.forEach((r, i) => {
-      setTimeout(() => {
-        window.open(`/invoices/adjustment/${r.dbId}/print?auto=1`, '_blank')
-      }, i * 600)
-    })
+    setBatchExportModalOpen(true)
+  }
+
+  async function handleBatchExport(format: 'pdf' | 'png') {
+    const selected = rows.filter((r) => r.selected && !r.isDeleted && r.dbId)
+    setBatchExporting(true)
+    setBatchProgress({ current: 0, total: selected.length })
+    try {
+      const result = await downloadInvoicesBatch(
+        selected.map((r) => ({
+          id: r.dbId!,
+          filename: `조정료청구서_${r.clientName}_${year}`,
+        })),
+        format,
+        (current, total) => setBatchProgress({ current, total })
+      )
+      setBatchExporting(false)
+      setBatchExportModalOpen(false)
+      setBatchProgress(undefined)
+      if (result.failedItems.length > 0) {
+        alert(
+          `일괄 출력 완료: 성공 ${result.successCount}건, 실패 ${result.failedItems.length}건\n` +
+            result.failedItems.map((f) => `- ${f.error}`).join('\n')
+        )
+      } else {
+        alert(`일괄 출력 완료: 총 ${result.successCount}건 다운로드`)
+      }
+    } catch (err) {
+      setBatchExporting(false)
+      alert(`일괄 출력 실패: ${err instanceof Error ? err.message : String(err)}`)
+    }
   }
 
   function handleExcelDownload() {
@@ -241,6 +313,7 @@ export default function AdjustmentInvoiceManager({
       고객사명: r.clientName,
       사업자번호: r.businessNumber,
       매출액: r.revenue,
+      결산보수: r.settlementFee,
       세무조정료: r.adjustmentFee,
       세액공제: r.taxCreditAdditional,
       성실신고: r.faithfulReportFee,
@@ -259,6 +332,7 @@ export default function AdjustmentInvoiceManager({
   }
 
   const dirtyCount = rows.filter((r) => r.isDirty && !r.isDeleted).length
+  const previewRow = previewRowId ? rows.find((r) => r.rowId === previewRowId) ?? null : null
 
   return (
     <div className="p-6 max-w-[1600px] mx-auto">
@@ -350,6 +424,13 @@ export default function AdjustmentInvoiceManager({
             {isPending ? '저장 중…' : `저장${dirtyCount > 0 ? ` (${dirtyCount})` : ''}`}
           </button>
           <button
+            onClick={handleBatchDelete}
+            className="inline-flex items-center gap-1 px-3 py-2 bg-red-600 text-white text-sm rounded-md hover:bg-red-700"
+          >
+            <Trash2 size={14} />
+            선택 삭제
+          </button>
+          <button
             onClick={() => setExcelModalOpen(true)}
             className="inline-flex items-center gap-1 px-3 py-2 bg-yellow-500 text-white text-sm rounded-md hover:bg-yellow-600"
           >
@@ -389,15 +470,16 @@ export default function AdjustmentInvoiceManager({
                   }
                 />
               </th>
-              <th className="text-left p-2">고객사명</th>
-              <th className="text-right p-2">매출액</th>
-              <th className="text-right p-2">세무조정료</th>
-              <th className="text-right p-2">세액공제</th>
-              <th className="text-right p-2">성실신고</th>
-              <th className="text-right p-2">할인</th>
-              <th className="text-right p-2 bg-blue-50">최종수수료</th>
-              <th className="text-right p-2 bg-blue-50">부가세</th>
-              <th className="text-right p-2 bg-blue-50 font-semibold">최종청구액</th>
+              <th className="text-center p-2">고객사명</th>
+              <th className="text-center p-2">매출액</th>
+              <th className="text-center p-2">결산보수</th>
+              <th className="text-center p-2">세무조정료</th>
+              <th className="text-center p-2">세액공제</th>
+              <th className="text-center p-2">성실신고</th>
+              <th className="text-center p-2">할인</th>
+              <th className="text-center p-2 bg-blue-50">최종수수료</th>
+              <th className="text-center p-2 bg-blue-50">부가세</th>
+              <th className="text-center p-2 bg-blue-50 font-semibold">최종청구액</th>
               <th className="text-center p-2">납부방법</th>
               <th className="text-center p-2">납부</th>
               <th className="text-center p-2 w-20">작업</th>
@@ -415,7 +497,7 @@ export default function AdjustmentInvoiceManager({
             ))}
             {visibleRows.length === 0 && (
               <tr>
-                <td colSpan={13} className="text-center py-12 text-gray-400 text-sm">
+                <td colSpan={14} className="text-center py-12 text-gray-400 text-sm">
                   데이터가 없습니다.{' '}
                   <button onClick={handleLoadClients} className="text-indigo-600 underline">
                     고객사 불러오기
@@ -434,6 +516,7 @@ export default function AdjustmentInvoiceManager({
               <tr>
                 <td colSpan={2} className="p-2 text-right text-gray-600">합 계</td>
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.revenue)}</td>
+                <td className="p-2 text-right tabular-nums">{formatCurrency(totals.settlementFee)}</td>
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.adjustmentFee)}</td>
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.taxCreditAdditional)}</td>
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.faithfulReportFee)}</td>
@@ -451,11 +534,23 @@ export default function AdjustmentInvoiceManager({
         </table>
       </div>
 
-      {previewDbId && (
+      {previewRow && (
         <InvoicePreviewModal
-          dbId={previewDbId}
-          clientName={previewClientName}
-          onClose={() => setPreviewDbId(null)}
+          row={previewRow}
+          year={year}
+          onClose={() => setPreviewRowId(null)}
+          onDownloadPDF={handleDownloadSinglePDF}
+          onDownloadPNG={handleDownloadSinglePNG}
+        />
+      )}
+
+      {batchExportModalOpen && (
+        <BatchExportModal
+          selectedCount={rows.filter((r) => r.selected && !r.isDeleted).length}
+          onClose={() => setBatchExportModalOpen(false)}
+          onSelect={handleBatchExport}
+          isExporting={batchExporting}
+          progress={batchProgress}
         />
       )}
 
@@ -483,6 +578,7 @@ function invoiceToRow(inv: AdjustmentInvoice): RowState {
     clientId: inv.client_id,
     clientName: inv.client_name,
     revenue: inv.revenue ?? 0,
+    settlementFee: inv.settlement_fee ?? 0,
     adjustmentFee: inv.adjustment_fee ?? 0,
     taxCreditAdditional: inv.tax_credit_additional ?? 0,
     faithfulReportFee: inv.faithful_report_fee ?? 0,
@@ -510,7 +606,7 @@ function rowToPayload(
     client_name: row.clientName,
     business_number: row.businessNumber || null,
     revenue: row.revenue,
-    settlement_fee: 0,
+    settlement_fee: row.settlementFee,
     adjustment_fee: row.adjustmentFee,
     tax_credit_additional: row.taxCreditAdditional,
     faithful_report_fee: row.faithfulReportFee,

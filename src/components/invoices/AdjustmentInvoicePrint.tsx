@@ -15,6 +15,7 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
   const invoiceNo = buildInvoiceNumber(issueYear, invoice.id)
 
   const subtotal =
+    invoice.settlement_fee +
     invoice.adjustment_fee +
     invoice.tax_credit_additional +
     invoice.faithful_report_fee
@@ -23,6 +24,7 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
     invoice.business_type === 'corporate' ? '법인·의료사업자' : '개인사업자'
 
   const lineItems = [
+    { label: '결산보수', note: '자동산출', amount: invoice.settlement_fee },
     { label: '조정료', note: '자동산출', amount: invoice.adjustment_fee },
     ...(invoice.tax_credit_additional > 0
       ? [{ label: '세액공제 추가', note: '가산', amount: invoice.tax_credit_additional }]

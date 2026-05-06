@@ -74,6 +74,15 @@ export function calculateTotalAmount(supplyAmount: number, vatAmount: number): n
   return supplyAmount + vatAmount
 }
 
+export function splitFeeIntoSettlementAndAdjustment(totalFee: number): {
+  settlementFee: number
+  adjustmentFee: number
+} {
+  const settlementFee = Math.round(totalFee / 2)
+  const adjustmentFee = totalFee - settlementFee
+  return { settlementFee, adjustmentFee }
+}
+
 export function calculateInvoiceRow(input: {
   revenue: number
   businessType: 'corporate' | 'individual'
@@ -81,14 +90,16 @@ export function calculateInvoiceRow(input: {
   faithfulReportFee: number
   discount: number
 }): {
+  settlementFee: number
   adjustmentFee: number
   supplyAmount: number
   vatAmount: number
   totalAmount: number
 } {
-  const adjustmentFee = calculateAdjustmentFee(input.revenue, input.businessType)
+  const totalAutoFee = calculateAdjustmentFee(input.revenue, input.businessType)
+  const { settlementFee, adjustmentFee } = splitFeeIntoSettlementAndAdjustment(totalAutoFee)
   const supplyAmount = calculateSupplyAmount({
-    settlementFee: 0,
+    settlementFee,
     adjustmentFee,
     taxCreditAdditional: input.taxCreditAdditional,
     faithfulReportFee: input.faithfulReportFee,
@@ -96,7 +107,7 @@ export function calculateInvoiceRow(input: {
   })
   const vatAmount = calculateVAT(supplyAmount)
   const totalAmount = calculateTotalAmount(supplyAmount, vatAmount)
-  return { adjustmentFee, supplyAmount, vatAmount, totalAmount }
+  return { settlementFee, adjustmentFee, supplyAmount, vatAmount, totalAmount }
 }
 
 export function calculateFinalFee(input: {

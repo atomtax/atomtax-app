@@ -30,6 +30,7 @@ export default function InvoiceRow({ row, onChangeCell, onPrint, onDelete }: Pro
         />
       </td>
       <NumberCell value={row.revenue} rowId={row.rowId} field="revenue" onChange={onChangeCell} />
+      <ReadonlyCell value={row.settlementFee} />
       <ReadonlyCell value={row.adjustmentFee} />
       <NumberCell value={row.taxCreditAdditional} rowId={row.rowId} field="taxCreditAdditional" onChange={onChangeCell} />
       <NumberCell value={row.faithfulReportFee} rowId={row.rowId} field="faithfulReportFee" onChange={onChangeCell} />
