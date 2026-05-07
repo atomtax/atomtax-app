@@ -1,20 +1,53 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import type { TraderInventory, TraderInventoryInsert, TraderInventoryUpdate, Expense, ExpenseInsert } from '@/types/database'
+import {
+  TRADER_BUSINESS_CODES,
+  type TraderInventory,
+  type TraderInventoryInsert,
+  type TraderInventoryUpdate,
+  type TraderInventoryWithClient,
+  type Expense,
+  type ExpenseInsert,
+} from '@/types/database'
 
-export async function getTraderInventories(): Promise<TraderInventory[]> {
+export interface TraderClient {
+  id: string
+  company_name: string
+  representative: string | null
+  business_number: string | null
+  business_category_code: string | null
+}
+
+export async function listTraderClients(): Promise<TraderClient[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('clients')
+    .select('id, company_name, representative, business_number, business_category_code')
+    .eq('is_terminated', false)
+    .in('business_category_code', [...TRADER_BUSINESS_CODES])
+    .order('company_name', { ascending: true })
+
+  if (error) throw new Error(error.message)
+  return (data ?? []) as TraderClient[]
+}
+
+export async function listAllTraderInventory(): Promise<TraderInventoryWithClient[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('trader_inventory')
-    .select('*')
-    .order('report_deadline', { ascending: true })
+    .select(`
+      *,
+      client:clients!inner(id, company_name, representative, business_number, business_category_code)
+    `)
+    .in('client.business_category_code', [...TRADER_BUSINESS_CODES])
+    .order('filing_deadline', { ascending: true, nullsFirst: false })
 
   if (error) throw new Error(error.message)
-  return data ?? []
+  return (data ?? []) as TraderInventoryWithClient[]
 }
 
-export async function getTraderInventoriesByClient(clientId: string): Promise<TraderInventory[]> {
+export async function listInventoryByClient(clientId: string): Promise<TraderInventory[]> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('trader_inventory')
@@ -23,7 +56,7 @@ export async function getTraderInventoriesByClient(clientId: string): Promise<Tr
     .order('acquisition_date', { ascending: false })
 
   if (error) throw new Error(error.message)
-  return data ?? []
+  return (data ?? []) as TraderInventory[]
 }
 
 export async function getTraderInventoryById(id: string): Promise<TraderInventory | null> {
@@ -35,7 +68,7 @@ export async function getTraderInventoryById(id: string): Promise<TraderInventor
     .single()
 
   if (error) return null
-  return data
+  return data as TraderInventory
 }
 
 export async function createTraderInventory(inventory: TraderInventoryInsert): Promise<TraderInventory> {
@@ -47,7 +80,7 @@ export async function createTraderInventory(inventory: TraderInventoryInsert): P
     .single()
 
   if (error) throw new Error(error.message)
-  return data
+  return data as TraderInventory
 }
 
 export async function updateTraderInventory(id: string, inventory: TraderInventoryUpdate): Promise<TraderInventory> {
@@ -60,7 +93,7 @@ export async function updateTraderInventory(id: string, inventory: TraderInvento
     .single()
 
   if (error) throw new Error(error.message)
-  return data
+  return data as TraderInventory
 }
 
 export async function deleteTraderInventory(id: string): Promise<void> {
@@ -74,11 +107,11 @@ export async function getExpensesByInventory(inventoryId: string): Promise<Expen
   const { data, error } = await supabase
     .from('expenses')
     .select('*')
-    .eq('inventory_id', inventoryId)
-    .order('created_at', { ascending: true })
+    .eq('trader_inventory_id', inventoryId)
+    .order('expense_date', { ascending: true })
 
   if (error) throw new Error(error.message)
-  return data ?? []
+  return (data ?? []) as Expense[]
 }
 
 export async function createExpense(expense: ExpenseInsert): Promise<Expense> {
@@ -90,7 +123,7 @@ export async function createExpense(expense: ExpenseInsert): Promise<Expense> {
     .single()
 
   if (error) throw new Error(error.message)
-  return data
+  return data as Expense
 }
 
 export async function deleteExpense(id: string): Promise<void> {

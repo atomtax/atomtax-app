@@ -1,6 +1,12 @@
 export type BusinessTypeCategory = '법인' | '개인'
-export type TraderStatus = '미확인' | '진행중' | '완료'
 export type AdjustmentBusinessType = 'corporate' | 'individual'
+
+// ============================================================
+// 매매사업자 (Phase 3)
+// ============================================================
+export const TRADER_BUSINESS_CODES = ['703011', '703012'] as const
+export type ProgressStatus = '미확인' | '진행중' | '완료'
+export const PROGRESS_STATUS_OPTIONS: ProgressStatus[] = ['미확인', '진행중', '완료']
 
 export interface Client {
   id: string
@@ -102,28 +108,49 @@ export type AdjustmentInvoiceUpdate = Partial<AdjustmentInvoiceInsert>
 
 export interface TraderInventory {
   id: string
-  client_id: string
-  property_name: string | null
+  client_id: string | null
+  property_address: string | null
+  property_type: string | null
   acquisition_date: string | null
-  disposal_date: string | null
-  report_deadline: string | null
-  status: TraderStatus
+  acquisition_price: number | null
+  transfer_date: string | null
+  transfer_price: number | null
+  filing_deadline: string | null
+  progress_status: ProgressStatus
+  is_taxable: boolean
+  output_vat: number | null
   notes: string | null
   created_at: string
   updated_at: string
 }
 
-export type TraderInventoryInsert = Omit<TraderInventory, 'id' | 'created_at' | 'updated_at'>
-export type TraderInventoryUpdate = Partial<TraderInventoryInsert>
+export interface TraderInventoryWithClient extends TraderInventory {
+  client: {
+    id: string
+    company_name: string
+    representative: string | null
+    business_number: string | null
+    business_category_code: string | null
+  } | null
+}
 
 export interface Expense {
   id: string
-  inventory_id: string
+  trader_inventory_id: string | null
+  client_id: string | null
+  expense_date: string | null
   category: string | null
-  amount: number | null
+  amount: number
   description: string | null
+  input_vat: number | null
+  receipt_url: string | null
   created_at: string
+  updated_at: string
 }
 
-export type ExpenseInsert = Omit<Expense, 'id' | 'created_at'>
-export type ExpenseUpdate = Partial<ExpenseInsert>
+export type TraderInventoryInput = Omit<TraderInventory, 'id' | 'created_at' | 'updated_at'>
+export type TraderInventoryInsert = TraderInventoryInput
+export type TraderInventoryUpdate = Partial<TraderInventoryInput>
+export type ExpenseInput = Omit<Expense, 'id' | 'created_at' | 'updated_at'>
+export type ExpenseInsert = ExpenseInput
+export type ExpenseUpdate = Partial<ExpenseInput>

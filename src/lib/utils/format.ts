@@ -27,3 +27,36 @@ export function formatBusinessNumber(value: string | null | undefined): string {
   }
   return value
 }
+
+/** 금액 표시 (null → '') */
+export function formatAmount(value: number | null | undefined): string {
+  if (value == null) return ''
+  return value.toLocaleString('ko-KR')
+}
+
+/** D-day 계산: 오늘 기준 남은 일수 (음수=초과) */
+export function daysUntil(dateStr: string | null | undefined): number | null {
+  if (!dateStr) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const target = new Date(dateStr)
+  target.setHours(0, 0, 0, 0)
+  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+/** 취득일~양도일 보유 기간 표시 */
+export function formatHoldingPeriod(
+  acquisitionDate: string | null | undefined,
+  transferDate: string | null | undefined
+): string {
+  if (!acquisitionDate) return ''
+  const start = new Date(acquisitionDate)
+  const end = transferDate ? new Date(transferDate) : new Date()
+  const diffDays = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+  if (diffDays < 0) return ''
+  const years = Math.floor(diffDays / 365)
+  const months = Math.floor((diffDays % 365) / 30)
+  if (years > 0 && months > 0) return `${years}년 ${months}개월`
+  if (years > 0) return `${years}년`
+  return `${months}개월`
+}
