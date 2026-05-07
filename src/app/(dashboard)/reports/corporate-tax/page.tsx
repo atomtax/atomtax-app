@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { listCorporateClientsWithReports, listCorporateManagers } from '@/lib/db/corporate-tax-reports'
 import { CorporateTaxFilters } from '@/components/reports/CorporateTaxFilters'
 import { CorporateTaxReportList } from '@/components/reports/CorporateTaxReportList'
@@ -35,12 +36,14 @@ export default async function CorporateTaxReportsPage({ searchParams }: Props) {
         <p className="text-sm text-gray-500 mt-0.5">{year}년도 신고</p>
       </div>
 
-      <CorporateTaxFilters
-        currentYear={year}
-        currentManager={manager}
-        currentQuery={query}
-        managers={managers}
-      />
+      <Suspense fallback={<div className="h-12" />}>
+        <CorporateTaxFilters
+          currentYear={year}
+          currentManager={manager}
+          currentQuery={query}
+          managers={managers}
+        />
+      </Suspense>
 
       <div className="flex gap-6 mb-6 text-sm bg-white border border-gray-200 rounded-lg px-5 py-3">
         <span>

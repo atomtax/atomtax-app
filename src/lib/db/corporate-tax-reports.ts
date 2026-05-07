@@ -25,7 +25,11 @@ export async function listCorporateClientsWithReports(
     .eq('report_year', year)
     .in('client_id', clientIds)
 
-  if (e2) throw new Error(`법인세 보고서 조회 실패: ${e2.message}`)
+  // DB 스키마 미마이그레이션 등 에러 발생 시 보고서 없이 고객만 반환 (페이지 크래시 방지)
+  if (e2) {
+    console.error('법인세 보고서 조회 실패 (마이그레이션 필요할 수 있음):', e2.message)
+    return clients.map((client) => ({ client, report: null }))
+  }
 
   const reportMap = new Map((reports ?? []).map((r) => [r.client_id as string, r]))
 
