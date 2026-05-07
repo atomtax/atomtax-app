@@ -23,6 +23,17 @@ export interface Client {
   is_terminated: boolean
   termination_date: string | null
   notes: string | null
+  email: string | null
+  google_drive_folder_url: string | null
+  trader_drive_folder_url: string | null
+  resident_number: string | null
+  business_category_code: string | null
+  postal_code: string | null
+  supply_value: number
+  tax_value: number
+  initial_billing_month: string | null
+  hometax_id: string | null
+  hometax_password: string | null
   created_at: string
   updated_at: string
 }

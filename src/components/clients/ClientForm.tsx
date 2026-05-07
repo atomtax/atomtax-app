@@ -38,6 +38,17 @@ export default function ClientForm({ client, onSuccess, onCancel }: ClientFormPr
     is_terminated: client?.is_terminated ?? false,
     termination_date: client?.termination_date ?? null,
     notes: client?.notes ?? '',
+    email: client?.email ?? null,
+    google_drive_folder_url: client?.google_drive_folder_url ?? null,
+    trader_drive_folder_url: client?.trader_drive_folder_url ?? null,
+    resident_number: client?.resident_number ?? null,
+    business_category_code: client?.business_category_code ?? null,
+    postal_code: client?.postal_code ?? null,
+    supply_value: client?.supply_value ?? 0,
+    tax_value: client?.tax_value ?? 0,
+    initial_billing_month: client?.initial_billing_month ?? null,
+    hometax_id: client?.hometax_id ?? null,
+    hometax_password: client?.hometax_password ?? null,
   })
 
   const set = (key: keyof ClientInsert, value: string | number | boolean | null) => {

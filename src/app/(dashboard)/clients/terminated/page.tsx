@@ -1,7 +1,7 @@
 import { getTerminatedClients } from '@/lib/db/clients'
-import TerminatedClientsClient from './TerminatedClientsClient'
+import ClientListManager from '@/components/clients/ClientListManager'
 
 export default async function TerminatedClientsPage() {
   const clients = await getTerminatedClients()
-  return <TerminatedClientsClient initialClients={clients} />
+  return <ClientListManager initialClients={clients} isTerminated />
 }

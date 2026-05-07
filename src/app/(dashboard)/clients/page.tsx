@@ -1,7 +1,7 @@
 import { getClients } from '@/lib/db/clients'
-import ClientsClient from './ClientsClient'
+import ClientListManager from '@/components/clients/ClientListManager'
 
 export default async function ClientsPage() {
   const clients = await getClients()
-  return <ClientsClient initialClients={clients} />
+  return <ClientListManager initialClients={clients} />
 }
