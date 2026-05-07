@@ -44,21 +44,35 @@ export default async function CorporateTaxReportEditPage({ params, searchParams 
     )
   }
 
-  const { id: reportId } = await ensureCorporateTaxReport(clientId, year)
-
-  const { data: report } = await supabase
-    .from('corporate_tax_reports')
-    .select('*')
-    .eq('id', reportId)
-    .single()
-
-  if (!report) {
+  let reportId: string
+  try {
+    const result = await ensureCorporateTaxReport(clientId, year)
+    reportId = result.id
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
     return (
       <div className="p-6">
         <Link href="/reports/corporate-tax" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-indigo-600 mb-4">
           <ArrowLeft size={16} /> 목록으로
         </Link>
-        <p className="text-gray-500">보고서를 불러올 수 없습니다.</p>
+        <p className="text-red-600">보고서 초기화 실패: {msg}</p>
+      </div>
+    )
+  }
+
+  const { data: report, error: reportError } = await supabase
+    .from('corporate_tax_reports')
+    .select('*')
+    .eq('id', reportId)
+    .single()
+
+  if (reportError || !report) {
+    return (
+      <div className="p-6">
+        <Link href="/reports/corporate-tax" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-indigo-600 mb-4">
+          <ArrowLeft size={16} /> 목록으로
+        </Link>
+        <p className="text-red-600">보고서를 불러올 수 없습니다{reportError ? `: ${reportError.message}` : ''}.</p>
       </div>
     )
   }
