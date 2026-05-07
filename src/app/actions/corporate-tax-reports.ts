@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import type { IncomeStatementSummary } from '@/types/database'
 
 export async function ensureCorporateTaxReport(
   clientId: string,
@@ -30,3 +31,41 @@ export async function ensureCorporateTaxReport(
   revalidatePath('/reports/corporate-tax')
   return { id: data.id }
 }
+
+interface SaveReportBasicInput {
+  reportId: string
+  income_statement_filename?: string | null
+  income_statement_period_label?: string | null
+  income_statement_summary?: IncomeStatementSummary | null
+  revenue?: number | null
+  net_income?: number | null
+}
+
+export async function saveCorporateTaxReportBasic(input: SaveReportBasicInput) {
+  const supabase = await createClient()
+
+  const updates: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  }
+  if (input.income_statement_filename !== undefined)
+    updates.income_statement_filename = input.income_statement_filename
+  if (input.income_statement_period_label !== undefined)
+    updates.income_statement_period_label = input.income_statement_period_label
+  if (input.income_statement_summary !== undefined)
+    updates.income_statement_summary = input.income_statement_summary
+  if (input.revenue !== undefined) updates.revenue = input.revenue
+  if (input.net_income !== undefined) updates.net_income = input.net_income
+
+  const { data, error } = await supabase
+    .from('corporate_tax_reports')
+    .update(updates)
+    .eq('id', input.reportId)
+    .select('id, client_id')
+    .single()
+
+  if (error) throw new Error(`보고서 저장 실패: ${error.message}`)
+
+  revalidatePath('/reports/corporate-tax')
+  if (data.client_id) revalidatePath(`/reports/corporate-tax/${data.client_id}`)
+}
+
