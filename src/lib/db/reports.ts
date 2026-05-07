@@ -8,10 +8,10 @@ export async function getCorporateTaxReports(): Promise<CorporateTaxReport[]> {
   const { data, error } = await supabase
     .from('corporate_tax_reports')
     .select('*')
-    .order('year', { ascending: false })
+    .order('report_year', { ascending: false })
 
   if (error) throw new Error(error.message)
-  return data ?? []
+  return (data ?? []) as CorporateTaxReport[]
 }
 
 export async function getCorporateTaxReportsByClient(clientId: string): Promise<CorporateTaxReport[]> {
@@ -20,10 +20,10 @@ export async function getCorporateTaxReportsByClient(clientId: string): Promise<
     .from('corporate_tax_reports')
     .select('*')
     .eq('client_id', clientId)
-    .order('year', { ascending: false })
+    .order('report_year', { ascending: false })
 
   if (error) throw new Error(error.message)
-  return data ?? []
+  return (data ?? []) as CorporateTaxReport[]
 }
 
 export async function getCorporateTaxReportById(id: string): Promise<CorporateTaxReport | null> {
@@ -35,19 +35,19 @@ export async function getCorporateTaxReportById(id: string): Promise<CorporateTa
     .single()
 
   if (error) return null
-  return data
+  return data as CorporateTaxReport
 }
 
 export async function upsertCorporateTaxReport(report: CorporateTaxReportInsert): Promise<CorporateTaxReport> {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('corporate_tax_reports')
-    .upsert(report, { onConflict: 'client_id,year' })
+    .upsert(report, { onConflict: 'client_id,report_year' })
     .select()
     .single()
 
   if (error) throw new Error(error.message)
-  return data
+  return data as CorporateTaxReport
 }
 
 export async function updateCorporateTaxReport(id: string, report: CorporateTaxReportUpdate): Promise<CorporateTaxReport> {
@@ -60,7 +60,7 @@ export async function updateCorporateTaxReport(id: string, report: CorporateTaxR
     .single()
 
   if (error) throw new Error(error.message)
-  return data
+  return data as CorporateTaxReport
 }
 
 export async function deleteCorporateTaxReport(id: string): Promise<void> {

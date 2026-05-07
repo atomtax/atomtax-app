@@ -97,13 +97,13 @@ export default async function ClientDetailPage({ params }: Props) {
                 key={report.id}
                 className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-lg text-sm"
               >
-                <span className="font-medium text-gray-900">{report.year}년</span>
+                <span className="font-medium text-gray-900">{report.report_year}년</span>
                 <div className="flex gap-6 text-gray-500">
                   <span>매출 {formatCurrency(report.revenue)}</span>
                   <span>결정세액 {formatCurrency(report.determined_tax)}</span>
                 </div>
                 <Link
-                  href={`/reports/corporate-tax?clientId=${client.id}&year=${report.year}`}
+                  href={`/reports/corporate-tax?clientId=${client.id}&year=${report.report_year}`}
                   className="text-xs text-indigo-600 hover:underline"
                 >
                   보기

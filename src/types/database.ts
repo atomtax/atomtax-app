@@ -47,37 +47,87 @@ export interface Client {
 export type ClientInsert = Omit<Client, 'id' | 'created_at' | 'updated_at'>
 export type ClientUpdate = Partial<ClientInsert>
 
+// ============================================================
+// 법인세 보고서 (v17)
+// ============================================================
+export type CorporateTaxReportStatus = 'draft' | 'completed'
+
+export interface IncomeStatementSummary {
+  revenue: number
+  cogs: number
+  gross_profit: number
+  sga: number
+  operating_income: number
+  non_operating_revenue: number
+  non_operating_expense: number
+  pretax_income: number
+  corporate_tax: number
+  net_income: number
+}
+
+export interface TaxCredit {
+  type: string
+  custom_name?: string
+  current_amount: number
+  carryover_amount: number
+}
+
+export interface TaxReduction {
+  type: string
+  custom_name?: string
+  current_amount: number
+}
+
 export interface CorporateTaxReport {
   id: string
-  client_id: string
-  year: number
+  client_id: string | null
+
+  report_year: number
+  status: CorporateTaxReportStatus
+
+  income_statement_filename: string | null
+  income_statement_period_label: string | null
+  income_statement_summary: IncomeStatementSummary | null
+
   revenue: number | null
-  net_profit: number | null
-  tax_payment: number | null
-  tax_refund: number | null
-  prepaid_tax: number | null
-  current_loss: number | null
-  carryforward_loss: number | null
-  tax_credit_type: string | null
-  tax_credit_increase: number | null
-  tax_credit_carryforward: number | null
-  tax_credit_note: string | null
-  has_tax_credit: boolean
-  requires_faithful_report: boolean
-  faithful_report_note: string | null
+  net_income: number | null
+
+  calculated_tax: number
+  determined_tax: number
+  local_tax: number
+  rural_special_tax: number
+  prepaid_tax: number
+  final_tax: number
+
+  current_loss: number
+  carryover_loss: number
+
+  tax_credits: TaxCredit[]
+  tax_reductions: TaxReduction[]
+
+  is_sincere_filing: boolean
   additional_notes: string | null
-  income_statement: Record<string, unknown> | null
-  financial_statements: Record<string, unknown> | null
-  calculated_tax: number | null
-  local_tax: number | null
-  rural_tax: number | null
-  determined_tax: number | null
+  conclusion_notes: string | null
+
+  completed_at: string | null
   created_at: string
   updated_at: string
 }
 
 export type CorporateTaxReportInsert = Omit<CorporateTaxReport, 'id' | 'created_at' | 'updated_at'>
 export type CorporateTaxReportUpdate = Partial<CorporateTaxReportInsert>
+
+/** 목록 페이지에서 사용 — 고객 + 보고서 조인 결과 */
+export interface CorporateClientWithReport {
+  client: {
+    id: string
+    company_name: string
+    representative: string | null
+    business_number: string | null
+    manager: string | null
+  }
+  report: Pick<CorporateTaxReport, 'id' | 'status' | 'completed_at' | 'updated_at'> | null
+}
 
 export interface AdjustmentInvoice {
   id: string

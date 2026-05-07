@@ -55,7 +55,7 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    label: '보고서',
+    label: '보고서 작성',
     icon: <BarChart3 size={18} />,
     children: [
       { label: '법인세 보고서', href: '/reports/corporate-tax' },
