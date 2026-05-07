@@ -5,6 +5,12 @@ import * as XLSX from 'xlsx'
 import { X, Upload } from 'lucide-react'
 import type { Client, ClientInsert } from '@/types/database'
 import { saveClientsBatchAction } from '@/app/(dashboard)/clients/actions'
+import {
+  formatPhoneNumber,
+  formatBusinessNumberForSave,
+  formatResidentNumber,
+  formatCorporateNumber,
+} from '@/lib/utils/format-phone'
 
 type Props = {
   existingClients: Client[]
@@ -44,14 +50,14 @@ export default function ClientExcelImportModal({ existingClients, onClose, onImp
             company_name: String(r[1] ?? '').trim(),
             manager: String(r[2] ?? '').trim() || null,
             representative: String(r[3] ?? '').trim() || null,
-            phone: String(r[4] ?? '').trim() || null,
+            phone: formatPhoneNumber(String(r[4] ?? '').trim()) || null,
             email: String(r[5] ?? '').trim() || null,
             google_drive_folder_url: String(r[6] ?? '').trim() || null,
             trader_drive_folder_url: String(r[7] ?? '').trim() || null,
-            business_number: businessNumber || null,
+            business_number: formatBusinessNumberForSave(businessNumber) || null,
             business_type_category: String(r[9] ?? '') === '법인' ? '법인' : '개인',
-            resident_number: String(r[10] ?? '').trim() || null,
-            corporate_number: String(r[11] ?? '').trim() || null,
+            resident_number: formatResidentNumber(String(r[10] ?? '').trim()) || null,
+            corporate_number: formatCorporateNumber(String(r[11] ?? '').trim()) || null,
             business_type: String(r[12] ?? '').trim() || null,
             business_item: String(r[13] ?? '').trim() || null,
             business_category_code: String(r[14] ?? '').trim() || null,

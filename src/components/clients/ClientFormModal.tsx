@@ -9,6 +9,12 @@ import {
   getNextClientNumberAction,
 } from '@/app/(dashboard)/clients/actions'
 import PostalCodeSearch from './PostalCodeSearch'
+import {
+  formatPhoneNumber,
+  formatBusinessNumberForSave,
+  formatResidentNumber,
+  formatCorporateNumber,
+} from '@/lib/utils/format-phone'
 
 type FormData = {
   number: string
@@ -63,9 +69,10 @@ function Label({ text, required }: { text: string; required?: boolean }) {
 }
 
 function TextInput({
-  label, value, onChange, placeholder, required, colSpan, type,
+  label, value, onChange, onBlur, placeholder, required, colSpan, type,
 }: {
   label: string; value: string; onChange: (v: string) => void
+  onBlur?: (v: string) => void
   placeholder?: string; required?: boolean; colSpan?: boolean; type?: string
 }) {
   return (
@@ -75,6 +82,7 @@ function TextInput({
         type={type ?? 'text'}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur ? (e) => onBlur(e.target.value) : undefined}
         placeholder={placeholder}
         required={required}
         className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-indigo-500"
@@ -222,7 +230,7 @@ export default function ClientFormModal({ client, onClose, onSaved }: Props) {
             <TextInput label="거래처명" value={form.company_name} onChange={(v) => set('company_name', v)} placeholder="(주)아톰세무" required />
             <TextInput label="담당자" value={form.manager} onChange={(v) => set('manager', v)} placeholder="홍길동" required />
             <TextInput label="대표자" value={form.representative} onChange={(v) => set('representative', v)} placeholder="김대표" />
-            <TextInput label="연락처" value={form.phone} onChange={(v) => set('phone', v)} placeholder="010-0000-0000" />
+            <TextInput label="연락처" value={form.phone} onChange={(v) => set('phone', v)} onBlur={(v) => set('phone', formatPhoneNumber(v))} placeholder="010-0000-0000" />
             <TextInput label="이메일" value={form.email} onChange={(v) => set('email', v)} placeholder="info@example.com" type="email" />
             <div className="col-span-2">
               <Label text="구글 드라이브 폴더 URL" />
@@ -248,7 +256,7 @@ export default function ClientFormModal({ client, onClose, onSaved }: Props) {
 
           {/* 사업자 정보 */}
           <FieldGroup title="사업자 정보">
-            <TextInput label="사업자번호" value={form.business_number} onChange={(v) => set('business_number', v)} placeholder="000-00-00000" />
+            <TextInput label="사업자번호" value={form.business_number} onChange={(v) => set('business_number', v)} onBlur={(v) => set('business_number', formatBusinessNumberForSave(v))} placeholder="000-00-00000" />
             <div>
               <Label text="사업자구분" required />
               <select
@@ -260,8 +268,8 @@ export default function ClientFormModal({ client, onClose, onSaved }: Props) {
                 <option value="법인">법인사업자</option>
               </select>
             </div>
-            <TextInput label="주민등록번호" value={form.resident_number} onChange={(v) => set('resident_number', v)} placeholder="000000-0000000" />
-            <TextInput label="법인등록번호" value={form.corporate_number} onChange={(v) => set('corporate_number', v)} placeholder="000000-0000000" />
+            <TextInput label="주민등록번호" value={form.resident_number} onChange={(v) => set('resident_number', v)} onBlur={(v) => set('resident_number', formatResidentNumber(v))} placeholder="000000-0000000" />
+            <TextInput label="법인등록번호" value={form.corporate_number} onChange={(v) => set('corporate_number', v)} onBlur={(v) => set('corporate_number', formatCorporateNumber(v))} placeholder="000000-0000000" />
             <TextInput label="업태" value={form.business_type} onChange={(v) => set('business_type', v)} placeholder="서비스업" />
             <TextInput label="종목" value={form.business_item} onChange={(v) => set('business_item', v)} placeholder="세무대리" />
             <div className="col-span-2">

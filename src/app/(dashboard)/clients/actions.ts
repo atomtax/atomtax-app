@@ -3,6 +3,28 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import type { Client, ClientInsert, ClientUpdate } from '@/types/database'
+import {
+  formatPhoneNumber,
+  formatBusinessNumberForSave,
+  formatResidentNumber,
+  formatCorporateNumber,
+} from '@/lib/utils/format-phone'
+
+function normalizeClientFields<T extends Partial<ClientInsert>>(data: T): T {
+  return {
+    ...data,
+    phone: data.phone ? formatPhoneNumber(data.phone) || data.phone : data.phone,
+    business_number: data.business_number
+      ? formatBusinessNumberForSave(data.business_number) || data.business_number
+      : data.business_number,
+    resident_number: data.resident_number
+      ? formatResidentNumber(data.resident_number) || data.resident_number
+      : data.resident_number,
+    corporate_number: data.corporate_number
+      ? formatCorporateNumber(data.corporate_number) || data.corporate_number
+      : data.corporate_number,
+  }
+}
 
 /** 활성 고객 중 최대 번호 + 1 반환 */
 export async function getNextClientNumberAction(): Promise<string> {
@@ -27,7 +49,7 @@ export async function createClientAction(data: ClientInsert): Promise<Client> {
   }
   const { data: created, error } = await supabase
     .from('clients')
-    .insert({ ...data, number })
+    .insert({ ...normalizeClientFields(data), number })
     .select()
     .single()
   if (error) throw new Error(error.message)
@@ -39,7 +61,7 @@ export async function updateClientAction(id: string, data: ClientUpdate): Promis
   const supabase = await createClient()
   const { data: updated, error } = await supabase
     .from('clients')
-    .update({ ...data, updated_at: new Date().toISOString() })
+    .update({ ...normalizeClientFields(data), updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single()
