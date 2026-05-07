@@ -38,7 +38,7 @@ export default function ClientListManager({ initialClients, isTerminated = false
   const [sortKey, setSortKey] = useState<SortKey>('number')
   const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(25)
+  const [pageSize, setPageSize] = useState(100)
 
   // 모달 상태
   const [detailClient, setDetailClient] = useState<Client | null>(null)
