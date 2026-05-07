@@ -28,6 +28,51 @@ export function formatBusinessNumber(value: string | null | undefined): string {
   return value
 }
 
+/**
+ * 엑셀 시리얼 숫자 / Date 객체 / 다양한 텍스트 포맷을 YYYY-MM 문자열로 정규화.
+ * 인식하지 못한 패턴은 원본 그대로 반환.
+ */
+export function normalizeBillingMonth(
+  value: string | number | Date | null | undefined
+): string {
+  if (value == null || value === '') return ''
+
+  // Date 객체
+  if (value instanceof Date) {
+    const year = value.getUTCFullYear()
+    const month = String(value.getUTCMonth() + 1).padStart(2, '0')
+    return `${year}-${month}`
+  }
+
+  const str = String(value).trim()
+  if (!str) return ''
+
+  // 이미 YYYY-MM 또는 YYYY/MM 또는 YYYY.MM
+  const ymMatch = str.match(/^(\d{4})[-/.](\d{1,2})$/)
+  if (ymMatch) {
+    return `${ymMatch[1]}-${ymMatch[2].padStart(2, '0')}`
+  }
+
+  // YYYY년 MM월
+  const krMatch = str.match(/^(\d{4})년\s*(\d{1,2})월$/)
+  if (krMatch) {
+    return `${krMatch[1]}-${krMatch[2].padStart(2, '0')}`
+  }
+
+  // 순수 숫자 → 엑셀 시리얼 (10000 이상)
+  if (/^\d+$/.test(str)) {
+    const serial = Number(str)
+    if (serial >= 10000) {
+      const d = new Date(Date.UTC(1899, 11, 30) + serial * 86400 * 1000)
+      const year = d.getUTCFullYear()
+      const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+      return `${year}-${month}`
+    }
+  }
+
+  return str
+}
+
 /** 금액 표시 (null → '') */
 export function formatAmount(value: number | null | undefined): string {
   if (value == null) return ''

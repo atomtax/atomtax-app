@@ -91,6 +91,58 @@ export default function ClientListManager({ initialClients, isTerminated = false
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize)
 
+  const PaginationBar = () => {
+    if (totalPages <= 1) return null
+    return (
+      <div className="flex items-center justify-between py-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">페이지당</span>
+          <select
+            value={pageSize}
+            onChange={(e) => { setPageSize(parseInt(e.target.value)); setPage(1) }}
+            className="px-2 py-1 text-sm border border-gray-300 rounded"
+          >
+            {[25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+          <span className="text-sm text-gray-400">/ 전체 {filtered.length}건</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            className="p-1 rounded border border-gray-300 disabled:opacity-40 hover:bg-gray-50"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
+            .map((p, idx, arr) => (
+              <span key={p}>
+                {idx > 0 && arr[idx - 1] !== p - 1 && <span className="px-1 text-gray-400">…</span>}
+                <button
+                  onClick={() => setPage(p)}
+                  className={`w-8 h-8 text-sm rounded border transition-colors ${
+                    p === page
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'border-gray-300 hover:bg-gray-50 text-gray-700'
+                  }`}
+                >
+                  {p}
+                </button>
+              </span>
+            ))}
+          <button
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            className="p-1 rounded border border-gray-300 disabled:opacity-40 hover:bg-gray-50"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   const handleDelete = (client: Client) => {
     const ok = confirm(
       `[${client.company_name}] 고객을 삭제하시겠습니까?\n\n연결된 청구서/보고서의 고객 정보가 사라집니다. (데이터는 유지됩니다)`
@@ -243,6 +295,9 @@ export default function ClientListManager({ initialClients, isTerminated = false
         </div>
       </div>
 
+      {/* 페이지네이션 (상단) */}
+      <PaginationBar />
+
       {/* 테이블 */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
         <table className="w-full text-sm">
@@ -299,54 +354,8 @@ export default function ClientListManager({ initialClients, isTerminated = false
         </table>
       </div>
 
-      {/* 페이지네이션 */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">페이지당</span>
-            <select
-              value={pageSize}
-              onChange={(e) => { setPageSize(parseInt(e.target.value)); setPage(1) }}
-              className="px-2 py-1 text-sm border border-gray-300 rounded"
-            >
-              {[25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
-            </select>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="p-1 rounded border border-gray-300 disabled:opacity-40 hover:bg-gray-50"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 2)
-              .map((p, idx, arr) => (
-                <span key={p}>
-                  {idx > 0 && arr[idx - 1] !== p - 1 && <span className="px-1 text-gray-400">…</span>}
-                  <button
-                    onClick={() => setPage(p)}
-                    className={`w-8 h-8 text-sm rounded border transition-colors ${
-                      p === page
-                        ? 'bg-indigo-600 text-white border-indigo-600'
-                        : 'border-gray-300 hover:bg-gray-50 text-gray-700'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                </span>
-              ))}
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="p-1 rounded border border-gray-300 disabled:opacity-40 hover:bg-gray-50"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-      )}
+      {/* 페이지네이션 (하단) */}
+      <PaginationBar />
 
       {/* 상세 팝업 */}
       {detailClient && (

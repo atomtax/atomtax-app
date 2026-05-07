@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { X, ExternalLink } from 'lucide-react'
 import type { Client } from '@/types/database'
-import { formatBusinessNumber } from '@/lib/utils/format'
+import { formatBusinessNumber, normalizeBillingMonth } from '@/lib/utils/format'
 
 type Tab = '기본정보' | '사업자정보' | '세무정보'
 
@@ -120,7 +120,7 @@ export default function ClientDetailModal({ client, onClose, onEdit }: Props) {
                 label="세액"
                 value={client.tax_value ? client.tax_value.toLocaleString('ko-KR') + '원' : null}
               />
-              <Field label="최초출금월" value={client.initial_billing_month} />
+              <Field label="최초출금월" value={normalizeBillingMonth(client.initial_billing_month) || null} />
               <div />
               <Field label="홈택스 아이디" value={client.hometax_id} />
               <Field label="홈택스 비밀번호" value={client.hometax_password} />

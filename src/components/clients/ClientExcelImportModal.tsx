@@ -11,6 +11,7 @@ import {
   formatResidentNumber,
   formatCorporateNumber,
 } from '@/lib/utils/format-phone'
+import { normalizeBillingMonth } from '@/lib/utils/format'
 
 type Props = {
   existingClients: Client[]
@@ -32,7 +33,7 @@ export default function ClientExcelImportModal({ existingClients, onClose, onImp
     const reader = new FileReader()
     reader.onload = (ev) => {
       try {
-        const wb = XLSX.read(ev.target?.result, { type: 'array' })
+        const wb = XLSX.read(ev.target?.result, { type: 'array', cellDates: true })
         const ws = wb.Sheets[wb.SheetNames[0]]
         const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
         if (rows.length < 2) { setError('데이터가 없습니다.'); return }
@@ -64,8 +65,12 @@ export default function ClientExcelImportModal({ existingClients, onClose, onImp
             postal_code: String(r[15] ?? '').trim() || null,
             address: String(r[16] ?? '').trim() || null,
             supply_value: parseInt(String(r[17] ?? '').replace(/,/g, '')) || 0,
-            tax_value: parseInt(String(r[18] ?? '').replace(/,/g, '')) || 0,
-            initial_billing_month: String(r[19] ?? '').trim() || null,
+            tax_value: (() => {
+              const supply = parseInt(String(r[17] ?? '').replace(/,/g, '')) || 0
+              const tax = parseInt(String(r[18] ?? '').replace(/,/g, '')) || 0
+              return supply > 0 && tax === 0 ? Math.round(supply * 0.1) : tax
+            })(),
+            initial_billing_month: normalizeBillingMonth(r[19] as string | number | Date | null) || null,
             hometax_id: String(r[20] ?? '').trim() || null,
             hometax_password: String(r[21] ?? '').trim() || null,
             is_terminated: false,

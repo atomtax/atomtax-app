@@ -9,8 +9,11 @@ import {
   formatResidentNumber,
   formatCorporateNumber,
 } from '@/lib/utils/format-phone'
+import { normalizeBillingMonth } from '@/lib/utils/format'
 
 function normalizeClientFields<T extends Partial<ClientInsert>>(data: T): T {
+  const supply = Number(data.supply_value ?? 0)
+  const tax = Number(data.tax_value ?? 0)
   return {
     ...data,
     phone: data.phone ? formatPhoneNumber(data.phone) || data.phone : data.phone,
@@ -23,6 +26,11 @@ function normalizeClientFields<T extends Partial<ClientInsert>>(data: T): T {
     corporate_number: data.corporate_number
       ? formatCorporateNumber(data.corporate_number) || data.corporate_number
       : data.corporate_number,
+    // supply_value > 0 이고 tax_value = 0 인 경우만 자동 계산 (의도적 0 보존)
+    tax_value: supply > 0 && tax === 0 ? Math.round(supply * 0.1) : tax,
+    initial_billing_month: data.initial_billing_month
+      ? normalizeBillingMonth(data.initial_billing_month) || data.initial_billing_month
+      : data.initial_billing_month,
   }
 }
 

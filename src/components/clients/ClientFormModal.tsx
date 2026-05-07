@@ -15,6 +15,7 @@ import {
   formatResidentNumber,
   formatCorporateNumber,
 } from '@/lib/utils/format-phone'
+import { normalizeBillingMonth } from '@/lib/utils/format'
 
 type FormData = {
   number: string
@@ -117,7 +118,7 @@ export default function ClientFormModal({ client, onClose, onSaved }: Props) {
     is_terminated: client?.is_terminated ?? false,
     supply_value: client?.supply_value ? String(client.supply_value) : '',
     tax_value: client?.tax_value ? String(client.tax_value) : '',
-    initial_billing_month: client?.initial_billing_month ?? '',
+    initial_billing_month: normalizeBillingMonth(client?.initial_billing_month) ?? '',
     hometax_id: client?.hometax_id ?? '',
     hometax_password: client?.hometax_password ?? '',
     notes: client?.notes ?? '',
@@ -179,7 +180,7 @@ export default function ClientFormModal({ client, onClose, onSaved }: Props) {
       postal_code: form.postal_code.trim() || null,
       supply_value: parseInt(form.supply_value.replace(/,/g, '')) || 0,
       tax_value: parseInt(form.tax_value.replace(/,/g, '')) || 0,
-      initial_billing_month: form.initial_billing_month.trim() || null,
+      initial_billing_month: normalizeBillingMonth(form.initial_billing_month) || null,
       hometax_id: form.hometax_id.trim() || null,
       hometax_password: form.hometax_password || null,
     }
@@ -355,21 +356,23 @@ export default function ClientFormModal({ client, onClose, onSaved }: Props) {
               />
             </div>
             <div>
-              <Label text="세액 (자동계산)" />
+              <label className="block text-xs text-gray-600 mb-1">
+                세액 <span className="text-gray-400 font-normal">(공급가액 10% 자동, 직접 수정 가능)</span>
+              </label>
               <input
                 type="text"
                 value={form.tax_value}
-                readOnly
-                className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md bg-gray-50 text-gray-500"
+                onChange={(e) => set('tax_value', e.target.value)}
+                placeholder="0"
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-indigo-500"
               />
             </div>
             <div>
               <Label text="최초출금월" />
               <input
-                type="text"
+                type="month"
                 value={form.initial_billing_month}
                 onChange={(e) => set('initial_billing_month', e.target.value)}
-                placeholder="2024-01"
                 className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-indigo-500"
               />
             </div>
