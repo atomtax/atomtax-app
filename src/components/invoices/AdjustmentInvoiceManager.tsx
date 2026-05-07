@@ -3,7 +3,7 @@
 import { useState, useMemo, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import * as XLSX from 'xlsx'
-import { Save, Plus, Download, Upload, Printer, RefreshCw, Trash2 } from 'lucide-react'
+import { Save, Plus, Download, Upload, Printer, RefreshCw, Trash2, Search } from 'lucide-react'
 import type { Client, AdjustmentInvoice } from '@/types/database'
 import { calculateInvoiceRow } from '@/lib/calculators/fee-schedule'
 import { saveInvoiceBatch } from '@/app/actions/adjustment-invoices'
@@ -52,9 +52,10 @@ export default function AdjustmentInvoiceManager({
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
-  const [year, setYear] = useState(initialYear)
-  const [businessType, setBusinessType] = useState<'corporate' | 'individual'>(initialBusinessType)
-  const [managerFilter, setManagerFilter] = useState('all')
+  const [pendingYear, setPendingYear] = useState(initialYear)
+  const [pendingBusinessType, setPendingBusinessType] = useState<'corporate' | 'individual'>(initialBusinessType)
+  const [pendingManagerFilter, setPendingManagerFilter] = useState('all')
+  const [appliedManagerFilter, setAppliedManagerFilter] = useState('all')
 
   const [rows, setRows] = useState<RowState[]>(() => initialInvoices.map(invoiceToRow))
 
@@ -64,7 +65,16 @@ export default function AdjustmentInvoiceManager({
   const [batchExporting, setBatchExporting] = useState(false)
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | undefined>()
 
-  const visibleRows = useMemo(() => rows.filter((r) => !r.isDeleted), [rows])
+  const visibleRows = useMemo(() => {
+    return rows.filter((r) => {
+      if (r.isDeleted) return false
+      if (appliedManagerFilter !== 'all') {
+        const client = initialClients.find((c) => c.id === r.clientId)
+        if (!client || client.manager !== appliedManagerFilter) return false
+      }
+      return true
+    })
+  }, [rows, appliedManagerFilter, initialClients])
 
   const managers = useMemo(
     () => [...new Set(initialClients.map((c) => c.manager).filter((m): m is string => !!m))],
@@ -100,15 +110,16 @@ export default function AdjustmentInvoiceManager({
     return true
   }
 
-  function handleBusinessTypeChange(newType: 'corporate' | 'individual') {
-    if (!confirmDirty()) return
-    router.push(`/invoices/adjustment?year=${year}&type=${newType}`)
-  }
-
-  function handleYearChange(newYear: number) {
-    if (!confirmDirty()) return
-    setYear(newYear)
-    router.push(`/invoices/adjustment?year=${newYear}&type=${businessType}`)
+  function handleSearch() {
+    const yearChanged = pendingYear !== initialYear
+    const typeChanged = pendingBusinessType !== initialBusinessType
+    if (yearChanged || typeChanged) {
+      if (!confirmDirty()) return
+    }
+    setAppliedManagerFilter(pendingManagerFilter)
+    if (yearChanged || typeChanged) {
+      router.push(`/invoices/adjustment?year=${pendingYear}&type=${pendingBusinessType}`)
+    }
   }
 
   function updateCell(rowId: string, field: keyof RowState, value: RowState[keyof RowState]) {
@@ -118,7 +129,7 @@ export default function AdjustmentInvoiceManager({
         const next = { ...r, [field]: value, isDirty: field !== 'selected' ? true : r.isDirty }
         const calc = calculateInvoiceRow({
           revenue: next.revenue,
-          businessType,
+          businessType: initialBusinessType,
           taxCreditAdditional: next.taxCreditAdditional,
           faithfulReportFee: next.faithfulReportFee,
           discount: next.discount,
@@ -138,7 +149,7 @@ export default function AdjustmentInvoiceManager({
       rows.filter((r) => !r.isDeleted && r.businessNumber).map((r) => r.businessNumber)
     )
     const filtered = initialClients.filter((c) => {
-      if (managerFilter !== 'all' && c.manager !== managerFilter) return false
+      if (appliedManagerFilter !== 'all' && c.manager !== appliedManagerFilter) return false
       if (!c.business_number) return false
       return !existingBNs.has(c.business_number)
     })
@@ -193,9 +204,9 @@ export default function AdjustmentInvoiceManager({
     startTransition(async () => {
       try {
         const { refreshedInvoices } = await saveInvoiceBatch({
-          year,
-          businessType,
-          upserts: dirtyRows.map((r) => rowToPayload(r, year, businessType)),
+          year: initialYear,
+          businessType: initialBusinessType,
+          upserts: dirtyRows.map((r) => rowToPayload(r, initialYear, initialBusinessType)),
           deleteIds: deletedRows.map((r) => r.dbId!),
         })
         setRows(refreshedInvoices.map(invoiceToRow))
@@ -246,7 +257,7 @@ export default function AdjustmentInvoiceManager({
       return
     }
     try {
-      await downloadInvoice(row.dbId, `조정료청구서_${row.clientName}_${year}`, 'pdf')
+      await downloadInvoice(row.dbId, `조정료청구서_${row.clientName}_${initialYear}`, 'pdf')
     } catch (err) {
       alert(`PDF 다운로드 실패: ${err instanceof Error ? err.message : String(err)}`)
     }
@@ -259,7 +270,7 @@ export default function AdjustmentInvoiceManager({
       return
     }
     try {
-      await downloadInvoice(row.dbId, `조정료청구서_${row.clientName}_${year}`, 'png')
+      await downloadInvoice(row.dbId, `조정료청구서_${row.clientName}_${initialYear}`, 'png')
     } catch (err) {
       alert(`PNG 다운로드 실패: ${err instanceof Error ? err.message : String(err)}`)
     }
@@ -286,7 +297,7 @@ export default function AdjustmentInvoiceManager({
       const result = await downloadInvoicesBatch(
         selected.map((r) => ({
           id: r.dbId!,
-          filename: `조정료청구서_${r.clientName}_${year}`,
+          filename: `조정료청구서_${r.clientName}_${initialYear}`,
         })),
         format,
         (current, total) => setBatchProgress({ current, total })
@@ -326,7 +337,7 @@ export default function AdjustmentInvoiceManager({
     }))
     const ws = XLSX.utils.json_to_sheet(data)
     const wb = XLSX.utils.book_new()
-    const sheetName = `${year}년_${businessType === 'corporate' ? '법인' : '개인'}`
+    const sheetName = `${initialYear}년_${initialBusinessType === 'corporate' ? '법인' : '개인'}`
     XLSX.utils.book_append_sheet(wb, ws, sheetName)
     XLSX.writeFile(wb, `조정료청구서_${sheetName}.xlsx`)
   }
@@ -340,7 +351,7 @@ export default function AdjustmentInvoiceManager({
         <div>
           <h1 className="text-2xl font-bold text-gray-900">조정료 청구서 관리</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {year}년 · {businessType === 'corporate' ? '법인·의료사업자' : '개인사업자'} ·
+            {initialYear}년 · {initialBusinessType === 'corporate' ? '법인·의료사업자' : '개인사업자'} ·
             {' '}{visibleRows.length}건
             {dirtyCount > 0 && (
               <span className="ml-2 text-amber-600 font-medium">미저장 {dirtyCount}건</span>
@@ -356,9 +367,9 @@ export default function AdjustmentInvoiceManager({
           {(['corporate', 'individual'] as const).map((t) => (
             <button
               key={t}
-              onClick={() => handleBusinessTypeChange(t)}
+              onClick={() => setPendingBusinessType(t)}
               className={`px-4 py-2 text-sm font-medium ${
-                businessType === t
+                pendingBusinessType === t
                   ? 'bg-indigo-600 text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               } ${t === 'individual' ? 'border-l border-gray-300' : ''}`}
@@ -372,11 +383,11 @@ export default function AdjustmentInvoiceManager({
         <div className="flex items-center gap-2 ml-2">
           <label className="text-sm text-gray-600">연도</label>
           <select
-            value={year}
-            onChange={(e) => handleYearChange(parseInt(e.target.value))}
+            value={pendingYear}
+            onChange={(e) => setPendingYear(parseInt(e.target.value))}
             className="px-3 py-2 text-sm border border-gray-300 rounded-md"
           >
-            {[year + 1, year, year - 1, year - 2, year - 3, year - 4].map((y) => (
+            {[pendingYear + 1, pendingYear, pendingYear - 1, pendingYear - 2, pendingYear - 3, pendingYear - 4].map((y) => (
               <option key={y} value={y}>{y}년</option>
             ))}
           </select>
@@ -387,8 +398,8 @@ export default function AdjustmentInvoiceManager({
           <div className="flex items-center gap-2 ml-2">
             <label className="text-sm text-gray-600">담당자</label>
             <select
-              value={managerFilter}
-              onChange={(e) => setManagerFilter(e.target.value)}
+              value={pendingManagerFilter}
+              onChange={(e) => setPendingManagerFilter(e.target.value)}
               className="px-3 py-2 text-sm border border-gray-300 rounded-md"
             >
               <option value="all">전체</option>
@@ -398,6 +409,20 @@ export default function AdjustmentInvoiceManager({
             </select>
           </div>
         )}
+
+        {/* 조회 버튼 */}
+        <div className="flex items-center gap-2 ml-1">
+          <button
+            onClick={handleSearch}
+            className="inline-flex items-center gap-1 px-3 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700"
+          >
+            <Search size={14} />
+            조회
+          </button>
+          {(pendingYear !== initialYear || pendingBusinessType !== initialBusinessType || pendingManagerFilter !== appliedManagerFilter) && (
+            <span className="text-xs text-amber-600">조회 버튼을 눌러 적용하세요</span>
+          )}
+        </div>
 
         {/* 우측 버튼 */}
         <div className="ml-auto flex flex-wrap gap-2">
@@ -537,7 +562,7 @@ export default function AdjustmentInvoiceManager({
       {previewRow && (
         <InvoicePreviewModal
           row={previewRow}
-          year={year}
+          year={initialYear}
           onClose={() => setPreviewRowId(null)}
           onDownloadPDF={handleDownloadSinglePDF}
           onDownloadPNG={handleDownloadSinglePNG}
@@ -556,8 +581,8 @@ export default function AdjustmentInvoiceManager({
 
       {excelModalOpen && (
         <ExcelImportModal
-          year={year}
-          businessType={businessType}
+          year={initialYear}
+          businessType={initialBusinessType}
           existingClients={initialClients}
           onClose={() => setExcelModalOpen(false)}
           onImported={(newRows) => {

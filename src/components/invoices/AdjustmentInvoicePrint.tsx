@@ -117,7 +117,7 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
       </div>
 
       {/* 통합 명세 테이블 */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px', border: '1px solid #cbd5e1' }}>
         <thead>
           <tr style={{ background: '#0f172a', color: 'white' }}>
             <th style={{ textAlign: 'left', padding: '12px 16px', fontSize: '13px', fontWeight: '500' }}>항목</th>
@@ -126,14 +126,14 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
           </tr>
         </thead>
         <tbody>
-          <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+          <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
             <td style={{ padding: '11px 16px', fontSize: '13px', color: '#0f172a' }}>결산보수</td>
             <td style={{ padding: '11px 16px', fontSize: '11px', color: '#6b7280' }}>자동산출</td>
             <td style={{ padding: '11px 16px', fontSize: '13px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
               {formatCurrency(invoice.settlement_fee)}
             </td>
           </tr>
-          <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+          <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
             <td style={{ padding: '11px 16px', fontSize: '13px', color: '#0f172a' }}>조정료</td>
             <td style={{ padding: '11px 16px', fontSize: '11px', color: '#6b7280' }}>자동산출</td>
             <td style={{ padding: '11px 16px', fontSize: '13px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
@@ -141,7 +141,7 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
             </td>
           </tr>
           {invoice.tax_credit_additional > 0 && (
-            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+            <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
               <td style={{ padding: '11px 16px', fontSize: '13px', color: '#0f172a' }}>세액공제 추가</td>
               <td style={{ padding: '11px 16px', fontSize: '11px', color: '#6b7280' }}>가산</td>
               <td style={{ padding: '11px 16px', fontSize: '13px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
@@ -150,7 +150,7 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
             </tr>
           )}
           {invoice.faithful_report_fee > 0 && (
-            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+            <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
               <td style={{ padding: '11px 16px', fontSize: '13px', color: '#0f172a' }}>성실신고 확인료</td>
               <td style={{ padding: '11px 16px', fontSize: '11px', color: '#6b7280' }}>가산</td>
               <td style={{ padding: '11px 16px', fontSize: '13px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
@@ -160,29 +160,23 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
           )}
         </tbody>
         <tfoot>
-          <tr style={{ borderTop: '2px solid #0f172a' }}>
+          <tr style={{ borderTop: '2px solid #0f172a', borderBottom: '1px solid #cbd5e1' }}>
             <td colSpan={2} style={{ padding: '11px 16px', textAlign: 'right', fontSize: '13px', fontWeight: '500', color: '#374151' }}>소 계</td>
             <td style={{ padding: '11px 16px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: '500' }}>
               {formatCurrency(subtotal)}
             </td>
           </tr>
           {invoice.discount > 0 && (
-            <tr>
+            <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
               <td colSpan={2} style={{ padding: '8px 16px', textAlign: 'right', fontSize: '13px', color: '#dc2626' }}>할 인</td>
               <td style={{ padding: '8px 16px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#dc2626' }}>
                 - {formatCurrency(invoice.discount)}
               </td>
             </tr>
           )}
-          <tr style={{ borderTop: '1px solid #cbd5e1' }}>
-            <td colSpan={2} style={{ padding: '11px 16px', textAlign: 'right', fontSize: '13px', fontWeight: '500', color: '#374151' }}>공급가액</td>
-            <td style={{ padding: '11px 16px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: '500' }}>
-              {formatCurrency(supplyAmount)}
-            </td>
-          </tr>
-          <tr>
+          <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
             <td colSpan={2} style={{ padding: '11px 16px', textAlign: 'right', fontSize: '13px', color: '#4b5563' }}>
-              부가가치세 <span style={{ fontSize: '11px', color: '#9ca3af' }}>(10%)</span>
+              부가가치세 (10%)
             </td>
             <td style={{ padding: '11px 16px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
               {formatCurrency(vatAmount)}

@@ -8,7 +8,7 @@ export default async function AdjustmentInvoicePage({
   searchParams: Promise<{ year?: string; type?: string }>
 }) {
   const params = await searchParams
-  const year = params.year ? parseInt(params.year) : new Date().getFullYear()
+  const year = params.year ? parseInt(params.year) : new Date().getFullYear() - 1
   const businessType = (params.type === 'individual' ? 'individual' : 'corporate') as
     | 'corporate'
     | 'individual'
