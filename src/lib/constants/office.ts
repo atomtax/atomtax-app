@@ -7,7 +7,6 @@ export const OFFICE = {
   bank: '하나은행',
   account: '146-910369-94207',
   accountHolder: '김경태(아톰세무회계)',
-  stampImage: '/stamp.png',
 } as const
 
 export const formatAccount = () =>
