@@ -28,7 +28,6 @@ export async function ensureCorporateTaxReport(
 
   if (e2) throw new Error(`보고서 생성 실패: ${e2.message}`)
 
-  revalidatePath('/reports/corporate-tax')
   return { id: data.id }
 }
 
