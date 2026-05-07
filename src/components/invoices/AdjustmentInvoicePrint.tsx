@@ -238,10 +238,12 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
           본 청구서는 {OFFICE.name}이(가) 발행하였습니다.<br />
           청구 내역 관련 문의: {OFFICE.phone}
         </div>
-        <div style={{ textAlign: 'right', position: 'relative' }}>
-          <div style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>{OFFICE.name}</div>
-          <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px', marginBottom: '12px' }}>
-            {OFFICE.representativeTitle} {OFFICE.representative}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>{OFFICE.name}</div>
+            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+              {OFFICE.representativeTitle} {OFFICE.representative}
+            </div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -250,11 +252,11 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
             style={{
               width: '80px',
               height: '80px',
-              position: 'absolute',
-              right: '-8px',
-              top: '-8px',
+              objectFit: 'contain',
+              flexShrink: 0,
               opacity: 0.9,
               mixBlendMode: 'multiply',
+              transform: 'rotate(-5deg)',
             }}
           />
         </div>
