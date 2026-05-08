@@ -1,13 +1,22 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useMemo, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Save } from 'lucide-react'
-import { saveCorporateTaxReportBasic } from '@/app/actions/corporate-tax-reports'
+import { ChevronLeft, ChevronRight, Save, Printer } from 'lucide-react'
+import { saveCorporateTaxReportFull } from '@/app/actions/corporate-tax-reports'
+import {
+  calculateCorporateTax,
+  calculateLocalTax,
+  calculateRuralTax,
+} from '@/lib/calculators/corporate-tax'
 import { IncomeStatementUpload } from './IncomeStatementUpload'
 import { FinancialSummary } from './FinancialSummary'
 import { IncomeStatementTable } from './IncomeStatementTable'
-import type { CorporateTaxReport, IncomeStatementSummary } from '@/types/database'
+import { TaxCalculationSection } from './TaxCalculationSection'
+import { TaxCreditsSection } from './TaxCreditsSection'
+import { TaxReductionsSection } from './TaxReductionsSection'
+import { NotesSection } from './NotesSection'
+import type { CorporateTaxReport, IncomeStatementSummary, TaxCredit, TaxReduction } from '@/types/database'
 
 interface Props {
   client: { id: string; company_name: string; business_number: string | null }
@@ -19,6 +28,7 @@ export function CorporateTaxReportForm({ client, report, year }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
+  // 기본 필드
   const [filename, setFilename] = useState(report.income_statement_filename ?? '')
   const [periodLabel, setPeriodLabel] = useState(report.income_statement_period_label ?? '')
   const [summary, setSummary] = useState<IncomeStatementSummary | null>(
@@ -26,6 +36,45 @@ export function CorporateTaxReportForm({ client, report, year }: Props) {
   )
   const [revenue, setRevenue] = useState<number | null>(report.revenue)
   const [netIncome, setNetIncome] = useState<number | null>(report.net_income)
+
+  // 세금 계산 필드
+  const [carryoverLoss, setCarryoverLoss] = useState(report.carryover_loss)
+  const [prepaidTax, setPrepaidTax] = useState(report.prepaid_tax)
+  const [taxCredits, setTaxCredits] = useState<TaxCredit[]>(report.tax_credits)
+  const [taxReductions, setTaxReductions] = useState<TaxReduction[]>(report.tax_reductions)
+
+  // 메모
+  const [isSincerefiling, setIsSincerefiling] = useState(report.is_sincere_filing)
+  const [additionalNotes, setAdditionalNotes] = useState(report.additional_notes ?? '')
+  const [conclusionNotes, setConclusionNotes] = useState(report.conclusion_notes ?? '')
+
+  // 파생 계산값 (실시간)
+  const taxableIncome = useMemo(
+    () => Math.max(0, (netIncome ?? 0) - carryoverLoss),
+    [netIncome, carryoverLoss]
+  )
+  const calculatedTax = useMemo(
+    () => calculateCorporateTax(taxableIncome, year),
+    [taxableIncome, year]
+  )
+  const totalCredits = useMemo(
+    () => taxCredits.reduce((s, c) => s + c.current_amount + c.carryover_amount, 0),
+    [taxCredits]
+  )
+  const totalReductions = useMemo(
+    () => taxReductions.reduce((s, r) => s + r.current_amount, 0),
+    [taxReductions]
+  )
+  const determinedTax = useMemo(
+    () => Math.max(0, calculatedTax - totalCredits - totalReductions),
+    [calculatedTax, totalCredits, totalReductions]
+  )
+  const localTax = useMemo(() => calculateLocalTax(determinedTax), [determinedTax])
+  const ruralSpecialTax = useMemo(() => calculateRuralTax(totalReductions), [totalReductions])
+  const finalTax = useMemo(
+    () => determinedTax + localTax + ruralSpecialTax - prepaidTax,
+    [determinedTax, localTax, ruralSpecialTax, prepaidTax]
+  )
 
   function handleParsed(data: {
     filename: string
@@ -46,13 +95,26 @@ export function CorporateTaxReportForm({ client, report, year }: Props) {
   function handleSave() {
     startTransition(async () => {
       try {
-        await saveCorporateTaxReportBasic({
+        await saveCorporateTaxReportFull({
           reportId: report.id,
           income_statement_filename: filename || null,
           income_statement_period_label: periodLabel || null,
           income_statement_summary: summary,
           revenue,
           net_income: netIncome,
+          carryover_loss: carryoverLoss,
+          current_loss: report.current_loss,
+          calculated_tax: calculatedTax,
+          determined_tax: determinedTax,
+          local_tax: localTax,
+          rural_special_tax: ruralSpecialTax,
+          prepaid_tax: prepaidTax,
+          final_tax: finalTax,
+          tax_credits: taxCredits,
+          tax_reductions: taxReductions,
+          is_sincere_filing: isSincerefiling,
+          additional_notes: additionalNotes || null,
+          conclusion_notes: conclusionNotes || null,
         })
         alert('저장되었습니다.')
         router.refresh()
@@ -120,10 +182,39 @@ export function CorporateTaxReportForm({ client, report, year }: Props) {
       {/* 손익계산서 요약 테이블 */}
       {summary && <IncomeStatementTable periodLabel={periodLabel} summary={summary} />}
 
-      {/* v17c placeholder */}
-      <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-400">
-        세금 계산 / 세액공제 / 세액감면 / 메모 — v17c에서 추가 예정
-      </div>
+      {/* 세금 계산 */}
+      <TaxCalculationSection
+        netIncome={netIncome}
+        carryoverLoss={carryoverLoss}
+        taxableIncome={taxableIncome}
+        calculatedTax={calculatedTax}
+        totalCredits={totalCredits}
+        totalReductions={totalReductions}
+        determinedTax={determinedTax}
+        localTax={localTax}
+        ruralSpecialTax={ruralSpecialTax}
+        prepaidTax={prepaidTax}
+        finalTax={finalTax}
+        year={year}
+        onCarryoverLossChange={setCarryoverLoss}
+        onPrepaidTaxChange={setPrepaidTax}
+      />
+
+      {/* 세액공제 */}
+      <TaxCreditsSection credits={taxCredits} onChange={setTaxCredits} />
+
+      {/* 세액감면 */}
+      <TaxReductionsSection reductions={taxReductions} onChange={setTaxReductions} />
+
+      {/* 메모 */}
+      <NotesSection
+        isSincerefiling={isSincerefiling}
+        additionalNotes={additionalNotes}
+        conclusionNotes={conclusionNotes}
+        onSincereChange={setIsSincerefiling}
+        onAdditionalChange={setAdditionalNotes}
+        onConclusionChange={setConclusionNotes}
+      />
 
       {/* 버튼 */}
       <div className="flex justify-end gap-2 pt-2">
@@ -133,6 +224,16 @@ export function CorporateTaxReportForm({ client, report, year }: Props) {
           className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
         >
           돌아가기
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            router.push(`/reports/corporate-tax/${client.id}/print?year=${year}`)
+          }
+          className="flex items-center gap-1.5 px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+        >
+          <Printer size={15} />
+          인쇄
         </button>
         <button
           type="button"

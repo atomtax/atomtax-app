@@ -68,3 +68,60 @@ export async function saveCorporateTaxReportBasic(input: SaveReportBasicInput) {
   if (data.client_id) revalidatePath(`/reports/corporate-tax/${data.client_id}`)
 }
 
+interface SaveReportFullInput {
+  reportId: string
+  income_statement_filename?: string | null
+  income_statement_period_label?: string | null
+  income_statement_summary?: IncomeStatementSummary | null
+  revenue?: number | null
+  net_income?: number | null
+  carryover_loss: number
+  current_loss: number
+  calculated_tax: number
+  determined_tax: number
+  local_tax: number
+  rural_special_tax: number
+  prepaid_tax: number
+  final_tax: number
+  tax_credits: import('@/types/database').TaxCredit[]
+  tax_reductions: import('@/types/database').TaxReduction[]
+  is_sincere_filing: boolean
+  additional_notes: string | null
+  conclusion_notes: string | null
+}
+
+export async function saveCorporateTaxReportFull(input: SaveReportFullInput) {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('corporate_tax_reports')
+    .update({
+      updated_at: new Date().toISOString(),
+      income_statement_filename: input.income_statement_filename ?? null,
+      income_statement_period_label: input.income_statement_period_label ?? null,
+      income_statement_summary: input.income_statement_summary ?? null,
+      revenue: input.revenue ?? null,
+      net_income: input.net_income ?? null,
+      carryover_loss: input.carryover_loss,
+      current_loss: input.current_loss,
+      calculated_tax: input.calculated_tax,
+      determined_tax: input.determined_tax,
+      local_tax: input.local_tax,
+      rural_special_tax: input.rural_special_tax,
+      prepaid_tax: input.prepaid_tax,
+      final_tax: input.final_tax,
+      tax_credits: input.tax_credits,
+      tax_reductions: input.tax_reductions,
+      is_sincere_filing: input.is_sincere_filing,
+      additional_notes: input.additional_notes,
+      conclusion_notes: input.conclusion_notes,
+    })
+    .eq('id', input.reportId)
+    .select('id, client_id')
+    .single()
+
+  if (error) throw new Error(`보고서 저장 실패: ${error.message}`)
+
+  revalidatePath('/reports/corporate-tax')
+  if (data.client_id) revalidatePath(`/reports/corporate-tax/${data.client_id}`)
+}
