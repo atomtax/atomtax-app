@@ -2,12 +2,15 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Save } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Save, Printer } from 'lucide-react'
 import { saveIncomeTaxReportFull } from '@/app/actions/income-tax-reports'
 import { HometaxPasteImport } from './HometaxPasteImport'
 import { TaxCalculationTable } from './TaxCalculationTable'
+import { TaxCreditsSection } from '@/components/reports/TaxCreditsSection'
+import { TaxReductionsSection } from '@/components/reports/TaxReductionsSection'
+import { NotesSection } from '@/components/reports/NotesSection'
 import { calculateIncomeTax } from '@/lib/calculators/income-tax'
-import type { IncomeTaxReport } from '@/types/database'
+import type { IncomeTaxReport, TaxCredit, TaxReduction } from '@/types/database'
 import type { ParsedIncomeTaxData } from '@/lib/calculators/income-tax-parser'
 
 interface Props {
@@ -25,7 +28,6 @@ function recalculate(d: IncomeTaxReport): IncomeTaxReport {
   // 종합소득세
   const tax_base = Math.max(0, d.income_total - d.income_deduction)
   const calc = calculateIncomeTax(tax_base)
-  // 산출세액은 홈택스 붙여넣기 또는 수동 입력 우선 — 단, 입력이 0이면 자동 계산값 사용
   const calculated_tax = d.income_calculated_tax !== 0 ? d.income_calculated_tax : calc.tax
   const applied_rate = calc.rate
   const comprehensive_tax = Math.max(0, calculated_tax - d.income_tax_reduction - d.income_tax_credit)
@@ -35,7 +37,7 @@ function recalculate(d: IncomeTaxReport): IncomeTaxReport {
   const within_deadline = payable - d.income_stock_deduct + d.income_stock_add - d.income_installment
   const final_payable = within_deadline - d.income_refund_offset
 
-  // 농어촌특별세 (동일 흐름, 세율 없음)
+  // 농어촌특별세
   const rural_tax_base = Math.max(0, d.rural_total - d.rural_deduction)
   const rural_comprehensive = Math.max(0, d.rural_calculated_tax - d.rural_tax_reduction - d.rural_tax_credit)
   const rural_determined = rural_comprehensive + d.rural_separate_tax
@@ -131,18 +133,42 @@ export function IncomeTaxReportForm({ client, report, year }: Props) {
       {/* 세액 계산 표 */}
       <TaxCalculationTable data={data} onChange={updateField} />
 
-      {/* v19c placeholder */}
-      <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-400 text-sm">
-        세액공제/감면 동적 항목 + 메모 — v19c에서 추가 예정
-      </div>
+      {/* 세액공제 */}
+      <TaxCreditsSection
+        credits={data.tax_credits}
+        onChange={(credits: TaxCredit[]) => updateField('tax_credits', credits)}
+      />
 
-      {/* 저장/취소 버튼 */}
+      {/* 세액감면 */}
+      <TaxReductionsSection
+        reductions={data.tax_reductions}
+        onChange={(reductions: TaxReduction[]) => updateField('tax_reductions', reductions)}
+      />
+
+      {/* 메모 */}
+      <NotesSection
+        isSincerefiling={data.is_sincere_filing}
+        additionalNotes={data.additional_notes ?? ''}
+        conclusionNotes={data.conclusion_notes ?? ''}
+        onSincereChange={(v) => updateField('is_sincere_filing', v)}
+        onAdditionalChange={(v) => updateField('additional_notes', v)}
+        onConclusionChange={(v) => updateField('conclusion_notes', v)}
+      />
+
+      {/* 저장/출력 버튼 */}
       <div className="flex justify-end gap-2 pt-2 pb-6">
         <button
           onClick={() => router.push(`/reports/income-tax?year=${year}`)}
           className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm"
         >
           돌아가기
+        </button>
+        <button
+          onClick={() => router.push(`/reports/income-tax/${client.id}/print?year=${year}`)}
+          className="flex items-center gap-1.5 px-4 py-2 border border-gray-300 bg-white rounded hover:bg-gray-50 text-sm"
+        >
+          <Printer size={16} />
+          PDF 출력
         </button>
         <button
           onClick={handleSave}
