@@ -29,7 +29,9 @@ const ROWS: RowDef[] = [
   { sign: '+',  label: '가산세',                          incomeKey: 'income_penalty_tax',       ruralKey: 'rural_penalty_tax',       isResult: false, isFinal: false },
   { sign: '+',  label: '추가납부세액',                    incomeKey: 'income_additional_tax',    ruralKey: 'rural_additional_tax',    isResult: false, isFinal: false },
   { sign: '−',  label: '기납부세액',                      incomeKey: 'income_prepaid_tax',       ruralKey: 'rural_prepaid_tax',       isResult: false, isFinal: false },
-  { sign: '=',  label: '납부(환급)할 총세액',             incomeKey: 'income_payable',           ruralKey: 'rural_payable',           isResult: true,  isFinal: true  },
+  { sign: '=',  label: '납부(환급)할 총세액',             incomeKey: 'income_payable',           ruralKey: 'rural_payable',           isResult: true,  isFinal: false },
+  { sign: '+',  label: '지방소득세', sublabel: '(총세액 × 10%)', incomeKey: 'income_local_tax', ruralKey: null,                       isResult: false, isFinal: false },
+  { sign: '=',  label: '최종 납부할 세액', sublabel: '(지방세 포함)', incomeKey: 'income_final_with_local', ruralKey: null,           isResult: true,  isFinal: true  },
 ]
 
 interface Props {
@@ -38,14 +40,44 @@ interface Props {
 }
 
 export function IncomeTaxSummaryPage({ reportYear, report }: Props) {
-  const finalPayable = report.income_final_payable
-  const isRefund = finalPayable < 0
+  const finalWithLocal = report.income_final_with_local
+  const isRefund = finalWithLocal < 0
 
   return (
     <div className="page-container" style={a4PageStyle}>
       <ChapterHeader number="02" titleKo="신고 개요" titleEn="FILING OVERVIEW" reportYear={reportYear} />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* Hero 카드 — 페이지 상단 */}
+        <div style={{
+          padding: '20px 24px',
+          background: isRefund
+            ? 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)'
+            : 'linear-gradient(135deg, #047857 0%, #059669 100%)',
+          borderRadius: '8px',
+          position: 'relative',
+          overflow: 'hidden',
+          WebkitPrintColorAdjust: 'exact',
+          printColorAdjust: 'exact',
+        } as React.CSSProperties}>
+          <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+          <div style={{ position: 'absolute', bottom: '-40px', right: '30px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
+          <div style={{ position: 'relative' }}>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.9)', margin: '0 0 8px', letterSpacing: '1px', fontWeight: 500 }}>
+              {isRefund ? 'FINAL TAX REFUND · 최종 환급세액' : 'FINAL TAX PAYABLE · 최종 납부할 세액'}
+            </p>
+            <p style={{ fontSize: '36px', fontWeight: 600, color: 'white', margin: 0, letterSpacing: '-1px', lineHeight: 1 }}>
+              {formatNumber(Math.abs(finalWithLocal))}
+              <span style={{ fontSize: '16px', fontWeight: 400, color: 'rgba(255,255,255,0.85)', marginLeft: '6px' }}>원</span>
+            </p>
+            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', margin: '10px 0 0' }}>
+              {isRefund
+                ? '기납부세액이 결정세액보다 많아 환급 대상입니다 (지방소득세 포함)'
+                : '종합소득세 + 지방소득세 (납부할 총세액 × 10%)'}
+            </p>
+          </div>
+        </div>
+
         {/* 부호 배지 표 */}
         <div style={{ border: `1px solid ${PRINT_TOKENS.border}`, borderRadius: '8px', overflow: 'hidden' }}>
           {/* 헤더 */}
@@ -80,7 +112,7 @@ export function IncomeTaxSummaryPage({ reportYear, report }: Props) {
             if (row.isFinal) {
               rowBg = `linear-gradient(90deg, ${PRINT_TOKENS.primaryBg} 0%, #fafbfc 100%)`
               textColor = PRINT_TOKENS.primary
-              fontWeight = 600
+              fontWeight = 700
             } else if (row.isResult) {
               rowBg = PRINT_TOKENS.bgSubtle
               fontWeight = 600
@@ -96,7 +128,7 @@ export function IncomeTaxSummaryPage({ reportYear, report }: Props) {
                   display: 'grid',
                   gridTemplateColumns: '36px 1fr 160px 120px',
                   gap: '14px',
-                  padding: '11px 20px',
+                  padding: '9px 20px',
                   alignItems: 'center',
                   borderBottom: `1px solid ${PRINT_TOKENS.borderLight}`,
                   background: rowBg,
@@ -126,11 +158,11 @@ export function IncomeTaxSummaryPage({ reportYear, report }: Props) {
 
                 {/* 항목명 */}
                 <div>
-                  <span style={{ fontSize: '14px', color: textColor, fontWeight }}>
+                  <span style={{ fontSize: '13px', color: textColor, fontWeight }}>
                     {row.label}
                   </span>
                   {row.sublabel && (
-                    <span style={{ fontSize: '11px', color: PRINT_TOKENS.textTertiary, marginLeft: '6px' }}>
+                    <span style={{ fontSize: '11px', color: row.isFinal ? PRINT_TOKENS.primaryAccent : PRINT_TOKENS.textTertiary, marginLeft: '6px' }}>
                       {row.sublabel}
                     </span>
                   )}
@@ -138,7 +170,7 @@ export function IncomeTaxSummaryPage({ reportYear, report }: Props) {
 
                 {/* 종합소득세 값 */}
                 <span style={{
-                  fontSize: row.isFinal ? '15px' : '14px',
+                  fontSize: row.isFinal ? '15px' : '13px',
                   color: incomeVal < 0 ? PRINT_TOKENS.danger : textColor,
                   fontWeight,
                   textAlign: 'right',
@@ -150,7 +182,7 @@ export function IncomeTaxSummaryPage({ reportYear, report }: Props) {
 
                 {/* 농어촌특별세 값 */}
                 <span style={{
-                  fontSize: '14px',
+                  fontSize: '13px',
                   color: ruralVal !== null && ruralVal < 0 ? PRINT_TOKENS.danger : textColor,
                   fontWeight: row.isFinal ? fontWeight : 400,
                   textAlign: 'right',
@@ -165,34 +197,6 @@ export function IncomeTaxSummaryPage({ reportYear, report }: Props) {
               </div>
             )
           })}
-        </div>
-
-        {/* 최종 납부(환급) 세액 Hero */}
-        <div style={{
-          padding: '20px 24px',
-          background: isRefund
-            ? 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)'
-            : 'linear-gradient(135deg, #047857 0%, #059669 100%)',
-          borderRadius: '8px',
-          position: 'relative',
-          overflow: 'hidden',
-          WebkitPrintColorAdjust: 'exact',
-          printColorAdjust: 'exact',
-        } as React.CSSProperties}>
-          <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.9)', margin: '0 0 8px', letterSpacing: '1px', fontWeight: 500 }}>
-            {isRefund
-              ? 'FINAL TAX REFUND · 최종 환급세액'
-              : 'FINAL TAX PAYABLE · 최종 납부할 세액'}
-          </p>
-          <p style={{ fontSize: '36px', fontWeight: 600, color: 'white', margin: 0, letterSpacing: '-1px', lineHeight: 1 }}>
-            {formatNumber(Math.abs(finalPayable))}
-            <span style={{ fontSize: '16px', fontWeight: 400, color: 'rgba(255,255,255,0.85)', marginLeft: '6px' }}>원</span>
-          </p>
-          <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', margin: '10px 0 0' }}>
-            {isRefund
-              ? '기납부세액이 결정세액보다 많아 환급 대상입니다'
-              : '결정세액 + 분리과세 + 가산세 − 기납부세액'}
-          </p>
         </div>
       </div>
 

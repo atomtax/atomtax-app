@@ -38,6 +38,8 @@ function recalculate(d: IncomeTaxReport): IncomeTaxReport {
   const payable = total_tax - d.income_prepaid_tax
   const within_deadline = payable - d.income_stock_deduct + d.income_stock_add - d.income_installment
   const final_payable = within_deadline - d.income_refund_offset
+  const local_tax = Math.floor(final_payable * 0.1)
+  const final_with_local = final_payable + local_tax
 
   // 농어촌특별세
   const rural_tax_base = Math.max(0, d.rural_total - d.rural_deduction)
@@ -59,6 +61,8 @@ function recalculate(d: IncomeTaxReport): IncomeTaxReport {
     income_payable: payable,
     income_within_deadline: within_deadline,
     income_final_payable: final_payable,
+    income_local_tax: local_tax,
+    income_final_with_local: final_with_local,
     rural_tax_base,
     rural_comprehensive_tax: rural_comprehensive,
     rural_determined_total: rural_determined,

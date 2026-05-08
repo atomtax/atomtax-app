@@ -62,6 +62,8 @@ export async function saveIncomeTaxReportFull(reportId: string, input: SaveInput
       income_within_deadline: input.income_within_deadline,
       income_refund_offset: input.income_refund_offset,
       income_final_payable: input.income_final_payable,
+      income_local_tax: input.income_local_tax,
+      income_final_with_local: input.income_final_with_local,
       rural_total: input.rural_total,
       rural_deduction: input.rural_deduction,
       rural_tax_base: input.rural_tax_base,

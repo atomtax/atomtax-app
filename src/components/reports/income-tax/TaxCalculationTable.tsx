@@ -40,7 +40,9 @@ const ROWS: RowDef[] = [
   { label: '분납할세액',                 incomeKey: 'income_installment',      ruralKey: 'rural_installment',      type: 'input' },
   { label: '신고기한내 납부할 세액', sublabel: '(총세액 − 차감 + 가산 − 분납)', incomeKey: 'income_within_deadline', ruralKey: 'rural_within_deadline', type: 'auto', emphasize: true },
   { label: '국세환급금 충당',            incomeKey: 'income_refund_offset',    ruralKey: 'income_refund_offset',   type: 'input', ruralDisabled: true },
-  { label: '충당후 납부(환급)할 세액',   incomeKey: 'income_final_payable',    ruralKey: 'rural_final_payable',    type: 'auto', emphasize: true, highlight: 'green' },
+  { label: '충당후 납부(환급)할 세액',   incomeKey: 'income_final_payable',    ruralKey: 'rural_final_payable',    type: 'auto', emphasize: true },
+  { label: '지방소득세', sublabel: '(충당후 세액 × 10%)', incomeKey: 'income_local_tax', ruralKey: 'income_local_tax', type: 'auto', ruralDisabled: true },
+  { label: '최종 납부할 세액', sublabel: '(지방세 포함)', incomeKey: 'income_final_with_local', ruralKey: 'income_final_with_local', type: 'auto', emphasize: true, highlight: 'green', ruralDisabled: true },
 ]
 
 export function TaxCalculationTable({ data, onChange }: Props) {

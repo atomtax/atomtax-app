@@ -238,6 +238,8 @@ export interface IncomeTaxReport {
   income_within_deadline: number
   income_refund_offset: number
   income_final_payable: number
+  income_local_tax: number
+  income_final_with_local: number
 
   // 농어촌특별세
   rural_total: number
