@@ -22,6 +22,43 @@ export function IncomeTaxCreditsPage({ reportYear, taxCredits, taxReductions }: 
     <div className="page-container" style={a4PageStyle}>
       <ChapterHeader number="03" titleKo="세액공제·감면" titleEn="TAX CREDITS & REDUCTIONS" reportYear={reportYear} />
 
+      {/* 안내 박스 */}
+      <div style={{
+        marginBottom: '16px',
+        padding: '14px 18px',
+        background: PRINT_TOKENS.primaryBg,
+        borderRadius: '6px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '12px',
+        WebkitPrintColorAdjust: 'exact',
+        printColorAdjust: 'exact',
+      } as React.CSSProperties}>
+        <div style={{
+          flexShrink: 0,
+          width: '24px',
+          height: '24px',
+          background: PRINT_TOKENS.primary,
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white',
+          fontSize: '14px',
+          fontWeight: 700,
+        }}>
+          ✓
+        </div>
+        <div>
+          <p style={{ fontSize: '13px', fontWeight: 600, color: PRINT_TOKENS.primary, margin: '0 0 4px' }}>
+            아톰세무회계 정책
+          </p>
+          <p style={{ fontSize: '13px', color: PRINT_TOKENS.textSecondary, margin: 0, lineHeight: 1.6 }}>
+            아톰세무회계는 적용 가능한 <strong>세액공제·감면을 최대한 적용</strong>하여 고객님의 세 부담을 최소화합니다.
+          </p>
+        </div>
+      </div>
+
       {noData ? (
         <div style={{
           flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -158,6 +195,7 @@ export function IncomeTaxCreditsPage({ reportYear, taxCredits, taxReductions }: 
       )}
 
       <PageFooter pageNumber={4} totalPages={5} />
+
     </div>
   )
 }

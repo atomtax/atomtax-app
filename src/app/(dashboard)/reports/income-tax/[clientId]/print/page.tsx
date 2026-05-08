@@ -2,8 +2,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { IncomeTaxCoverPage } from '@/components/reports/income-tax/print/IncomeTaxCoverPage'
-import { IncomeTaxOverviewPage } from '@/components/reports/income-tax/print/IncomeTaxOverviewPage'
-import { IncomeTaxCalcPage } from '@/components/reports/income-tax/print/IncomeTaxCalcPage'
+import { IncomeTaxSummaryPage } from '@/components/reports/income-tax/print/IncomeTaxSummaryPage'
+import { IncomeStatementPage } from '@/components/reports/income-tax/print/IncomeStatementPage'
 import { IncomeTaxCreditsPage } from '@/components/reports/income-tax/print/IncomeTaxCreditsPage'
 import { IncomeTaxConclusionPage } from '@/components/reports/income-tax/print/IncomeTaxConclusionPage'
 import { IncomeTaxDownloadPDFButton } from '@/components/reports/income-tax/print/IncomeTaxDownloadPDFButton'
@@ -74,6 +74,7 @@ export default async function IncomeTaxPrintPage({ params, searchParams }: Props
         <IncomeTaxDownloadPDFButton companyName={client.company_name} reportYear={year} />
       </div>
 
+      {/* 01 표지 */}
       <IncomeTaxCoverPage
         client={{
           company_name: client.company_name,
@@ -83,16 +84,24 @@ export default async function IncomeTaxPrintPage({ params, searchParams }: Props
         reportYear={year}
       />
 
-      <IncomeTaxOverviewPage reportYear={year} report={report} />
+      {/* 02 신고개요 — 부호 배지 표 */}
+      <IncomeTaxSummaryPage reportYear={year} report={report} />
 
-      <IncomeTaxCalcPage reportYear={year} report={report} />
+      {/* 03 손익계산서 */}
+      <IncomeStatementPage
+        reportYear={year}
+        summary={report.income_statement_summary}
+        periodLabel={report.income_statement_period_label ?? null}
+      />
 
+      {/* 04 세액공제·감면 */}
       <IncomeTaxCreditsPage
         reportYear={year}
         taxCredits={report.tax_credits}
         taxReductions={report.tax_reductions}
       />
 
+      {/* 05 종합결론 */}
       <IncomeTaxConclusionPage reportYear={year} report={report} />
     </>
   )

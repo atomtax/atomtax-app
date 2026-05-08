@@ -1,0 +1,202 @@
+import {
+  PRINT_TOKENS, a4PageStyle,
+  ChapterHeader, PageFooter,
+  formatNumber, formatSignedAmount,
+} from '@/components/reports/print/CorporateTaxPrintTokens'
+import type { IncomeTaxReport } from '@/types/database'
+
+interface RowDef {
+  sign: '+' | '−' | '=' | null
+  label: string
+  sublabel?: string
+  incomeKey: keyof IncomeTaxReport
+  ruralKey: keyof IncomeTaxReport | null
+  isResult: boolean
+  isFinal: boolean
+  isRate?: boolean
+}
+
+const ROWS: RowDef[] = [
+  { sign: null, label: '종합소득금액',                    incomeKey: 'income_total',             ruralKey: 'rural_total',             isResult: true,  isFinal: false },
+  { sign: '−',  label: '소득공제계',                      incomeKey: 'income_deduction',         ruralKey: 'rural_deduction',         isResult: false, isFinal: false },
+  { sign: '=',  label: '과세표준',                        incomeKey: 'income_tax_base',          ruralKey: 'rural_tax_base',          isResult: true,  isFinal: false },
+  { sign: null, label: '세율',                             incomeKey: 'income_applied_rate',      ruralKey: null,                      isResult: false, isFinal: false, isRate: true },
+  { sign: '=',  label: '산출세액',                        incomeKey: 'income_calculated_tax',    ruralKey: 'rural_calculated_tax',    isResult: true,  isFinal: false },
+  { sign: '−',  label: '세액감면',                        incomeKey: 'income_tax_reduction',     ruralKey: 'rural_tax_reduction',     isResult: false, isFinal: false },
+  { sign: '−',  label: '세액공제',                        incomeKey: 'income_tax_credit',        ruralKey: 'rural_tax_credit',        isResult: false, isFinal: false },
+  { sign: '=',  label: '결정세액', sublabel: '종합과세',  incomeKey: 'income_comprehensive_tax', ruralKey: 'rural_comprehensive_tax', isResult: true,  isFinal: false },
+  { sign: '+',  label: '분리과세',                        incomeKey: 'income_separate_tax',      ruralKey: 'rural_separate_tax',      isResult: false, isFinal: false },
+  { sign: '+',  label: '가산세',                          incomeKey: 'income_penalty_tax',       ruralKey: 'rural_penalty_tax',       isResult: false, isFinal: false },
+  { sign: '+',  label: '추가납부세액',                    incomeKey: 'income_additional_tax',    ruralKey: 'rural_additional_tax',    isResult: false, isFinal: false },
+  { sign: '−',  label: '기납부세액',                      incomeKey: 'income_prepaid_tax',       ruralKey: 'rural_prepaid_tax',       isResult: false, isFinal: false },
+  { sign: '=',  label: '납부(환급)할 총세액',             incomeKey: 'income_payable',           ruralKey: 'rural_payable',           isResult: true,  isFinal: true  },
+]
+
+interface Props {
+  reportYear: number
+  report: IncomeTaxReport
+}
+
+export function IncomeTaxSummaryPage({ reportYear, report }: Props) {
+  const finalPayable = report.income_final_payable
+  const isRefund = finalPayable < 0
+
+  return (
+    <div className="page-container" style={a4PageStyle}>
+      <ChapterHeader number="02" titleKo="신고 개요" titleEn="FILING OVERVIEW" reportYear={reportYear} />
+
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* 부호 배지 표 */}
+        <div style={{ border: `1px solid ${PRINT_TOKENS.border}`, borderRadius: '8px', overflow: 'hidden' }}>
+          {/* 헤더 */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '36px 1fr 160px 120px',
+            gap: '14px',
+            padding: '10px 20px',
+            background: PRINT_TOKENS.bgSecondary,
+            borderBottom: `1px solid ${PRINT_TOKENS.border}`,
+            fontSize: '11px',
+            color: PRINT_TOKENS.textSecondary,
+            fontWeight: 600,
+            letterSpacing: '0.5px',
+            WebkitPrintColorAdjust: 'exact',
+            printColorAdjust: 'exact',
+          } as React.CSSProperties}>
+            <span />
+            <span>구분</span>
+            <span style={{ textAlign: 'right' }}>종합소득세 (원)</span>
+            <span style={{ textAlign: 'right' }}>농어촌특별세 (원)</span>
+          </div>
+
+          {ROWS.map((row, idx) => {
+            const incomeVal = Number(report[row.incomeKey] ?? 0)
+            const ruralVal = row.ruralKey !== null ? Number(report[row.ruralKey] ?? 0) : null
+
+            let rowBg: string = 'white'
+            let textColor: string = PRINT_TOKENS.textPrimary
+            let fontWeight = 400
+
+            if (row.isFinal) {
+              rowBg = `linear-gradient(90deg, ${PRINT_TOKENS.primaryBg} 0%, #fafbfc 100%)`
+              textColor = PRINT_TOKENS.primary
+              fontWeight = 600
+            } else if (row.isResult) {
+              rowBg = PRINT_TOKENS.bgSubtle
+              fontWeight = 600
+            }
+
+            const signBg = row.sign === '=' ? PRINT_TOKENS.primaryBgPill : PRINT_TOKENS.bgSecondary
+            const signColor = row.sign === '=' ? PRINT_TOKENS.primary : PRINT_TOKENS.textSecondary
+
+            return (
+              <div
+                key={idx}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '36px 1fr 160px 120px',
+                  gap: '14px',
+                  padding: '11px 20px',
+                  alignItems: 'center',
+                  borderBottom: `1px solid ${PRINT_TOKENS.borderLight}`,
+                  background: rowBg,
+                  WebkitPrintColorAdjust: 'exact',
+                  printColorAdjust: 'exact',
+                } as React.CSSProperties}
+              >
+                {/* 부호 배지 */}
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: row.sign ? signBg : 'transparent',
+                  color: signColor,
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  lineHeight: 1,
+                  flexShrink: 0,
+                  WebkitPrintColorAdjust: 'exact',
+                  printColorAdjust: 'exact',
+                } as React.CSSProperties}>
+                  {row.sign ?? ''}
+                </div>
+
+                {/* 항목명 */}
+                <div>
+                  <span style={{ fontSize: '14px', color: textColor, fontWeight }}>
+                    {row.label}
+                  </span>
+                  {row.sublabel && (
+                    <span style={{ fontSize: '11px', color: PRINT_TOKENS.textTertiary, marginLeft: '6px' }}>
+                      {row.sublabel}
+                    </span>
+                  )}
+                </div>
+
+                {/* 종합소득세 값 */}
+                <span style={{
+                  fontSize: row.isFinal ? '15px' : '14px',
+                  color: incomeVal < 0 ? PRINT_TOKENS.danger : textColor,
+                  fontWeight,
+                  textAlign: 'right',
+                  fontVariantNumeric: 'tabular-nums',
+                  whiteSpace: 'nowrap',
+                } as React.CSSProperties}>
+                  {row.isRate ? `${incomeVal}%` : formatSignedAmount(incomeVal)}
+                </span>
+
+                {/* 농어촌특별세 값 */}
+                <span style={{
+                  fontSize: '14px',
+                  color: ruralVal !== null && ruralVal < 0 ? PRINT_TOKENS.danger : textColor,
+                  fontWeight: row.isFinal ? fontWeight : 400,
+                  textAlign: 'right',
+                  fontVariantNumeric: 'tabular-nums',
+                  whiteSpace: 'nowrap',
+                } as React.CSSProperties}>
+                  {row.isRate || ruralVal === null
+                    ? <span style={{ color: PRINT_TOKENS.textMuted }}>—</span>
+                    : formatSignedAmount(ruralVal)
+                  }
+                </span>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* 최종 납부(환급) 세액 Hero */}
+        <div style={{
+          padding: '20px 24px',
+          background: isRefund
+            ? 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)'
+            : 'linear-gradient(135deg, #047857 0%, #059669 100%)',
+          borderRadius: '8px',
+          position: 'relative',
+          overflow: 'hidden',
+          WebkitPrintColorAdjust: 'exact',
+          printColorAdjust: 'exact',
+        } as React.CSSProperties}>
+          <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.9)', margin: '0 0 8px', letterSpacing: '1px', fontWeight: 500 }}>
+            {isRefund
+              ? 'FINAL TAX REFUND · 최종 환급세액'
+              : 'FINAL TAX PAYABLE · 최종 납부할 세액'}
+          </p>
+          <p style={{ fontSize: '36px', fontWeight: 600, color: 'white', margin: 0, letterSpacing: '-1px', lineHeight: 1 }}>
+            {formatNumber(Math.abs(finalPayable))}
+            <span style={{ fontSize: '16px', fontWeight: 400, color: 'rgba(255,255,255,0.85)', marginLeft: '6px' }}>원</span>
+          </p>
+          <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', margin: '10px 0 0' }}>
+            {isRefund
+              ? '기납부세액이 결정세액보다 많아 환급 대상입니다'
+              : '결정세액 + 분리과세 + 가산세 − 기납부세액'}
+          </p>
+        </div>
+      </div>
+
+      <PageFooter pageNumber={2} totalPages={5} />
+    </div>
+  )
+}

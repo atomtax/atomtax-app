@@ -4,13 +4,15 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, Save, Printer } from 'lucide-react'
 import { saveIncomeTaxReportFull } from '@/app/actions/income-tax-reports'
+import { IncomeStatementUpload } from '@/components/reports/IncomeStatementUpload'
+import { IncomeStatementTable } from '@/components/reports/IncomeStatementTable'
 import { HometaxPasteImport } from './HometaxPasteImport'
 import { TaxCalculationTable } from './TaxCalculationTable'
 import { TaxCreditsSection } from '@/components/reports/TaxCreditsSection'
 import { TaxReductionsSection } from '@/components/reports/TaxReductionsSection'
 import { NotesSection } from '@/components/reports/NotesSection'
 import { calculateIncomeTax } from '@/lib/calculators/income-tax'
-import type { IncomeTaxReport, TaxCredit, TaxReduction } from '@/types/database'
+import type { IncomeTaxReport, TaxCredit, TaxReduction, IncomeStatementSummary } from '@/types/database'
 import type { ParsedIncomeTaxData } from '@/lib/calculators/income-tax-parser'
 
 interface Props {
@@ -72,12 +74,29 @@ export function IncomeTaxReportForm({ client, report, year }: Props) {
   const [isPending, startTransition] = useTransition()
   const [data, setData] = useState<IncomeTaxReport>(() => recalculate(report))
 
+  // 손익계산서
+  const [filename, setFilename] = useState(report.income_statement_filename ?? '')
+  const [periodLabel, setPeriodLabel] = useState(report.income_statement_period_label ?? '')
+  const [summary, setSummary] = useState<IncomeStatementSummary | null>(
+    report.income_statement_summary ?? null
+  )
+
   function updateField<K extends keyof IncomeTaxReport>(key: K, value: IncomeTaxReport[K]) {
     setData((prev) => recalculate({ ...prev, [key]: value }))
   }
 
-  function handleParsed(parsed: ParsedIncomeTaxData) {
+  function handleHometaxParsed(parsed: ParsedIncomeTaxData) {
     setData((prev) => recalculate({ ...prev, ...parsed }))
+  }
+
+  function handleStatementParsed(parsed: {
+    filename: string
+    period_label: string
+    summary: IncomeStatementSummary
+  }) {
+    setFilename(parsed.filename)
+    setPeriodLabel(parsed.period_label)
+    setSummary(parsed.summary)
   }
 
   function handleYearChange(delta: number) {
@@ -88,7 +107,12 @@ export function IncomeTaxReportForm({ client, report, year }: Props) {
     startTransition(async () => {
       try {
         const { id: _id, client_id: _cid, created_at: _ca, updated_at: _ua, completed_at: _comp, ...saveData } = data
-        await saveIncomeTaxReportFull(report.id, saveData)
+        await saveIncomeTaxReportFull(report.id, {
+          ...saveData,
+          income_statement_filename: filename || null,
+          income_statement_period_label: periodLabel || null,
+          income_statement_summary: summary,
+        })
         alert('저장되었습니다.')
         router.refresh()
       } catch (e) {
@@ -127,8 +151,22 @@ export function IncomeTaxReportForm({ client, report, year }: Props) {
         </div>
       </section>
 
-      {/* 텍스트 붙여넣기 */}
-      <HometaxPasteImport onParsed={handleParsed} />
+      {/* 손익계산서 업로드 */}
+      <IncomeStatementUpload
+        currentFilename={filename}
+        onParsed={handleStatementParsed}
+      />
+
+      {/* 손익계산서 표 (업로드 후 표시) */}
+      {summary && (
+        <IncomeStatementTable
+          periodLabel={periodLabel}
+          summary={summary}
+        />
+      )}
+
+      {/* 홈택스 텍스트 붙여넣기 */}
+      <HometaxPasteImport onParsed={handleHometaxParsed} />
 
       {/* 세액 계산 표 */}
       <TaxCalculationTable data={data} onChange={updateField} />

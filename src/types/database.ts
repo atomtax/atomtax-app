@@ -260,6 +260,11 @@ export interface IncomeTaxReport {
   rural_within_deadline: number
   rural_final_payable: number
 
+  // 손익계산서
+  income_statement_filename: string | null
+  income_statement_period_label: string | null
+  income_statement_summary: IncomeStatementSummary | null
+
   // 세액공제/감면 (v19c)
   tax_credits: TaxCredit[]
   tax_reductions: TaxReduction[]
