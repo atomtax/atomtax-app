@@ -1,0 +1,158 @@
+'use client'
+
+import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
+import { ChevronLeft, ChevronRight, Save } from 'lucide-react'
+import { saveIncomeTaxReportFull } from '@/app/actions/income-tax-reports'
+import { HometaxPasteImport } from './HometaxPasteImport'
+import { TaxCalculationTable } from './TaxCalculationTable'
+import { calculateIncomeTax } from '@/lib/calculators/income-tax'
+import type { IncomeTaxReport } from '@/types/database'
+import type { ParsedIncomeTaxData } from '@/lib/calculators/income-tax-parser'
+
+interface Props {
+  client: {
+    id: string
+    company_name: string
+    business_number: string | null
+    representative: string | null
+  }
+  report: IncomeTaxReport
+  year: number
+}
+
+function recalculate(d: IncomeTaxReport): IncomeTaxReport {
+  // 종합소득세
+  const tax_base = Math.max(0, d.income_total - d.income_deduction)
+  const calc = calculateIncomeTax(tax_base)
+  // 산출세액은 홈택스 붙여넣기 또는 수동 입력 우선 — 단, 입력이 0이면 자동 계산값 사용
+  const calculated_tax = d.income_calculated_tax !== 0 ? d.income_calculated_tax : calc.tax
+  const applied_rate = calc.rate
+  const comprehensive_tax = Math.max(0, calculated_tax - d.income_tax_reduction - d.income_tax_credit)
+  const determined_total = comprehensive_tax + d.income_separate_tax
+  const total_tax = determined_total + d.income_penalty_tax + d.income_additional_tax
+  const payable = total_tax - d.income_prepaid_tax
+  const within_deadline = payable - d.income_stock_deduct + d.income_stock_add - d.income_installment
+  const final_payable = within_deadline - d.income_refund_offset
+
+  // 농어촌특별세 (동일 흐름, 세율 없음)
+  const rural_tax_base = Math.max(0, d.rural_total - d.rural_deduction)
+  const rural_comprehensive = Math.max(0, d.rural_calculated_tax - d.rural_tax_reduction - d.rural_tax_credit)
+  const rural_determined = rural_comprehensive + d.rural_separate_tax
+  const rural_total_tax = rural_determined + d.rural_penalty_tax + d.rural_additional_tax
+  const rural_payable = rural_total_tax - d.rural_prepaid_tax
+  const rural_within = rural_payable - d.rural_stock_deduct + d.rural_stock_add - d.rural_installment
+  const rural_final = rural_within
+
+  return {
+    ...d,
+    income_tax_base: tax_base,
+    income_applied_rate: applied_rate,
+    income_calculated_tax: calculated_tax,
+    income_comprehensive_tax: comprehensive_tax,
+    income_determined_total: determined_total,
+    income_total_tax: total_tax,
+    income_payable: payable,
+    income_within_deadline: within_deadline,
+    income_final_payable: final_payable,
+    rural_tax_base,
+    rural_comprehensive_tax: rural_comprehensive,
+    rural_determined_total: rural_determined,
+    rural_total_tax,
+    rural_payable,
+    rural_within_deadline: rural_within,
+    rural_final_payable: rural_final,
+  }
+}
+
+export function IncomeTaxReportForm({ client, report, year }: Props) {
+  const router = useRouter()
+  const [isPending, startTransition] = useTransition()
+  const [data, setData] = useState<IncomeTaxReport>(() => recalculate(report))
+
+  function updateField<K extends keyof IncomeTaxReport>(key: K, value: IncomeTaxReport[K]) {
+    setData((prev) => recalculate({ ...prev, [key]: value }))
+  }
+
+  function handleParsed(parsed: ParsedIncomeTaxData) {
+    setData((prev) => recalculate({ ...prev, ...parsed }))
+  }
+
+  function handleYearChange(delta: number) {
+    router.push(`/reports/income-tax/${client.id}?year=${year + delta}`)
+  }
+
+  function handleSave() {
+    startTransition(async () => {
+      try {
+        const { id: _id, client_id: _cid, created_at: _ca, updated_at: _ua, completed_at: _comp, ...saveData } = data
+        await saveIncomeTaxReportFull(report.id, saveData)
+        alert('저장되었습니다.')
+        router.refresh()
+      } catch (e) {
+        alert(`저장 실패: ${e instanceof Error ? e.message : String(e)}`)
+      }
+    })
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* 고객 정보 + 연도 헤더 */}
+      <section className="bg-white border border-gray-200 rounded-lg p-6">
+        <h2 className="text-xl font-bold mb-1">{client.company_name}</h2>
+        {client.representative && (
+          <p className="text-sm text-gray-500">대표자: {client.representative}</p>
+        )}
+        {client.business_number && (
+          <p className="text-sm text-gray-500">{client.business_number}</p>
+        )}
+
+        <div className="flex items-center gap-3 mt-4">
+          <span className="text-sm font-medium text-gray-700">신고연도</span>
+          <button
+            onClick={() => handleYearChange(-1)}
+            className="w-9 h-9 flex items-center justify-center bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <span className="text-2xl font-bold text-blue-600 min-w-[80px] text-center">{year}</span>
+          <button
+            onClick={() => handleYearChange(1)}
+            className="w-9 h-9 flex items-center justify-center bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      </section>
+
+      {/* 텍스트 붙여넣기 */}
+      <HometaxPasteImport onParsed={handleParsed} />
+
+      {/* 세액 계산 표 */}
+      <TaxCalculationTable data={data} onChange={updateField} />
+
+      {/* v19c placeholder */}
+      <div className="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-400 text-sm">
+        세액공제/감면 동적 항목 + 메모 — v19c에서 추가 예정
+      </div>
+
+      {/* 저장/취소 버튼 */}
+      <div className="flex justify-end gap-2 pt-2 pb-6">
+        <button
+          onClick={() => router.push(`/reports/income-tax?year=${year}`)}
+          className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm"
+        >
+          돌아가기
+        </button>
+        <button
+          onClick={handleSave}
+          disabled={isPending}
+          className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 text-sm font-medium"
+        >
+          <Save size={16} />
+          {isPending ? '저장 중...' : '저장하기'}
+        </button>
+      </div>
+    </div>
+  )
+}

@@ -204,3 +204,84 @@ export type TraderInventoryUpdate = Partial<TraderInventoryInput>
 export type ExpenseInput = Omit<Expense, 'id' | 'created_at' | 'updated_at'>
 export type ExpenseInsert = ExpenseInput
 export type ExpenseUpdate = Partial<ExpenseInput>
+
+// ============================================================
+// 종합소득세 보고서 (v19)
+// ============================================================
+export type IncomeTaxReportStatus = 'draft' | 'completed'
+
+export interface IncomeTaxReport {
+  id: string
+  client_id: string | null
+  report_year: number
+  status: IncomeTaxReportStatus
+
+  // 종합소득세
+  income_total: number
+  income_deduction: number
+  income_tax_base: number
+  income_applied_rate: number
+  income_calculated_tax: number
+  income_tax_reduction: number
+  income_tax_credit: number
+  income_comprehensive_tax: number
+  income_separate_tax: number
+  income_determined_total: number
+  income_penalty_tax: number
+  income_additional_tax: number
+  income_total_tax: number
+  income_prepaid_tax: number
+  income_payable: number
+  income_stock_deduct: number
+  income_stock_add: number
+  income_installment: number
+  income_within_deadline: number
+  income_refund_offset: number
+  income_final_payable: number
+
+  // 농어촌특별세
+  rural_total: number
+  rural_deduction: number
+  rural_tax_base: number
+  rural_calculated_tax: number
+  rural_tax_reduction: number
+  rural_tax_credit: number
+  rural_comprehensive_tax: number
+  rural_separate_tax: number
+  rural_determined_total: number
+  rural_penalty_tax: number
+  rural_additional_tax: number
+  rural_total_tax: number
+  rural_prepaid_tax: number
+  rural_payable: number
+  rural_stock_deduct: number
+  rural_stock_add: number
+  rural_installment: number
+  rural_within_deadline: number
+  rural_final_payable: number
+
+  // 세액공제/감면 (v19c)
+  tax_credits: TaxCredit[]
+  tax_reductions: TaxReduction[]
+
+  // 메모
+  is_sincere_filing: boolean
+  additional_notes: string | null
+  conclusion_notes: string | null
+
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** 목록 페이지에서 사용 — 고객 + 보고서 조인 결과 */
+export interface IncomeClientWithReport {
+  client: {
+    id: string
+    company_name: string
+    representative: string | null
+    business_number: string | null
+    manager: string | null
+  }
+  report: Pick<IncomeTaxReport, 'id' | 'status' | 'completed_at' | 'updated_at'> | null
+}

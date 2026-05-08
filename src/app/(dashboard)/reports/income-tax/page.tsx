@@ -1,12 +1,63 @@
-import Header from '@/components/layout/Header'
+import { Suspense } from 'react'
+import { listIncomeClientsWithReports, listIncomeManagers } from '@/lib/db/income-tax-reports'
+import { IncomeTaxFilters } from '@/components/reports/income-tax/IncomeTaxFilters'
+import { IncomeTaxReportList } from '@/components/reports/income-tax/IncomeTaxReportList'
 
-export default function IncomeTaxPage() {
+interface Props {
+  searchParams: Promise<{ year?: string; manager?: string; q?: string }>
+}
+
+export default async function IncomeTaxReportsPage({ searchParams }: Props) {
+  const params = await searchParams
+  const currentYear = new Date().getFullYear()
+  const year = Number(params.year) || currentYear - 1
+  const manager = params.manager ?? 'all'
+  const query = (params.q ?? '').trim()
+
+  const [clientsWithReports, managers] = await Promise.all([
+    listIncomeClientsWithReports(year),
+    listIncomeManagers(),
+  ])
+
+  const filtered = clientsWithReports.filter(({ client }) => {
+    if (manager !== 'all' && (client.manager?.trim() || '미배정') !== manager) return false
+    if (query && !client.company_name.toLowerCase().includes(query.toLowerCase())) return false
+    return true
+  })
+
+  const total = clientsWithReports.length
+  const completed = clientsWithReports.filter((c) => c.report?.status === 'completed').length
+  const unstarted = total - completed
+
   return (
-    <div>
-      <Header title="종합소득세 보고서" subtitle="Phase 4에서 구현 예정" />
-      <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400 shadow-sm">
-        종합소득세 보고서는 Phase 4에서 구현됩니다.
+    <div className="p-6">
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold text-gray-900">종합소득세 보고서</h1>
+        <p className="text-sm text-gray-500 mt-0.5">{year}년도 신고</p>
       </div>
+
+      <Suspense fallback={<div className="h-12" />}>
+        <IncomeTaxFilters
+          currentYear={year}
+          currentManager={manager}
+          currentQuery={query}
+          managers={managers}
+        />
+      </Suspense>
+
+      <div className="flex gap-6 mb-6 text-sm bg-white border border-gray-200 rounded-lg px-5 py-3">
+        <span>
+          전체 개인고객 <strong className="text-indigo-600 ml-1">{total}</strong>
+        </span>
+        <span>
+          보고서 완료 <strong className="text-green-600 ml-1">{completed}</strong>
+        </span>
+        <span>
+          미작성 <strong className="text-orange-600 ml-1">{unstarted}</strong>
+        </span>
+      </div>
+
+      <IncomeTaxReportList items={filtered} year={year} />
     </div>
   )
 }
