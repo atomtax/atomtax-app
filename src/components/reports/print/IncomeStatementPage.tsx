@@ -1,7 +1,7 @@
 import {
   PRINT_TOKENS, a4PageStyle,
   ChapterHeader, PageFooter,
-  toBillionWon, safePercentage, isLoss,
+  toBillionWon, safePercentage, formatNumber,
 } from './CorporateTaxPrintTokens'
 import type { IncomeStatementSummary } from '@/types/database'
 
@@ -11,37 +11,30 @@ interface Props {
   periodLabel: string | null
 }
 
-const EMPTY: IncomeStatementSummary = {
-  revenue: 0, cogs: 0, gross_profit: 0, sga: 0,
-  operating_income: 0, non_operating_revenue: 0, non_operating_expense: 0,
-  pretax_income: 0, corporate_tax: 0, net_income: 0,
+interface RowDef {
+  sign: '+' | '−' | '=' | null
+  label: string
+  key: keyof IncomeStatementSummary
+  isResult: boolean
+  isFinal: boolean
 }
 
-interface Row {
-  label: string
-  value: number
-  indent?: boolean
-  highlight?: boolean
-  bold?: boolean
-  separator?: boolean
-}
+const ROWS: RowDef[] = [
+  { sign: null, label: '매출액',           key: 'revenue',               isResult: true,  isFinal: false },
+  { sign: '−',  label: '매출원가',         key: 'cogs',                  isResult: false, isFinal: false },
+  { sign: '=',  label: '매출총이익',       key: 'gross_profit',          isResult: true,  isFinal: false },
+  { sign: '−',  label: '판매비와 관리비',  key: 'sga',                   isResult: false, isFinal: false },
+  { sign: '=',  label: '영업이익',         key: 'operating_income',      isResult: true,  isFinal: false },
+  { sign: '+',  label: '영업외수익',       key: 'non_operating_revenue', isResult: false, isFinal: false },
+  { sign: '−',  label: '영업외비용',       key: 'non_operating_expense', isResult: false, isFinal: false },
+  { sign: '=',  label: '법인세차감전이익', key: 'pretax_income',         isResult: true,  isFinal: false },
+  { sign: '−',  label: '법인세 비용',      key: 'corporate_tax',         isResult: false, isFinal: false },
+  { sign: '=',  label: '당기순이익',       key: 'net_income',            isResult: true,  isFinal: true  },
+]
 
 export function IncomeStatementPage({ reportYear, summary, periodLabel }: Props) {
-  const s = summary ?? EMPTY
-  const operatingMarginRate = safePercentage(s.operating_income, s.revenue)
-
-  const rows: Row[] = [
-    { label: '매출액', value: s.revenue, bold: true },
-    { label: '매출원가', value: s.cogs, indent: true },
-    { label: '매출총이익', value: s.gross_profit, bold: true, separator: true },
-    { label: '판매비와관리비', value: s.sga, indent: true },
-    { label: '영업이익', value: s.operating_income, bold: true, separator: true },
-    { label: '영업외수익', value: s.non_operating_revenue, indent: true },
-    { label: '영업외비용', value: s.non_operating_expense, indent: true },
-    { label: '법인세차감전이익', value: s.pretax_income, bold: true, separator: true },
-    { label: '법인세 비용', value: s.corporate_tax, indent: true },
-    { label: '당기순이익', value: s.net_income, bold: true, highlight: true, separator: true },
-  ]
+  const operatingMarginRate = safePercentage(summary?.operating_income, summary?.revenue)
+  const revenue = summary?.revenue ?? 0
 
   return (
     <div className="page-container" style={a4PageStyle}>
@@ -64,75 +57,117 @@ export function IncomeStatementPage({ reportYear, summary, periodLabel }: Props)
           </div>
         )}
 
-        {/* 손익계산서 테이블 */}
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{
-              background: PRINT_TOKENS.bgSecondary,
-              borderBottom: `2px solid ${PRINT_TOKENS.border}`,
-            }}>
-              <th style={{ padding: '10px 12px', textAlign: 'left', fontSize: '13px', fontWeight: 600, color: PRINT_TOKENS.textSecondary }}>항목</th>
-              <th style={{ padding: '10px 12px', textAlign: 'right', fontSize: '13px', fontWeight: 600, color: PRINT_TOKENS.textSecondary, width: '160px' }}>금액 (원)</th>
-              <th style={{ padding: '10px 12px', textAlign: 'right', fontSize: '13px', fontWeight: 600, color: PRINT_TOKENS.textSecondary, width: '80px' }}>비율</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => {
-              const loss = isLoss(row.value)
-              const valueColor = row.highlight
-                ? (loss ? PRINT_TOKENS.danger : PRINT_TOKENS.primary)
-                : (loss ? PRINT_TOKENS.danger : PRINT_TOKENS.textPrimary)
+        {/* 손익계산서 */}
+        <div style={{ border: `1px solid ${PRINT_TOKENS.border}`, borderRadius: '8px', overflow: 'hidden' }}>
+          {/* 헤더 행 */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '36px 1fr auto 80px',
+            gap: '14px',
+            padding: '12px 20px',
+            background: PRINT_TOKENS.bgSecondary,
+            borderBottom: `1px solid ${PRINT_TOKENS.border}`,
+            fontSize: '11px',
+            color: PRINT_TOKENS.textSecondary,
+            fontWeight: 600,
+            letterSpacing: '0.5px',
+            WebkitPrintColorAdjust: 'exact',
+            printColorAdjust: 'exact',
+          } as React.CSSProperties}>
+            <span></span>
+            <span>항목</span>
+            <span style={{ textAlign: 'right', minWidth: '160px' }}>금액 (원)</span>
+            <span style={{ textAlign: 'right' }}>비율</span>
+          </div>
 
-              return (
-                <tr
-                  key={row.label}
-                  style={{
-                    borderBottom: row.separator
-                      ? `2px solid ${PRINT_TOKENS.border}`
-                      : `1px solid ${PRINT_TOKENS.borderLight}`,
-                    background: row.highlight
-                      ? `linear-gradient(90deg, ${PRINT_TOKENS.primaryBg} 0%, white 100%)`
-                      : 'transparent',
-                    WebkitPrintColorAdjust: 'exact',
-                    printColorAdjust: 'exact',
-                  } as React.CSSProperties}
-                >
-                  <td style={{
-                    padding: row.indent ? '8px 12px 8px 28px' : '8px 12px',
-                    fontSize: row.bold ? '16px' : '14px',
-                    fontWeight: row.bold ? 700 : 400,
-                    color: row.bold ? PRINT_TOKENS.textPrimary : PRINT_TOKENS.textSecondary,
-                  }}>
-                    {row.indent && (
-                      <span style={{ marginRight: '6px', color: PRINT_TOKENS.textMuted }}>└</span>
-                    )}
-                    {row.label}
-                  </td>
-                  <td style={{
-                    padding: '8px 12px',
-                    textAlign: 'right',
-                    fontSize: row.bold ? '16px' : '14px',
-                    fontWeight: row.bold ? 700 : 400,
-                    color: valueColor,
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {loss && <span style={{ marginRight: '2px', fontSize: '13px' }}>△</span>}
-                    {Math.abs(row.value).toLocaleString('ko-KR')}
-                  </td>
-                  <td style={{
-                    padding: '8px 12px',
-                    textAlign: 'right',
-                    fontSize: '13px',
-                    color: PRINT_TOKENS.textTertiary,
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {row.label === '매출액' ? '100%' : safePercentage(Math.abs(row.value), s.revenue) === '—' ? '—' : `${safePercentage(Math.abs(row.value), s.revenue)}%`}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+          {/* 데이터 행 */}
+          {ROWS.map((row) => {
+            const value = Number(summary?.[row.key] ?? 0)
+            const ratio = revenue > 0 ? ((Math.abs(value) / revenue) * 100).toFixed(2) : '—'
+
+            let rowBackground = 'white'
+            let textColor: string = PRINT_TOKENS.textPrimary
+            let fontWeight = 400
+
+            if (row.isFinal) {
+              rowBackground = `linear-gradient(90deg, ${PRINT_TOKENS.primaryBg} 0%, #fafbfc 100%)`
+              textColor = PRINT_TOKENS.primary
+              fontWeight = 600
+            } else if (row.isResult) {
+              rowBackground = PRINT_TOKENS.bgSubtle
+              fontWeight = 600
+            }
+
+            const signBg = row.sign === '=' ? PRINT_TOKENS.primaryBgPill : PRINT_TOKENS.bgSecondary
+            const signColor = row.sign === '=' ? PRINT_TOKENS.primary : PRINT_TOKENS.textSecondary
+
+            return (
+              <div
+                key={row.key}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '36px 1fr auto 80px',
+                  gap: '14px',
+                  padding: '12px 20px',
+                  alignItems: 'center',
+                  borderBottom: `1px solid ${PRINT_TOKENS.borderLight}`,
+                  background: rowBackground,
+                  WebkitPrintColorAdjust: 'exact',
+                  printColorAdjust: 'exact',
+                } as React.CSSProperties}
+              >
+                {/* 부호 배지 */}
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: row.sign ? signBg : 'transparent',
+                  color: signColor,
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  lineHeight: 1,
+                  flexShrink: 0,
+                  WebkitPrintColorAdjust: 'exact',
+                  printColorAdjust: 'exact',
+                } as React.CSSProperties}>
+                  {row.sign ?? ''}
+                </div>
+
+                {/* 항목명 */}
+                <span style={{ fontSize: '14px', color: textColor, fontWeight }}>
+                  {row.label}
+                </span>
+
+                {/* 금액 */}
+                <span style={{
+                  fontSize: row.isFinal ? '16px' : '14px',
+                  color: value < 0 ? PRINT_TOKENS.danger : textColor,
+                  fontWeight,
+                  textAlign: 'right',
+                  fontVariantNumeric: 'tabular-nums',
+                  minWidth: '160px',
+                  whiteSpace: 'nowrap',
+                } as React.CSSProperties}>
+                  {value < 0 ? '△ ' : ''}{formatNumber(Math.abs(value))}
+                </span>
+
+                {/* 비율 */}
+                <span style={{
+                  fontSize: '12px',
+                  color: row.isFinal ? PRINT_TOKENS.primary : PRINT_TOKENS.textTertiary,
+                  fontWeight: row.isFinal ? 600 : 400,
+                  textAlign: 'right',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {row.key === 'revenue' ? '100%' : ratio === '—' ? '—' : `${ratio}%`}
+                </span>
+              </div>
+            )
+          })}
+        </div>
 
         {/* 한줄 요약 */}
         <div style={{
@@ -142,8 +177,8 @@ export function IncomeStatementPage({ reportYear, summary, periodLabel }: Props)
         }}>
           <div style={{ width: '4px', height: '36px', background: PRINT_TOKENS.primary, borderRadius: '2px', flexShrink: 0 }} />
           <p style={{ fontSize: '14px', color: PRINT_TOKENS.textSecondary, margin: 0, lineHeight: 1.6 }}>
-            매출 {toBillionWon(s.revenue)} → 영업이익 {toBillionWon(s.operating_income)}
-            ({operatingMarginRate === '—' ? '—' : `${operatingMarginRate}%`}) → 당기순이익 {toBillionWon(s.net_income)}으로 마감
+            매출 {toBillionWon(summary?.revenue)} → 영업이익 {toBillionWon(summary?.operating_income)}
+            ({operatingMarginRate === '—' ? '—' : `${operatingMarginRate}%`}) → 당기순이익 {toBillionWon(summary?.net_income)}으로 마감
           </p>
         </div>
       </div>
