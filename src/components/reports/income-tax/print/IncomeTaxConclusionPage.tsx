@@ -3,7 +3,7 @@ import {
   ChapterHeader, PageFooter,
   formatNumber, toBillionWon,
 } from '@/components/reports/print/CorporateTaxPrintTokens'
-import { parseConclusion } from '@/lib/utils/conclusion-parser'
+import { parseIncomeTaxConclusion } from '@/lib/utils/income-tax-conclusion-parser'
 import type { IncomeTaxReport } from '@/types/database'
 
 interface Props {
@@ -12,19 +12,19 @@ interface Props {
 }
 
 export function IncomeTaxConclusionPage({ reportYear, report }: Props) {
-  const finalPayable = report.income_final_payable
-  const isRefund = finalPayable < 0
+  const finalWithLocal = report.income_final_with_local
+  const isRefund = finalWithLocal < 0
   const creditTotal = report.tax_credits.reduce((s, c) => s + (c.current_amount ?? 0) + (c.carryover_amount ?? 0), 0)
   const reductionTotal = report.tax_reductions.reduce((s, r) => s + (r.current_amount ?? 0), 0)
   const totalBenefit = creditTotal + reductionTotal
 
-  const points = parseConclusion(report.conclusion_notes)
+  const { cards, closing } = parseIncomeTaxConclusion(report.conclusion_notes)
 
   const keyMetrics = [
     {
-      label: isRefund ? '환급 세액' : '최종 납부세액',
-      value: `${formatNumber(Math.abs(finalPayable))}원`,
-      sub: toBillionWon(Math.abs(finalPayable)),
+      label: isRefund ? '환급 세액 (지방세 포함)' : '최종 납부세액 (지방세 포함)',
+      value: `${formatNumber(Math.abs(finalWithLocal))}원`,
+      sub: toBillionWon(Math.abs(finalWithLocal)),
       bg: isRefund ? PRINT_TOKENS.successDark : PRINT_TOKENS.primary,
     },
     {
@@ -43,7 +43,7 @@ export function IncomeTaxConclusionPage({ reportYear, report }: Props) {
 
   return (
     <div className="page-container" style={a4LastPageStyle}>
-      <ChapterHeader number="04" titleKo="종합 결론" titleEn="CONCLUSION & SUMMARY" reportYear={reportYear} />
+      <ChapterHeader number="05" titleKo="종합 결론" titleEn="CONCLUSION & SUMMARY" reportYear={reportYear} />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {/* 핵심 지표 3개 */}
@@ -76,25 +76,21 @@ export function IncomeTaxConclusionPage({ reportYear, report }: Props) {
             borderRadius: '100px',
             alignSelf: 'flex-start',
           }}>
-            <div style={{
-              width: '6px', height: '6px',
-              background: PRINT_TOKENS.success,
-              borderRadius: '50%',
-            }} />
+            <div style={{ width: '6px', height: '6px', background: PRINT_TOKENS.success, borderRadius: '50%' }} />
             <span style={{ fontSize: '13px', color: PRINT_TOKENS.textSecondary, fontWeight: 600 }}>
               성실신고 확인 대상
             </span>
           </div>
         )}
 
-        {/* 결론 카드 */}
-        {points.length > 0 && (
+        {/* 결론 카드 (최대 4개, "마무리 인사" 제외) */}
+        {cards.length > 0 && (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: points.length === 1 ? '1fr' : points.length === 2 ? '1fr 1fr' : points.length === 3 ? '1fr 1fr 1fr' : '1fr 1fr',
+            gridTemplateColumns: cards.length === 1 ? '1fr' : cards.length === 2 ? '1fr 1fr' : cards.length === 3 ? '1fr 1fr 1fr' : '1fr 1fr',
             gap: '10px',
           }}>
-            {points.map((point, i) => (
+            {cards.map((point, i) => (
               <div key={i} style={{
                 border: `1px solid ${PRINT_TOKENS.border}`,
                 borderRadius: '8px',
@@ -103,21 +99,12 @@ export function IncomeTaxConclusionPage({ reportYear, report }: Props) {
                 WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
               } as React.CSSProperties}>
                 {point.title && (
-                  <p style={{
-                    fontSize: '14px', fontWeight: 700,
-                    color: PRINT_TOKENS.primary,
-                    margin: '0 0 6px',
-                  }}>
+                  <p style={{ fontSize: '14px', fontWeight: 700, color: PRINT_TOKENS.primary, margin: '0 0 6px' }}>
                     {point.title}
                   </p>
                 )}
                 {point.body && (
-                  <p style={{
-                    fontSize: '14px',
-                    color: PRINT_TOKENS.textSecondary,
-                    margin: 0,
-                    lineHeight: 1.6,
-                  }}>
+                  <p style={{ fontSize: '13px', color: PRINT_TOKENS.textSecondary, margin: 0, lineHeight: 1.6 }}>
                     {point.body}
                   </p>
                 )}
@@ -135,36 +122,54 @@ export function IncomeTaxConclusionPage({ reportYear, report }: Props) {
             padding: '12px 16px',
           }}>
             <p style={{ fontSize: '13px', fontWeight: 600, color: PRINT_TOKENS.textTertiary, margin: '0 0 6px', letterSpacing: '0.4px' }}>ADDITIONAL NOTES</p>
-            <p style={{ fontSize: '14px', color: PRINT_TOKENS.textSecondary, margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+            <p style={{ fontSize: '13px', color: PRINT_TOKENS.textSecondary, margin: 0, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
               {report.additional_notes}
             </p>
           </div>
         )}
 
-        {/* 안내 박스 */}
+        {/* 진파랑 박스 — 인사말 + 기존 안내 */}
         <div style={{
-          background: `linear-gradient(135deg, ${PRINT_TOKENS.primaryBg} 0%, white 100%)`,
-          borderRadius: '8px', padding: '14px 18px',
-          border: `1px solid ${PRINT_TOKENS.primaryBgPill}`,
-          display: 'flex', gap: '12px', alignItems: 'flex-start',
           marginTop: 'auto',
-          WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
+          padding: '18px 22px',
+          background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)',
+          color: 'white',
+          borderRadius: '8px',
+          position: 'relative',
+          overflow: 'hidden',
+          WebkitPrintColorAdjust: 'exact',
+          printColorAdjust: 'exact',
         } as React.CSSProperties}>
-          <div style={{
-            width: '22px', height: '22px', background: PRINT_TOKENS.primary,
-            borderRadius: '50%', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', flexShrink: 0, marginTop: '1px',
-          }}>
-            <span style={{ fontSize: '16px', fontWeight: 700, color: 'white' }}>A</span>
-          </div>
-          <div>
-            <p style={{ fontSize: '14px', fontWeight: 600, color: PRINT_TOKENS.primary, margin: '0 0 3px' }}>
-              아톰세무회계 — {reportYear}년 종합소득세 신고 완료
-            </p>
-            <p style={{ fontSize: '13px', color: PRINT_TOKENS.textSecondary, margin: 0, lineHeight: 1.5 }}>
-              본 보고서는 {reportYear}년도 종합소득세 신고 결과를 요약한 것으로, 담당 세무사의 검토를 거쳐 작성되었습니다.
-              궁금한 사항은 아톰세무회계로 문의하시기 바랍니다.
-            </p>
+          <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
+          <div style={{ position: 'relative' }}>
+            {/* 인사말 (자동 생성 시) */}
+            {closing && (
+              <>
+                <p style={{ fontSize: '14px', fontWeight: 500, color: 'rgba(255,255,255,0.95)', margin: '0 0 12px', lineHeight: 1.7 }}>
+                  {closing}
+                </p>
+                <div style={{ height: '1px', background: 'rgba(255,255,255,0.2)', margin: '0 0 12px' }} />
+              </>
+            )}
+            {/* 기존 안내 — 항상 표시 */}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+              <div style={{
+                width: '22px', height: '22px', background: 'rgba(255,255,255,0.2)',
+                borderRadius: '50%', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', flexShrink: 0,
+              }}>
+                <span style={{ fontSize: '14px', fontWeight: 700 }}>A</span>
+              </div>
+              <div>
+                <p style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.95)', margin: '0 0 3px' }}>
+                  아톰세무회계 — {reportYear}년 종합소득세 신고 완료
+                </p>
+                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)', margin: 0, lineHeight: 1.5 }}>
+                  본 보고서는 {reportYear}년도 종합소득세 신고 결과를 요약한 것으로, 담당 세무사의 검토를 거쳐 작성되었습니다.
+                  궁금한 사항은 아톰세무회계로 문의하시기 바랍니다.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

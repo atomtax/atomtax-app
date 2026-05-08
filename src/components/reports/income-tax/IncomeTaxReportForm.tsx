@@ -10,7 +10,7 @@ import { HometaxPasteImport } from './HometaxPasteImport'
 import { TaxCalculationTable } from './TaxCalculationTable'
 import { TaxCreditsSection } from '@/components/reports/TaxCreditsSection'
 import { TaxReductionsSection } from '@/components/reports/TaxReductionsSection'
-import { NotesSection } from '@/components/reports/NotesSection'
+import { IncomeTaxNotesSection } from './IncomeTaxNotesSection'
 import { calculateIncomeTax } from '@/lib/calculators/income-tax'
 import type { IncomeTaxReport, TaxCredit, TaxReduction, IncomeStatementSummary } from '@/types/database'
 import type { ParsedIncomeTaxData } from '@/lib/calculators/income-tax-parser'
@@ -188,7 +188,9 @@ export function IncomeTaxReportForm({ client, report, year }: Props) {
       />
 
       {/* 메모 */}
-      <NotesSection
+      <IncomeTaxNotesSection
+        data={data}
+        summary={summary}
         isSincerefiling={data.is_sincere_filing}
         additionalNotes={data.additional_notes ?? ''}
         conclusionNotes={data.conclusion_notes ?? ''}
