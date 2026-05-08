@@ -57,7 +57,7 @@ export const chapterHeaderStyle: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'flex-start',
-  marginBottom: '28px',
+  marginBottom: '20px',
   paddingBottom: '14px',
   borderBottom: `1px solid ${PRINT_TOKENS.border}`,
 }
@@ -68,7 +68,7 @@ export const pageFooterStyle: React.CSSProperties = {
   borderTop: `1px solid ${PRINT_TOKENS.border}`,
   display: 'flex',
   justifyContent: 'space-between',
-  fontSize: '9px',
+  fontSize: '13px',
   color: PRINT_TOKENS.textMuted,
   letterSpacing: '0.5px',
   fontWeight: 500,
@@ -78,11 +78,13 @@ export const pageFooterStyle: React.CSSProperties = {
 
 export function toBillionWon(amount: number | null | undefined): string {
   if (amount == null || amount === 0) return '0'
+  const sign = amount < 0 ? '△' : ''
   const abs = Math.abs(amount)
   const billion = abs / 100_000_000
-  if (billion >= 0.1) return (amount < 0 ? '△' : '') + billion.toFixed(1)
+  if (billion >= 1) return sign + billion.toFixed(1) + '억'
   const million = abs / 1_000_000
-  return (amount < 0 ? '△' : '') + million.toFixed(0) + '백만'
+  if (million >= 1) return sign + million.toFixed(0) + '백만'
+  return sign + abs.toLocaleString('ko-KR') + '원'
 }
 
 export function safePercentage(
@@ -123,26 +125,26 @@ export function ChapterHeader({ number, titleKo, titleEn, reportYear }: ChapterH
       <div>
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: '8px',
-          padding: '4px 10px', backgroundColor: PRINT_TOKENS.primaryBgPill,
+          padding: '4px 12px', backgroundColor: PRINT_TOKENS.primaryBgPill,
           borderRadius: '100px', marginBottom: '10px',
         }}>
           <span style={{
-            fontSize: '9px', fontWeight: 600, color: PRINT_TOKENS.primary,
+            fontSize: '13px', fontWeight: 600, color: PRINT_TOKENS.primary,
             letterSpacing: '0.8px',
           }}>CHAPTER {number}</span>
         </div>
         <h2 style={{
-          fontSize: '20px', fontWeight: 600, color: PRINT_TOKENS.textPrimary,
+          fontSize: '28px', fontWeight: 600, color: PRINT_TOKENS.textPrimary,
           margin: 0, letterSpacing: '-0.4px',
         }}>{titleKo}</h2>
         <p style={{
-          fontSize: '11px', color: PRINT_TOKENS.textTertiary,
+          fontSize: '16px', color: PRINT_TOKENS.textTertiary,
           margin: '3px 0 0', letterSpacing: '0.3px', fontWeight: 500,
         }}>{titleEn}</p>
       </div>
       <div style={{ textAlign: 'right' }}>
-        <p style={{ fontSize: '9px', color: PRINT_TOKENS.textMuted, margin: 0, letterSpacing: '1px', fontWeight: 500 }}>ATOM TAX</p>
-        <p style={{ fontSize: '9px', color: PRINT_TOKENS.textMuted, margin: '2px 0 0' }}>FY {reportYear}</p>
+        <p style={{ fontSize: '13px', color: PRINT_TOKENS.textMuted, margin: 0, letterSpacing: '1px', fontWeight: 500 }}>ATOM TAX</p>
+        <p style={{ fontSize: '13px', color: PRINT_TOKENS.textMuted, margin: '2px 0 0' }}>FY {reportYear}</p>
       </div>
     </div>
   )
