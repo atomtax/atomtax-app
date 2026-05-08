@@ -46,7 +46,7 @@ export function NotesSection({
           value={conclusionNotes}
           onChange={(e) => onConclusionChange(e.target.value)}
           rows={3}
-          placeholder="세무사 의견, 결론 등..."
+          placeholder={`## 제목\n본문 내용...\n\n## 다른 제목\n내용... (최대 4개 카드)`}
           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-indigo-500 resize-none"
         />
       </div>
