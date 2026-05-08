@@ -54,7 +54,7 @@ export function ConclusionPage({
   ]
 
   return (
-    <div style={a4LastPageStyle}>
+    <div className="page-container" style={a4LastPageStyle}>
       <ChapterHeader number="05" titleKo="종합 결론" titleEn="CONCLUSION & SUMMARY" reportYear={reportYear} />
 
       {/* 핵심 지표 3개 */}

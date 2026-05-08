@@ -28,7 +28,7 @@ export function TaxCreditsPage({ reportYear, taxCredits }: Props) {
   const isEmpty = grandTotal === 0
 
   return (
-    <div style={a4PageStyle}>
+    <div className="page-container" style={a4PageStyle}>
       <ChapterHeader number="03" titleKo="세액공제" titleEn="TAX CREDITS" reportYear={reportYear} />
 
       {isEmpty ? (

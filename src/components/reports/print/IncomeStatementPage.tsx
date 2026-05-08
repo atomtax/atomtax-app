@@ -43,7 +43,7 @@ export function IncomeStatementPage({ reportYear, summary, periodLabel }: Props)
   ]
 
   return (
-    <div style={a4PageStyle}>
+    <div className="page-container" style={a4PageStyle}>
       <ChapterHeader number="04" titleKo="손익계산서" titleEn="INCOME STATEMENT" reportYear={reportYear} />
 
       {/* 기간 라벨 */}

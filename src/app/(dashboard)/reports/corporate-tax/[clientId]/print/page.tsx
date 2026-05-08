@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import PrintButton from '@/components/print/PrintButton'
+import { DownloadPDFButton } from '@/components/reports/print/DownloadPDFButton'
 import { CoverPage } from '@/components/reports/print/CoverPage'
 import { FinancialPage } from '@/components/reports/print/FinancialPage'
 import { TaxPaymentPage } from '@/components/reports/print/TaxPaymentPage'
@@ -61,20 +61,20 @@ export default async function CorporateTaxPrintPage({ params, searchParams }: Pr
         position: 'fixed', top: '16px', right: '16px', zIndex: 50,
         display: 'flex', gap: '8px',
       }}>
-        <PrintButton label="PDF 다운로드 / 인쇄" />
         <Link
           href={`/reports/corporate-tax/${clientId}?year=${year}`}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '6px',
-            padding: '8px 16px', fontSize: '14px', fontWeight: 500,
+            padding: '8px 14px', fontSize: '13px', fontWeight: 500,
             color: '#475569', background: 'white',
-            border: '1px solid #cbd5e1', borderRadius: '8px',
+            border: '1px solid #cbd5e1', borderRadius: '6px',
             boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
             textDecoration: 'none',
           }}
         >
           ← 작성 페이지로
         </Link>
+        <DownloadPDFButton companyName={client.company_name} reportYear={year} />
       </div>
 
       <CoverPage

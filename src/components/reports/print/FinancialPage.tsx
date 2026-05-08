@@ -42,7 +42,7 @@ export function FinancialPage({ reportYear, summary, finalTax }: Props) {
   ]
 
   return (
-    <div style={a4PageStyle}>
+    <div className="page-container" style={a4PageStyle}>
       <ChapterHeader number="01" titleKo="재무 현황" titleEn="FINANCIAL STATUS" reportYear={reportYear} />
 
       {/* ─ 3원화 카드 ─ */}

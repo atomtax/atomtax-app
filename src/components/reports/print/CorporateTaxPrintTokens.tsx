@@ -29,13 +29,17 @@ export const PRINT_TOKENS = {
 
 export const a4PageStyle: React.CSSProperties = {
   width: '210mm',
-  minHeight: '297mm',
+  height: '297mm',
+  boxSizing: 'border-box',
   padding: '20mm 18mm',
   margin: '0 auto',
   backgroundColor: 'white',
   display: 'flex',
   flexDirection: 'column',
   pageBreakAfter: 'always',
+  pageBreakInside: 'avoid',
+  breakAfter: 'page',
+  breakInside: 'avoid',
   WebkitPrintColorAdjust: 'exact',
   printColorAdjust: 'exact',
   fontFamily: 'Inter, -apple-system, sans-serif',
@@ -46,6 +50,7 @@ export const a4PageStyle: React.CSSProperties = {
 export const a4LastPageStyle: React.CSSProperties = {
   ...a4PageStyle,
   pageBreakAfter: 'auto',
+  breakAfter: 'auto',
 }
 
 export const chapterHeaderStyle: React.CSSProperties = {

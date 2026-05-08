@@ -11,7 +11,7 @@ interface Props {
 
 export function CoverPage({ client, reportYear }: Props) {
   return (
-    <div style={a4PageStyle}>
+    <div className="page-container" style={a4PageStyle}>
       {/* ── 상단 그라디언트 헤더 ── */}
       <div style={{
         margin: '-20mm -18mm 0',

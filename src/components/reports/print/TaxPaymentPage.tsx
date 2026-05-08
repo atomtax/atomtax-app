@@ -48,7 +48,7 @@ export function TaxPaymentPage({
   ]
 
   return (
-    <div style={a4PageStyle}>
+    <div className="page-container" style={a4PageStyle}>
       <ChapterHeader number="02" titleKo="세금 납부" titleEn="TAX PAYMENT & REFUND" reportYear={reportYear} />
 
       {/* ─ 최종세액 Hero 카드 ─ */}
