@@ -44,6 +44,7 @@ const PropertyReportModal = dynamic(
 interface Props {
   property: TraderProperty
   clientName: string
+  clientFolder: string | null
   onChange: (updates: Partial<TraderProperty>) => void
   onCollapse: () => void
 }
@@ -51,6 +52,7 @@ interface Props {
 export function PropertyDetailPanel({
   property,
   clientName,
+  clientFolder,
   onChange,
   onCollapse,
 }: Props) {
@@ -127,6 +129,8 @@ export function PropertyDetailPanel({
             transfer_amount: Number(property.transfer_amount) || 0,
             acquisition_date: property.acquisition_date,
             transfer_date: property.transfer_date,
+            land_area: Number(property.land_area) || 0,
+            building_area: Number(property.building_area) || 0,
           },
           expenses.map((r) => ({
             row_no: r.row_no,
@@ -158,20 +162,27 @@ export function PropertyDetailPanel({
     })
   }
 
-  function handleCalculateTax() {
-    startTransition(async () => {
-      try {
-        const result = await calculatePropertyTax(property.id)
-        const message =
-          result.transfer_income > 0
-            ? `세금 자동 계산 완료\n\n양도소득: ${result.transfer_income.toLocaleString('ko-KR')}원\n적용세율: ${result.applied_rate}%\n종합소득세: ${result.income_tax.toLocaleString('ko-KR')}원\n지방소득세: ${result.local_tax.toLocaleString('ko-KR')}원`
-            : '양도소득이 0 이하이므로 세금이 0원으로 설정되었습니다.'
-        alert(message)
-        router.refresh()
-      } catch (e) {
-        alert(`세금 계산 실패: ${e instanceof Error ? e.message : String(e)}`)
-      }
-    })
+  async function handleCalculateTax() {
+    try {
+      const result = await calculatePropertyTax(property.id)
+      // 즉시 클라이언트 state 업데이트 (alert 없이 조용히 적용)
+      onChange({
+        prepaid_income_tax: result.income_tax,
+        prepaid_local_tax: result.local_tax,
+      })
+    } catch (e) {
+      alert(`세금 계산 실패: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  function handleOpenFolder() {
+    if (!clientFolder) {
+      alert(
+        '이 고객사에는 부동산 폴더 URL이 등록되어 있지 않습니다. 고객 정보에서 먼저 등록해주세요.',
+      )
+      return
+    }
+    window.open(clientFolder, '_blank', 'noopener,noreferrer')
   }
 
   const acquisitionTotal = useMemo(
@@ -231,10 +242,11 @@ export function PropertyDetailPanel({
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">기납부 종소세</label>
           <input
-            type="number"
-            value={property.prepaid_income_tax || ''}
+            type="text"
+            inputMode="numeric"
+            value={formatNumberWithCommas(property.prepaid_income_tax)}
             onChange={(e) =>
-              onChange({ prepaid_income_tax: Number(e.target.value) || 0 })
+              onChange({ prepaid_income_tax: parseNumberFromCommas(e.target.value) })
             }
             placeholder="0"
             className="w-full px-2 py-1 text-right border border-gray-200 rounded text-sm tabular-nums focus:border-indigo-500 focus:outline-none"
@@ -243,10 +255,11 @@ export function PropertyDetailPanel({
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">기납부 지방소득세</label>
           <input
-            type="number"
-            value={property.prepaid_local_tax || ''}
+            type="text"
+            inputMode="numeric"
+            value={formatNumberWithCommas(property.prepaid_local_tax)}
             onChange={(e) =>
-              onChange({ prepaid_local_tax: Number(e.target.value) || 0 })
+              onChange({ prepaid_local_tax: parseNumberFromCommas(e.target.value) })
             }
             placeholder="0"
             className="w-full px-2 py-1 text-right border border-gray-200 rounded text-sm tabular-nums focus:border-indigo-500 focus:outline-none"
@@ -278,66 +291,110 @@ export function PropertyDetailPanel({
         </div>
       </div>
 
-      {/* 진행단계 + 액션 버튼 */}
-      <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-gray-600">진행단계</label>
-          <select
-            value={property.progress_status}
-            onChange={(e) =>
-              onChange({
-                progress_status: e.target.value as TraderProperty['progress_status'],
-              })
-            }
-            className={`px-3 py-1 border rounded text-sm focus:border-indigo-500 focus:outline-none ${progressStyle.bg} ${progressStyle.text} ${progressStyle.border}`}
-          >
-            {PROGRESS_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* 진행단계 + 토지/건물면적 + 액션 버튼 */}
+      <div className="mb-4 pb-3 border-b border-gray-200">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-600 whitespace-nowrap">
+                진행단계
+              </label>
+              <select
+                value={property.progress_status}
+                onChange={(e) =>
+                  onChange({
+                    progress_status: e.target.value as TraderProperty['progress_status'],
+                  })
+                }
+                className={`px-3 py-1 border rounded text-sm focus:border-indigo-500 focus:outline-none ${progressStyle.bg} ${progressStyle.text} ${progressStyle.border}`}
+              >
+                {PROGRESS_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div className="flex items-center gap-1">
-          <button
-            disabled
-            type="button"
-            className="px-3 py-1 bg-red-100 text-red-700 text-xs rounded opacity-50 cursor-not-allowed flex items-center gap-1"
-            title="추후 작업 예정"
-          >
-            <FolderOpen size={11} /> 서류 업로드
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowReference(true)}
-            className="px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs rounded flex items-center gap-1"
-          >
-            <FileSearch size={11} /> 입력참고용
-          </button>
-          <button
-            type="button"
-            onClick={handleCalculateTax}
-            disabled={isPending}
-            className="px-3 py-1 bg-purple-100 text-purple-700 hover:bg-purple-200 text-xs rounded flex items-center gap-1 disabled:opacity-50"
-          >
-            <Calculator size={11} /> 세금계산
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowReport(true)}
-            className="px-3 py-1 bg-green-100 text-green-700 hover:bg-green-200 text-xs rounded flex items-center gap-1"
-          >
-            <FileText size={11} /> 보고서
-          </button>
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={isPending}
-            className="px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 text-xs rounded flex items-center gap-1 disabled:opacity-50"
-          >
-            <Trash2 size={11} /> 삭제
-          </button>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-600 whitespace-nowrap">
+                토지면적
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={formatNumberWithCommas(property.land_area)}
+                onChange={(e) =>
+                  onChange({ land_area: parseNumberFromCommas(e.target.value) })
+                }
+                placeholder="0"
+                className="w-24 px-2 py-1 border border-gray-200 rounded text-sm text-right tabular-nums focus:border-indigo-500 focus:outline-none"
+              />
+              <span className="text-xs text-gray-500">m²</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-600 whitespace-nowrap">
+                건물면적
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={formatNumberWithCommas(property.building_area)}
+                onChange={(e) =>
+                  onChange({ building_area: parseNumberFromCommas(e.target.value) })
+                }
+                placeholder="0"
+                className="w-24 px-2 py-1 border border-gray-200 rounded text-sm text-right tabular-nums focus:border-indigo-500 focus:outline-none"
+              />
+              <span className="text-xs text-gray-500">m²</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleOpenFolder}
+              disabled={!clientFolder}
+              title={
+                clientFolder
+                  ? '부동산 폴더 새 탭으로 열기'
+                  : '고객 정보에 부동산 폴더 URL을 먼저 등록하세요'
+              }
+              className="px-3 py-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 text-xs rounded flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <FolderOpen size={11} /> 부동산 폴더
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowReference(true)}
+              className="px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs rounded flex items-center gap-1"
+            >
+              <FileSearch size={11} /> 입력참고용
+            </button>
+            <button
+              type="button"
+              onClick={handleCalculateTax}
+              className="px-3 py-1 bg-purple-100 text-purple-700 hover:bg-purple-200 text-xs rounded flex items-center gap-1"
+            >
+              <Calculator size={11} /> 세금계산
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowReport(true)}
+              className="px-3 py-1 bg-green-100 text-green-700 hover:bg-green-200 text-xs rounded flex items-center gap-1"
+            >
+              <FileText size={11} /> 보고서
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isPending}
+              className="px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 text-xs rounded flex items-center gap-1 disabled:opacity-50"
+            >
+              <Trash2 size={11} /> 삭제
+            </button>
+          </div>
         </div>
       </div>
 
