@@ -5,8 +5,14 @@ import { createClient } from '@/lib/supabase/server'
 import {
   calculateTransferIncome,
   calculateFilingDeadline,
+  aggregateExpenses,
 } from '@/lib/calculators/property'
-import type { TraderProperty } from '@/types/database'
+import { listExpensesByProperty } from '@/lib/db/trader-properties'
+import type {
+  TraderExpenseCategory,
+  TraderProperty,
+  TraderPropertyExpense,
+} from '@/types/database'
 
 export interface UpdatePropertyInput {
   transfer_amount?: number
@@ -89,6 +95,102 @@ export async function updateProperty(
   if (error) throw new Error(error.message)
 
   revalidatePath(`/traders/${current.client_id}`)
+}
+
+/** 필요경비 10행 조회 (Client Component에서 호출용 래퍼) */
+export async function getExpenses(propertyId: string): Promise<TraderPropertyExpense[]> {
+  return listExpensesByProperty(propertyId)
+}
+
+export interface SaveExpenseRowInput {
+  row_no: number
+  expense_name: string | null
+  category: TraderExpenseCategory
+  amount: number
+  predeclaration_allowed: boolean
+  income_tax_allowed: boolean
+  memo: string | null
+}
+
+/**
+ * 필요경비 10행 저장 + 물건 마스터의 acquisition_amount/other_expenses 자동 합산
+ * 1) 기존 필요경비 행 전체 삭제 → 비용명/금액이 채워진 행만 INSERT
+ * 2) aggregateExpenses로 합산 (예정신고=true 항목만, category별)
+ * 3) 양도소득 재계산 (transfer_amount - acquisition_amount - other_expenses)
+ * 4) trader_properties 업데이트
+ */
+export async function saveExpenses(
+  propertyId: string,
+  rows: SaveExpenseRowInput[],
+): Promise<void> {
+  const supabase = await createClient()
+
+  const { error: deleteError } = await supabase
+    .from('trader_property_expenses')
+    .delete()
+    .eq('property_id', propertyId)
+
+  if (deleteError) throw new Error(deleteError.message)
+
+  const toInsert = rows
+    .filter((r) => (r.expense_name && r.expense_name.trim() !== '') || r.amount > 0)
+    .map((r) => ({
+      property_id: propertyId,
+      row_no: r.row_no,
+      expense_name: r.expense_name,
+      category: r.category,
+      amount: r.amount,
+      predeclaration_allowed: r.predeclaration_allowed,
+      income_tax_allowed: r.income_tax_allowed,
+      memo: r.memo,
+    }))
+
+  if (toInsert.length > 0) {
+    const { error: insertError } = await supabase
+      .from('trader_property_expenses')
+      .insert(toInsert)
+
+    if (insertError) throw new Error(insertError.message)
+  }
+
+  const { acquisition_amount, other_expenses } = aggregateExpenses(
+    rows.map((r) => ({
+      category: r.category,
+      amount: r.amount,
+      predeclaration_allowed: r.predeclaration_allowed,
+    })),
+  )
+
+  const { data: propertyRow, error: fetchError } = await supabase
+    .from('trader_properties')
+    .select('transfer_amount, client_id')
+    .eq('id', propertyId)
+    .single()
+
+  if (fetchError || !propertyRow) throw new Error('물건을 찾을 수 없습니다.')
+
+  const transferAmount = Number(propertyRow.transfer_amount) || 0
+  const transferIncome = calculateTransferIncome(
+    transferAmount,
+    acquisition_amount,
+    other_expenses,
+  )
+
+  const { error: updateError } = await supabase
+    .from('trader_properties')
+    .update({
+      acquisition_amount,
+      other_expenses,
+      transfer_income: transferIncome,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', propertyId)
+
+  if (updateError) throw new Error(updateError.message)
+
+  if (propertyRow.client_id) {
+    revalidatePath(`/traders/${propertyRow.client_id}`)
+  }
 }
 
 /** 물건 삭제 (v20a에서는 UI 비활성, 함수만 준비) */
