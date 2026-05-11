@@ -8,6 +8,10 @@ import {
 } from '@/lib/calculators/property'
 import { PROGRESS_STYLES } from '@/lib/constants/property-progress'
 import { autoFormatDate } from '@/lib/utils/format-date'
+import {
+  formatNumberWithCommas,
+  parseNumberFromCommas,
+} from '@/lib/utils/format-number'
 import type { TraderProperty } from '@/types/database'
 
 // 펼침 시에만 로드 (초기 로딩 가벼움)
@@ -24,12 +28,19 @@ const PropertyDetailPanel = dynamic(
 
 interface Props {
   property: TraderProperty
+  clientName: string
   isExpanded: boolean
   onToggle: () => void
   onChange: (updates: Partial<TraderProperty>) => void
 }
 
-function PropertyRowImpl({ property, isExpanded, onToggle, onChange }: Props) {
+function PropertyRowImpl({
+  property,
+  clientName,
+  isExpanded,
+  onToggle,
+  onChange,
+}: Props) {
   const transferIncome = useMemo(
     () =>
       calculateTransferIncome(
@@ -70,9 +81,12 @@ function PropertyRowImpl({ property, isExpanded, onToggle, onChange }: Props) {
         </td>
         <td className="px-3 py-2" onClick={stopToggle}>
           <input
-            type="number"
-            value={property.transfer_amount || ''}
-            onChange={(e) => onChange({ transfer_amount: Number(e.target.value) || 0 })}
+            type="text"
+            inputMode="numeric"
+            value={formatNumberWithCommas(property.transfer_amount)}
+            onChange={(e) =>
+              onChange({ transfer_amount: parseNumberFromCommas(e.target.value) })
+            }
             placeholder="0"
             className="w-full px-2 py-1 text-right border border-gray-200 rounded tabular-nums focus:border-indigo-500 focus:outline-none"
           />
@@ -129,6 +143,7 @@ function PropertyRowImpl({ property, isExpanded, onToggle, onChange }: Props) {
           <td colSpan={9} className="p-0">
             <PropertyDetailPanel
               property={property}
+              clientName={clientName}
               onChange={onChange}
               onCollapse={onToggle}
             />

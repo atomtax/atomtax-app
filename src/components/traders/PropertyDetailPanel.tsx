@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import {
   ChevronUp,
@@ -12,6 +13,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import {
+  calculatePropertyTax,
   deleteProperty,
   getExpenses,
   saveExpensesAndProperty,
@@ -19,24 +21,46 @@ import {
 import { EXPENSE_NAMES } from '@/lib/constants/property-expense'
 import { PROGRESS_OPTIONS, PROGRESS_STYLES } from '@/lib/constants/property-progress'
 import {
+  formatNumberWithCommas,
+  parseNumberFromCommas,
+} from '@/lib/utils/format-number'
+import {
   TRADER_EXPENSE_CATEGORY_OPTIONS,
   type TraderExpenseCategory,
   type TraderProperty,
   type TraderPropertyExpense,
 } from '@/types/database'
 
+// 모달은 클릭 시에만 로드
+const PropertyReferenceModal = dynamic(
+  () => import('./PropertyReferenceModal').then((m) => m.PropertyReferenceModal),
+  { ssr: false },
+)
+const PropertyReportModal = dynamic(
+  () => import('./PropertyReportModal').then((m) => m.PropertyReportModal),
+  { ssr: false },
+)
+
 interface Props {
   property: TraderProperty
+  clientName: string
   onChange: (updates: Partial<TraderProperty>) => void
   onCollapse: () => void
 }
 
-export function PropertyDetailPanel({ property, onChange, onCollapse }: Props) {
+export function PropertyDetailPanel({
+  property,
+  clientName,
+  onChange,
+  onCollapse,
+}: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [propertyName, setPropertyName] = useState(property.property_name)
   const [expenses, setExpenses] = useState<TraderPropertyExpense[]>([])
   const [loading, setLoading] = useState(true)
+  const [showReference, setShowReference] = useState(false)
+  const [showReport, setShowReport] = useState(false)
 
   // 펼침 시 필요경비 로드
   useEffect(() => {
@@ -130,6 +154,22 @@ export function PropertyDetailPanel({ property, onChange, onCollapse }: Props) {
         router.refresh()
       } catch (e) {
         alert(`삭제 실패: ${e instanceof Error ? e.message : String(e)}`)
+      }
+    })
+  }
+
+  function handleCalculateTax() {
+    startTransition(async () => {
+      try {
+        const result = await calculatePropertyTax(property.id)
+        const message =
+          result.transfer_income > 0
+            ? `세금 자동 계산 완료\n\n양도소득: ${result.transfer_income.toLocaleString('ko-KR')}원\n적용세율: ${result.applied_rate}%\n종합소득세: ${result.income_tax.toLocaleString('ko-KR')}원\n지방소득세: ${result.local_tax.toLocaleString('ko-KR')}원`
+            : '양도소득이 0 이하이므로 세금이 0원으로 설정되었습니다.'
+        alert(message)
+        router.refresh()
+      } catch (e) {
+        alert(`세금 계산 실패: ${e instanceof Error ? e.message : String(e)}`)
       }
     })
   }
@@ -264,31 +304,29 @@ export function PropertyDetailPanel({ property, onChange, onCollapse }: Props) {
             disabled
             type="button"
             className="px-3 py-1 bg-red-100 text-red-700 text-xs rounded opacity-50 cursor-not-allowed flex items-center gap-1"
-            title="v20d에서 활성화"
+            title="추후 작업 예정"
           >
             <FolderOpen size={11} /> 서류 업로드
           </button>
           <button
-            disabled
             type="button"
-            className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded opacity-50 cursor-not-allowed flex items-center gap-1"
-            title="v20d에서 활성화"
+            onClick={() => setShowReference(true)}
+            className="px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs rounded flex items-center gap-1"
           >
             <FileSearch size={11} /> 입력참고용
           </button>
           <button
-            disabled
             type="button"
-            className="px-3 py-1 bg-purple-100 text-purple-700 text-xs rounded opacity-50 cursor-not-allowed flex items-center gap-1"
-            title="v20d에서 활성화"
+            onClick={handleCalculateTax}
+            disabled={isPending}
+            className="px-3 py-1 bg-purple-100 text-purple-700 hover:bg-purple-200 text-xs rounded flex items-center gap-1 disabled:opacity-50"
           >
             <Calculator size={11} /> 세금계산
           </button>
           <button
-            disabled
             type="button"
-            className="px-3 py-1 bg-green-100 text-green-700 text-xs rounded opacity-50 cursor-not-allowed flex items-center gap-1"
-            title="v20d에서 활성화"
+            onClick={() => setShowReport(true)}
+            className="px-3 py-1 bg-green-100 text-green-700 hover:bg-green-200 text-xs rounded flex items-center gap-1"
           >
             <FileText size={11} /> 보고서
           </button>
@@ -305,7 +343,18 @@ export function PropertyDetailPanel({ property, onChange, onCollapse }: Props) {
 
       {/* 필요경비 상세 */}
       <div className="mb-3">
-        <h3 className="text-sm font-bold text-gray-700 mb-2">📋 필요경비 상세</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-bold text-gray-700">📋 필요경비 상세</h3>
+          <button
+            type="button"
+            onClick={handleSaveAll}
+            disabled={isPending}
+            className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-xs"
+          >
+            <Save size={12} />
+            {isPending ? '저장 중...' : '저장 및 반영'}
+          </button>
+        </div>
         {loading ? (
           <div className="p-6 text-center text-gray-400 text-sm bg-white border border-gray-200 rounded">
             필요경비 상세 로드 중...
@@ -375,10 +424,13 @@ export function PropertyDetailPanel({ property, onChange, onCollapse }: Props) {
                     </td>
                     <td className="px-2 py-1">
                       <input
-                        type="number"
-                        value={row.amount || ''}
+                        type="text"
+                        inputMode="numeric"
+                        value={formatNumberWithCommas(row.amount)}
                         onChange={(e) =>
-                          updateExpense(idx, { amount: Number(e.target.value) || 0 })
+                          updateExpense(idx, {
+                            amount: parseNumberFromCommas(e.target.value),
+                          })
                         }
                         placeholder="0"
                         className="w-full px-1 py-0.5 text-right border border-gray-200 rounded tabular-nums text-xs focus:border-indigo-500 focus:outline-none"
@@ -459,22 +511,24 @@ export function PropertyDetailPanel({ property, onChange, onCollapse }: Props) {
         )}
       </div>
 
-      <p className="text-xs text-gray-500 mb-3">
+      <p className="text-xs text-gray-500">
         💡 예정신고 비용인정이 <strong>O</strong>인 항목만 합계에 포함됩니다. [저장 및 반영]을
         누르면 메인 표의 모든 정보(물건명·취득가액·기타필요경비·양도소득)가 업데이트됩니다.
       </p>
 
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={handleSaveAll}
-          disabled={isPending}
-          className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-sm"
-        >
-          <Save size={14} />
-          {isPending ? '저장 중...' : '저장 및 반영'}
-        </button>
-      </div>
+      {showReference && (
+        <PropertyReferenceModal
+          property={property}
+          onClose={() => setShowReference(false)}
+        />
+      )}
+      {showReport && (
+        <PropertyReportModal
+          property={property}
+          clientName={clientName}
+          onClose={() => setShowReport(false)}
+        />
+      )}
     </div>
   )
 }
