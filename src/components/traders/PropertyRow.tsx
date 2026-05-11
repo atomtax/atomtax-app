@@ -28,12 +28,19 @@ const PropertyDetailPanel = dynamic(
 
 interface Props {
   property: TraderProperty
+  clientName: string
   isExpanded: boolean
   onToggle: () => void
   onChange: (updates: Partial<TraderProperty>) => void
 }
 
-function PropertyRowImpl({ property, isExpanded, onToggle, onChange }: Props) {
+function PropertyRowImpl({
+  property,
+  clientName,
+  isExpanded,
+  onToggle,
+  onChange,
+}: Props) {
   const transferIncome = useMemo(
     () =>
       calculateTransferIncome(
@@ -136,6 +143,7 @@ function PropertyRowImpl({ property, isExpanded, onToggle, onChange }: Props) {
           <td colSpan={9} className="p-0">
             <PropertyDetailPanel
               property={property}
+              clientName={clientName}
               onChange={onChange}
               onCollapse={onToggle}
             />

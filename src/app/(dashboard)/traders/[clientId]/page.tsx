@@ -41,7 +41,11 @@ export default async function TraderClientPage({ params }: Props) {
         </div>
       </div>
 
-      <PropertyListManager clientId={clientId} initialProperties={properties} />
+      <PropertyListManager
+        clientId={clientId}
+        clientName={client.company_name}
+        initialProperties={properties}
+      />
     </div>
   )
 }
