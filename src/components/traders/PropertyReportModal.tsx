@@ -1,11 +1,12 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Download, X } from 'lucide-react'
 import html2canvas from 'html2canvas'
+import { getExpenses } from '@/app/actions/trader-properties'
 import { calculateIncomeTax } from '@/lib/calculators/income-tax'
 import { formatNumberWithCommas } from '@/lib/utils/format-number'
-import type { TraderProperty } from '@/types/database'
+import type { TraderProperty, TraderPropertyExpense } from '@/types/database'
 
 interface Props {
   property: TraderProperty
@@ -14,8 +15,28 @@ interface Props {
 }
 
 export function PropertyReportModal({ property, clientName, onClose }: Props) {
-  const reportRef = useRef<HTMLDivElement>(null)
+  const page1Ref = useRef<HTMLDivElement>(null)
+  const page2Ref = useRef<HTMLDivElement>(null)
   const [downloading, setDownloading] = useState(false)
+  const [expenses, setExpenses] = useState<TraderPropertyExpense[]>([])
+  const [loadingExpenses, setLoadingExpenses] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    getExpenses(property.id)
+      .then((data) => {
+        if (!cancelled) {
+          setExpenses(data.filter((e) => Number(e.amount) > 0))
+          setLoadingExpenses(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setLoadingExpenses(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [property.id])
 
   const transferAmount = Number(property.transfer_amount) || 0
   const acquisitionAmount = Number(property.acquisition_amount) || 0
@@ -28,29 +49,39 @@ export function PropertyReportModal({ property, clientName, onClose }: Props) {
   if (transferIncome > 0) {
     appliedRate = calculateIncomeTax(transferIncome).rate
   }
-
   const totalTax = prepaidIncomeTax + prepaidLocalTax
 
+  const expensesTotal = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0)
+
   const today = new Date()
-  const todayIso = today.toISOString().split('T')[0]
   const todayLabel = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`
 
   async function handleDownload() {
-    if (!reportRef.current) return
+    if (!page1Ref.current || !page2Ref.current) return
 
     setDownloading(true)
     try {
-      const canvas = await html2canvas(reportRef.current, {
+      const canvas1 = await html2canvas(page1Ref.current, {
         scale: 2,
         backgroundColor: '#ffffff',
         logging: false,
       })
+      const link1 = document.createElement('a')
+      link1.download = `${property.property_name}_1(토지등매매차익예정신고 보고서).png`
+      link1.href = canvas1.toDataURL('image/png')
+      link1.click()
 
-      const link = document.createElement('a')
-      const filename = `토지등매매차익예정신고보고서_${clientName}_${property.property_name}_${todayIso}.png`
-      link.download = filename
-      link.href = canvas.toDataURL('image/png')
-      link.click()
+      await new Promise((resolve) => setTimeout(resolve, 300))
+
+      const canvas2 = await html2canvas(page2Ref.current, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        logging: false,
+      })
+      const link2 = document.createElement('a')
+      link2.download = `${property.property_name}_2(필요경비 상세).png`
+      link2.href = canvas2.toDataURL('image/png')
+      link2.click()
     } catch (e) {
       alert(`다운로드 실패: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
@@ -68,16 +99,16 @@ export function PropertyReportModal({ property, clientName, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white border-b border-gray-200 px-5 py-3 flex items-center justify-between z-10">
-          <h2 className="text-sm font-bold text-gray-700">📄 보고서 미리보기</h2>
+          <h2 className="text-sm font-bold text-gray-700">📄 보고서 미리보기 (2페이지)</h2>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleDownload}
-              disabled={downloading}
+              disabled={downloading || loadingExpenses}
               className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 disabled:opacity-50"
             >
               <Download size={14} />
-              {downloading ? '생성 중...' : 'PNG 다운로드'}
+              {downloading ? '생성 중...' : 'PNG 다운로드 (2장)'}
             </button>
             <button
               type="button"
@@ -89,7 +120,8 @@ export function PropertyReportModal({ property, clientName, onClose }: Props) {
           </div>
         </div>
 
-        <div ref={reportRef} className="p-8 bg-white" style={{ minWidth: '600px' }}>
+        {/* 페이지 1: 토지등 매매차익 예정신고 보고서 */}
+        <div ref={page1Ref} className="p-8 bg-white" style={{ minWidth: '600px' }}>
           <div
             className="text-center mb-6 pb-4"
             style={{ borderBottom: '3px solid #5b6cf0' }}
@@ -119,7 +151,9 @@ export function PropertyReportModal({ property, clientName, onClose }: Props) {
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">납부기한</p>
-              <p className="text-gray-900">{property.filing_deadline ?? '-'}</p>
+              <p style={{ color: '#dc2626', fontWeight: 700 }}>
+                {property.filing_deadline ?? '-'}
+              </p>
             </div>
             <div>
               <p className="text-xs text-gray-500 mb-1">비교과세</p>
@@ -203,6 +237,99 @@ export function PropertyReportModal({ property, clientName, onClose }: Props) {
               </tr>
             </tbody>
           </table>
+
+          <p className="text-xs text-gray-400 text-center mt-6 pt-3 border-t border-gray-100">
+            이 보고서는 아톰세무회계 내부 업무 시스템에서 자동 생성되었습니다.
+          </p>
+        </div>
+
+        <div className="bg-gray-100 py-2 text-center text-xs text-gray-400 border-y border-gray-200">
+          ─── 페이지 2 ───
+        </div>
+
+        {/* 페이지 2: 필요경비 상세 */}
+        <div ref={page2Ref} className="p-8 bg-white" style={{ minWidth: '600px' }}>
+          <div
+            className="text-center mb-6 pb-4"
+            style={{ borderBottom: '3px solid #5b6cf0' }}
+          >
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">필요경비 상세</h1>
+            <p className="text-sm text-gray-500">{todayLabel}</p>
+          </div>
+
+          <div className="bg-gray-50 rounded p-4 mb-6 grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">고객사명</p>
+              <p className="font-bold text-gray-900">{clientName}</p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">물건명</p>
+              <p className="font-bold text-gray-900">{property.property_name}</p>
+            </div>
+          </div>
+
+          {loadingExpenses ? (
+            <p className="text-center text-gray-400 py-8">필요경비 로드 중...</p>
+          ) : expenses.length === 0 ? (
+            <p className="text-center text-gray-400 py-8">입력된 필요경비가 없습니다.</p>
+          ) : (
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr
+                  style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                  }}
+                >
+                  <th className="px-3 py-2.5 text-center w-12">No</th>
+                  <th className="px-3 py-2.5 text-left">비용명</th>
+                  <th className="px-3 py-2.5 text-left">구분</th>
+                  <th className="px-3 py-2.5 text-right">금액</th>
+                  <th className="px-3 py-2.5 text-center w-16">
+                    예정
+                    <br />
+                    신고
+                  </th>
+                  <th className="px-3 py-2.5 text-center w-16">
+                    종소세
+                    <br />
+                    인정
+                  </th>
+                  <th className="px-3 py-2.5 text-left">비고</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expenses.map((row, idx) => (
+                  <tr key={row.id || idx} className="border-b border-gray-200">
+                    <td className="px-3 py-2 text-center text-gray-500">{idx + 1}</td>
+                    <td className="px-3 py-2">{row.expense_name ?? '-'}</td>
+                    <td className="px-3 py-2">{row.category}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {formatNumberWithCommas(row.amount) || '0'}원
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {row.predeclaration_allowed ? 'O' : 'X'}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {row.income_tax_allowed ? 'O' : 'X'}
+                    </td>
+                    <td className="px-3 py-2 text-xs text-gray-600">{row.memo ?? ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-indigo-50 border-t-2 border-indigo-300">
+                  <td colSpan={3} className="px-3 py-3 text-right font-bold text-gray-800">
+                    합계
+                  </td>
+                  <td className="px-3 py-3 text-right tabular-nums font-bold text-indigo-700">
+                    {formatNumberWithCommas(expensesTotal) || '0'}원
+                  </td>
+                  <td colSpan={3}></td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
 
           <p className="text-xs text-gray-400 text-center mt-6 pt-3 border-t border-gray-100">
             이 보고서는 아톰세무회계 내부 업무 시스템에서 자동 생성되었습니다.
