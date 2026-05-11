@@ -2,11 +2,30 @@ export type BusinessTypeCategory = '법인' | '개인'
 export type AdjustmentBusinessType = 'corporate' | 'individual'
 
 // ============================================================
-// 매매사업자 (Phase 3)
+// 매매사업자 (v20a)
 // ============================================================
 export const TRADER_BUSINESS_CODES = ['703011', '703012'] as const
-export type ProgressStatus = '미확인' | '진행중' | '완료'
-export const PROGRESS_STATUS_OPTIONS: ProgressStatus[] = ['미확인', '진행중', '완료']
+
+export type TraderProgressStatus =
+  | '미확인'
+  | '확인'
+  | '위하고입력'
+  | '고객안내'
+  | '신고완료'
+
+export const TRADER_PROGRESS_STATUS_OPTIONS: TraderProgressStatus[] = [
+  '미확인',
+  '확인',
+  '위하고입력',
+  '고객안내',
+  '신고완료',
+]
+
+export type TraderExpenseCategory = '취득가액' | '기타필요경비'
+export const TRADER_EXPENSE_CATEGORY_OPTIONS: TraderExpenseCategory[] = [
+  '취득가액',
+  '기타필요경비',
+]
 
 export interface Client {
   id: string
@@ -156,54 +175,49 @@ export interface AdjustmentInvoice {
 export type AdjustmentInvoiceInsert = Omit<AdjustmentInvoice, 'id' | 'created_at' | 'updated_at'>
 export type AdjustmentInvoiceUpdate = Partial<AdjustmentInvoiceInsert>
 
-export interface TraderInventory {
+export interface TraderProperty {
   id: string
-  client_id: string | null
-  property_address: string | null
-  property_type: string | null
+  client_id: string
+  property_name: string
+  display_order: number
+  acquisition_amount: number
+  other_expenses: number
+  transfer_amount: number
   acquisition_date: string | null
-  acquisition_price: number | null
   transfer_date: string | null
-  transfer_price: number | null
+  transfer_income: number
   filing_deadline: string | null
-  progress_status: ProgressStatus
-  is_taxable: boolean
-  output_vat: number | null
-  notes: string | null
+  prepaid_income_tax: number
+  prepaid_local_tax: number
+  location: string | null
+  is_85_over: boolean
+  comparison_taxation: boolean
+  progress_status: TraderProgressStatus
   created_at: string
   updated_at: string
 }
 
-export interface TraderInventoryWithClient extends TraderInventory {
-  client: {
-    id: string
-    company_name: string
-    representative: string | null
-    business_number: string | null
-    business_category_code: string | null
-  } | null
-}
+export type TraderPropertyInput = Omit<TraderProperty, 'id' | 'created_at' | 'updated_at'>
+export type TraderPropertyInsert = TraderPropertyInput
+export type TraderPropertyUpdate = Partial<TraderPropertyInput>
 
-export interface Expense {
+export interface TraderPropertyExpense {
   id: string
-  trader_inventory_id: string | null
-  client_id: string | null
-  expense_date: string | null
-  category: string | null
+  property_id: string
+  row_no: number
+  expense_name: string | null
+  category: TraderExpenseCategory
   amount: number
-  description: string | null
-  input_vat: number | null
-  receipt_url: string | null
+  predeclaration_allowed: boolean
+  income_tax_allowed: boolean
+  memo: string | null
   created_at: string
   updated_at: string
 }
 
-export type TraderInventoryInput = Omit<TraderInventory, 'id' | 'created_at' | 'updated_at'>
-export type TraderInventoryInsert = TraderInventoryInput
-export type TraderInventoryUpdate = Partial<TraderInventoryInput>
-export type ExpenseInput = Omit<Expense, 'id' | 'created_at' | 'updated_at'>
-export type ExpenseInsert = ExpenseInput
-export type ExpenseUpdate = Partial<ExpenseInput>
+export type TraderPropertyExpenseInput = Omit<TraderPropertyExpense, 'id' | 'created_at' | 'updated_at'>
+export type TraderPropertyExpenseInsert = TraderPropertyExpenseInput
+export type TraderPropertyExpenseUpdate = Partial<TraderPropertyExpenseInput>
 
 // ============================================================
 // 종합소득세 보고서 (v19)
