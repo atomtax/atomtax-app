@@ -1,6 +1,7 @@
 'use client'
 
 import { memo, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import {
   calculateFilingDeadline,
   calculateTransferIncome,
@@ -8,7 +9,18 @@ import {
 import { PROGRESS_STYLES } from '@/lib/constants/property-progress'
 import { autoFormatDate } from '@/lib/utils/format-date'
 import type { TraderProperty } from '@/types/database'
-import { PropertyDetailPanel } from './PropertyDetailPanel'
+
+// 펼침 시에만 로드 (초기 로딩 가벼움)
+const PropertyDetailPanel = dynamic(
+  () => import('./PropertyDetailPanel').then((m) => m.PropertyDetailPanel),
+  {
+    loading: () => (
+      <div className="px-4 py-6 text-center text-gray-400 text-sm border-l-4 border-indigo-300 bg-gray-50">
+        로드 중...
+      </div>
+    ),
+  },
+)
 
 interface Props {
   property: TraderProperty
