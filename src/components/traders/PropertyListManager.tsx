@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useCallback, useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Save, Building, FileText, FolderOpen } from 'lucide-react'
 import { addProperty, updateProperty } from '@/app/actions/trader-properties'
@@ -16,10 +16,8 @@ export function PropertyListManager({ clientId, initialProperties }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [properties, setProperties] = useState<TraderProperty[]>(initialProperties)
-  const [expandedExpenses, setExpandedExpenses] = useState<Set<string>>(new Set())
-  const [expandedMeta, setExpandedMeta] = useState<Set<string>>(new Set())
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
-  // 서버 측 데이터 변경(router.refresh) 시 클라이언트 state 동기화
   useEffect(() => {
     setProperties(initialProperties)
   }, [initialProperties])
@@ -35,29 +33,23 @@ export function PropertyListManager({ clientId, initialProperties }: Props) {
     })
   }
 
-  function toggleExpenseDetail(propertyId: string) {
-    setExpandedExpenses((prev) => {
+  const toggleExpand = useCallback((propertyId: string) => {
+    setExpandedRows((prev) => {
       const next = new Set(prev)
       if (next.has(propertyId)) next.delete(propertyId)
       else next.add(propertyId)
       return next
     })
-  }
+  }, [])
 
-  function toggleMetaDetail(propertyId: string) {
-    setExpandedMeta((prev) => {
-      const next = new Set(prev)
-      if (next.has(propertyId)) next.delete(propertyId)
-      else next.add(propertyId)
-      return next
-    })
-  }
-
-  function handlePropertyChange(propertyId: string, updates: Partial<TraderProperty>) {
-    setProperties((prev) =>
-      prev.map((p) => (p.id === propertyId ? { ...p, ...updates } : p)),
-    )
-  }
+  const handlePropertyChange = useCallback(
+    (propertyId: string, updates: Partial<TraderProperty>) => {
+      setProperties((prev) =>
+        prev.map((p) => (p.id === propertyId ? { ...p, ...updates } : p)),
+      )
+    },
+    [],
+  )
 
   function handleSaveAll() {
     startTransition(async () => {
@@ -95,7 +87,7 @@ export function PropertyListManager({ clientId, initialProperties }: Props) {
             disabled
             type="button"
             className="px-3 py-1.5 bg-yellow-100 text-yellow-800 text-sm rounded opacity-50 cursor-not-allowed flex items-center gap-1"
-            title="v20b/c에서 활성화"
+            title="v20d에서 활성화"
           >
             <FolderOpen size={14} /> 부동산 폴더
           </button>
@@ -103,7 +95,7 @@ export function PropertyListManager({ clientId, initialProperties }: Props) {
             disabled
             type="button"
             className="px-3 py-1.5 bg-purple-100 text-purple-800 text-sm rounded opacity-50 cursor-not-allowed flex items-center gap-1"
-            title="v20b/c에서 활성화"
+            title="v20d에서 활성화"
           >
             <FileText size={14} /> 체크리스트
           </button>
@@ -124,12 +116,13 @@ export function PropertyListManager({ clientId, initialProperties }: Props) {
               <th className="px-3 py-2 text-center font-semibold text-yellow-700 bg-yellow-50">
                 신고기한
               </th>
+              <th className="px-3 py-2 text-center font-semibold text-gray-700">진행단계</th>
             </tr>
           </thead>
           <tbody>
             {properties.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                <td colSpan={9} className="px-4 py-12 text-center text-gray-400">
                   물건이 없습니다. 아래 [+ 행 추가] 버튼을 눌러 추가하세요.
                 </td>
               </tr>
@@ -138,10 +131,8 @@ export function PropertyListManager({ clientId, initialProperties }: Props) {
                 <PropertyRow
                   key={property.id}
                   property={property}
-                  isExpenseExpanded={expandedExpenses.has(property.id)}
-                  isMetaExpanded={expandedMeta.has(property.id)}
-                  onToggleExpense={() => toggleExpenseDetail(property.id)}
-                  onToggleMeta={() => toggleMetaDetail(property.id)}
+                  isExpanded={expandedRows.has(property.id)}
+                  onToggle={() => toggleExpand(property.id)}
                   onChange={(updates) => handlePropertyChange(property.id, updates)}
                 />
               ))
