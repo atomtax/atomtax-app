@@ -46,12 +46,12 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    label: '매매사업자',
+    label: '매매사업자 관리',
     icon: <Building2 size={18} />,
     children: [
-      { label: '물건 목록', href: '/traders' },
-      { label: '체크리스트', href: '/traders/checklist' },
-      { label: '부가세 계산', href: '/traders/vat' },
+      { label: '매매사업자 데이터', href: '/traders' },
+      { label: '매매사업자 체크리스트', href: '/traders/checklist' },
+      { label: '부가가치세 계산', href: '/traders/vat' },
     ],
   },
   {
