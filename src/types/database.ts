@@ -193,6 +193,8 @@ export interface TraderProperty {
   is_85_over: boolean
   comparison_taxation: boolean
   progress_status: TraderProgressStatus
+  land_area: number
+  building_area: number
   created_at: string
   updated_at: string
 }
