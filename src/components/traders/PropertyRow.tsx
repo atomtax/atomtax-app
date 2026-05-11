@@ -29,6 +29,7 @@ const PropertyDetailPanel = dynamic(
 interface Props {
   property: TraderProperty
   clientName: string
+  clientFolder: string | null
   isExpanded: boolean
   onToggle: () => void
   onChange: (updates: Partial<TraderProperty>) => void
@@ -37,6 +38,7 @@ interface Props {
 function PropertyRowImpl({
   property,
   clientName,
+  clientFolder,
   isExpanded,
   onToggle,
   onChange,
@@ -144,6 +146,7 @@ function PropertyRowImpl({
             <PropertyDetailPanel
               property={property}
               clientName={clientName}
+              clientFolder={clientFolder}
               onChange={onChange}
               onCollapse={onToggle}
             />

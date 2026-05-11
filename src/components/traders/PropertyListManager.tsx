@@ -10,12 +10,14 @@ import type { TraderProperty } from '@/types/database'
 interface Props {
   clientId: string
   clientName: string
+  clientFolder: string | null
   initialProperties: TraderProperty[]
 }
 
 export function PropertyListManager({
   clientId,
   clientName,
+  clientFolder,
   initialProperties,
 }: Props) {
   const router = useRouter()
@@ -137,6 +139,7 @@ export function PropertyListManager({
                   key={property.id}
                   property={property}
                   clientName={clientName}
+                  clientFolder={clientFolder}
                   isExpanded={expandedRows.has(property.id)}
                   onToggle={() => toggleExpand(property.id)}
                   onChange={(updates) => handlePropertyChange(property.id, updates)}

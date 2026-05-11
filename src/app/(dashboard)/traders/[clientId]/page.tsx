@@ -44,6 +44,7 @@ export default async function TraderClientPage({ params }: Props) {
       <PropertyListManager
         clientId={clientId}
         clientName={client.company_name}
+        clientFolder={client.trader_drive_folder_url}
         initialProperties={properties}
       />
     </div>
