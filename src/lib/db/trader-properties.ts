@@ -1,5 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
-import { TRADER_BUSINESS_CODES, type Client, type TraderProperty } from '@/types/database'
+import {
+  TRADER_BUSINESS_CODES,
+  type Client,
+  type TraderProperty,
+  type TraderPropertyExpense,
+} from '@/types/database'
 
 export interface TraderClientSummary {
   id: string
@@ -75,4 +80,48 @@ export async function getTraderClient(clientId: string): Promise<Client | null> 
 
   if (error) return null
   return data as Client
+}
+
+/**
+ * 특정 물건의 필요경비 10행 로드
+ * - DB에 저장된 행을 row_no 슬롯에 매핑
+ * - 비어있는 슬롯은 기본값 객체로 채워 항상 길이 10인 배열 반환
+ */
+export async function listExpensesByProperty(
+  propertyId: string,
+): Promise<TraderPropertyExpense[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('trader_property_expenses')
+    .select('*')
+    .eq('property_id', propertyId)
+    .order('row_no', { ascending: true })
+
+  if (error) throw new Error(error.message)
+
+  const existing = (data ?? []) as TraderPropertyExpense[]
+  const result: TraderPropertyExpense[] = []
+  for (let i = 1; i <= 10; i++) {
+    const match = existing.find((e) => e.row_no === i)
+    if (match) {
+      result.push(match)
+    } else {
+      result.push({
+        id: '',
+        property_id: propertyId,
+        row_no: i,
+        expense_name: null,
+        category: '취득가액',
+        amount: 0,
+        predeclaration_allowed: true,
+        income_tax_allowed: true,
+        memo: null,
+        created_at: '',
+        updated_at: '',
+      })
+    }
+  }
+
+  return result
 }
