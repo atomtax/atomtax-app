@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Save, Building, FileText, FolderOpen } from 'lucide-react'
 import { addProperty, updateProperty } from '@/app/actions/trader-properties'
@@ -16,7 +16,13 @@ export function PropertyListManager({ clientId, initialProperties }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [properties, setProperties] = useState<TraderProperty[]>(initialProperties)
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const [expandedExpenses, setExpandedExpenses] = useState<Set<string>>(new Set())
+  const [expandedMeta, setExpandedMeta] = useState<Set<string>>(new Set())
+
+  // 서버 측 데이터 변경(router.refresh) 시 클라이언트 state 동기화
+  useEffect(() => {
+    setProperties(initialProperties)
+  }, [initialProperties])
 
   function handleAddRow() {
     startTransition(async () => {
@@ -29,8 +35,17 @@ export function PropertyListManager({ clientId, initialProperties }: Props) {
     })
   }
 
-  function toggleExpand(propertyId: string) {
-    setExpandedRows((prev) => {
+  function toggleExpenseDetail(propertyId: string) {
+    setExpandedExpenses((prev) => {
+      const next = new Set(prev)
+      if (next.has(propertyId)) next.delete(propertyId)
+      else next.add(propertyId)
+      return next
+    })
+  }
+
+  function toggleMetaDetail(propertyId: string) {
+    setExpandedMeta((prev) => {
       const next = new Set(prev)
       if (next.has(propertyId)) next.delete(propertyId)
       else next.add(propertyId)
@@ -123,8 +138,10 @@ export function PropertyListManager({ clientId, initialProperties }: Props) {
                 <PropertyRow
                   key={property.id}
                   property={property}
-                  isExpanded={expandedRows.has(property.id)}
-                  onToggle={() => toggleExpand(property.id)}
+                  isExpenseExpanded={expandedExpenses.has(property.id)}
+                  isMetaExpanded={expandedMeta.has(property.id)}
+                  onToggleExpense={() => toggleExpenseDetail(property.id)}
+                  onToggleMeta={() => toggleMetaDetail(property.id)}
                   onChange={(updates) => handlePropertyChange(property.id, updates)}
                 />
               ))
