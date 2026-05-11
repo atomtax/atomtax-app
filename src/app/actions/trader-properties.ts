@@ -206,6 +206,8 @@ export interface SavePropertyMeta {
   transfer_amount?: number
   acquisition_date?: string | null
   transfer_date?: string | null
+  land_area?: number
+  building_area?: number
 }
 
 /**
@@ -312,42 +314,33 @@ export async function deleteProperty(propertyId: string): Promise<void> {
 export interface CalculatePropertyTaxResult {
   income_tax: number
   local_tax: number
-  applied_rate: number
-  transfer_income: number
 }
 
 /**
- * 세금계산 버튼 동작:
- *  - 양도소득 × 종합소득세 누진세율 → 종합소득세
- *  - 종합소득세 × 10% → 지방소득세
- *  - 양도소득이 0 이하면 세금 0원
- *  - 기존 값이 있어도 조용히 덮어쓰기 (사용자 정책)
+ * 세금계산: 최소 쿼리 + 빠른 동기 적용
+ * - select 최소 (transfer_income만)
+ * - revalidatePath 제거 (클라이언트가 onChange로 즉시 state 업데이트)
+ * - 반환값 최소화 (alert 없이 바로 input 칸에 반영)
  */
 export async function calculatePropertyTax(
   propertyId: string,
 ): Promise<CalculatePropertyTaxResult> {
   const supabase = await createClient()
 
-  const { data: property, error: fetchError } = await supabase
+  const { data, error } = await supabase
     .from('trader_properties')
-    .select('client_id, transfer_income')
+    .select('transfer_income')
     .eq('id', propertyId)
     .single()
 
-  if (fetchError || !property) {
-    throw new Error('물건을 찾을 수 없습니다.')
-  }
+  if (error || !data) throw new Error('물건을 찾을 수 없습니다.')
 
-  const transferIncome = Number(property.transfer_income) || 0
+  const transferIncome = Number(data.transfer_income) || 0
 
   let incomeTax = 0
-  let appliedRate = 0
   if (transferIncome > 0) {
-    const result = calculateIncomeTax(transferIncome)
-    incomeTax = result.tax
-    appliedRate = result.rate
+    incomeTax = calculateIncomeTax(transferIncome).tax
   }
-
   const localTax = Math.floor(incomeTax * 0.1)
 
   const { error: updateError } = await supabase
@@ -355,20 +348,10 @@ export async function calculatePropertyTax(
     .update({
       prepaid_income_tax: incomeTax,
       prepaid_local_tax: localTax,
-      updated_at: new Date().toISOString(),
     })
     .eq('id', propertyId)
 
   if (updateError) throw new Error(updateError.message)
 
-  if (property.client_id) {
-    revalidatePath(`/traders/${property.client_id}`)
-  }
-
-  return {
-    income_tax: incomeTax,
-    local_tax: localTax,
-    applied_rate: appliedRate,
-    transfer_income: transferIncome,
-  }
+  return { income_tax: incomeTax, local_tax: localTax }
 }
