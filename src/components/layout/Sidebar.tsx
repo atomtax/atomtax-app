@@ -150,6 +150,13 @@ export default function Sidebar() {
                       <Link
                         key={child.href}
                         href={child.href}
+                        onClick={(e) => {
+                          // 같은 경로면 강제 새로고침 (Next.js Link는 same-path 시 동작 안 함)
+                          if (pathname === child.href) {
+                            e.preventDefault()
+                            window.location.reload()
+                          }
+                        }}
                         className={`flex items-center gap-3 pl-12 pr-5 py-2 text-sm transition-colors ${
                           isChildActive
                             ? 'text-indigo-600 bg-indigo-50 font-medium border-r-2 border-indigo-600'
