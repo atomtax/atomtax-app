@@ -7,6 +7,7 @@ import {
   calculateFilingDeadline,
   aggregateExpenses,
 } from '@/lib/calculators/property'
+import { calculateIncomeTax } from '@/lib/calculators/income-tax'
 import { listExpensesByProperty } from '@/lib/db/trader-properties'
 import type {
   TraderExpenseCategory,
@@ -306,4 +307,68 @@ export async function deleteProperty(propertyId: string): Promise<void> {
   if (error) throw new Error(error.message)
 
   if (clientId) revalidatePath(`/traders/${clientId}`)
+}
+
+export interface CalculatePropertyTaxResult {
+  income_tax: number
+  local_tax: number
+  applied_rate: number
+  transfer_income: number
+}
+
+/**
+ * 세금계산 버튼 동작:
+ *  - 양도소득 × 종합소득세 누진세율 → 종합소득세
+ *  - 종합소득세 × 10% → 지방소득세
+ *  - 양도소득이 0 이하면 세금 0원
+ *  - 기존 값이 있어도 조용히 덮어쓰기 (사용자 정책)
+ */
+export async function calculatePropertyTax(
+  propertyId: string,
+): Promise<CalculatePropertyTaxResult> {
+  const supabase = await createClient()
+
+  const { data: property, error: fetchError } = await supabase
+    .from('trader_properties')
+    .select('client_id, transfer_income')
+    .eq('id', propertyId)
+    .single()
+
+  if (fetchError || !property) {
+    throw new Error('물건을 찾을 수 없습니다.')
+  }
+
+  const transferIncome = Number(property.transfer_income) || 0
+
+  let incomeTax = 0
+  let appliedRate = 0
+  if (transferIncome > 0) {
+    const result = calculateIncomeTax(transferIncome)
+    incomeTax = result.tax
+    appliedRate = result.rate
+  }
+
+  const localTax = Math.floor(incomeTax * 0.1)
+
+  const { error: updateError } = await supabase
+    .from('trader_properties')
+    .update({
+      prepaid_income_tax: incomeTax,
+      prepaid_local_tax: localTax,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', propertyId)
+
+  if (updateError) throw new Error(updateError.message)
+
+  if (property.client_id) {
+    revalidatePath(`/traders/${property.client_id}`)
+  }
+
+  return {
+    income_tax: incomeTax,
+    local_tax: localTax,
+    applied_rate: appliedRate,
+    transfer_income: transferIncome,
+  }
 }
