@@ -5,15 +5,25 @@ import {
   calculateFilingDeadline,
 } from '@/lib/calculators/property'
 import { TRADER_PROGRESS_STATUS_OPTIONS, type TraderProperty } from '@/types/database'
+import { PropertyExpenseDetail } from './PropertyExpenseDetail'
 
 interface Props {
   property: TraderProperty
-  isExpanded: boolean
-  onToggle: () => void
+  isExpenseExpanded: boolean
+  isMetaExpanded: boolean
+  onToggleExpense: () => void
+  onToggleMeta: () => void
   onChange: (updates: Partial<TraderProperty>) => void
 }
 
-export function PropertyRow({ property, isExpanded, onToggle, onChange }: Props) {
+export function PropertyRow({
+  property,
+  isExpenseExpanded,
+  isMetaExpanded,
+  onToggleExpense,
+  onToggleMeta,
+  onChange,
+}: Props) {
   const transferIncome = calculateTransferIncome(
     Number(property.transfer_amount) || 0,
     Number(property.acquisition_amount) || 0,
@@ -22,25 +32,35 @@ export function PropertyRow({ property, isExpanded, onToggle, onChange }: Props)
 
   const filingDeadline = calculateFilingDeadline(property.transfer_date)
 
+  // input/date 셀 클릭 시 메타 펼침 트리거 차단
+  const stopMetaToggle = (e: React.MouseEvent) => e.stopPropagation()
+
   return (
     <>
       <tr className="border-b border-gray-100 hover:bg-gray-50">
         <td className="px-3 py-2">
           <button
             type="button"
-            onClick={onToggle}
+            onClick={onToggleExpense}
             className="text-indigo-600 hover:underline font-medium"
           >
             {property.property_name}
+            <span className="ml-1 text-xs">{isExpenseExpanded ? '▾' : '▸'}</span>
           </button>
         </td>
-        <td className="px-3 py-2 text-right tabular-nums bg-blue-50">
+        <td
+          className="px-3 py-2 text-right tabular-nums bg-blue-50 cursor-pointer"
+          onClick={onToggleMeta}
+        >
           {Number(property.acquisition_amount).toLocaleString('ko-KR')}
         </td>
-        <td className="px-3 py-2 text-right tabular-nums bg-green-50">
+        <td
+          className="px-3 py-2 text-right tabular-nums bg-green-50 cursor-pointer"
+          onClick={onToggleMeta}
+        >
           {Number(property.other_expenses).toLocaleString('ko-KR')}
         </td>
-        <td className="px-3 py-2">
+        <td className="px-3 py-2" onClick={stopMetaToggle}>
           <input
             type="number"
             value={property.transfer_amount || ''}
@@ -50,13 +70,14 @@ export function PropertyRow({ property, isExpanded, onToggle, onChange }: Props)
           />
         </td>
         <td
-          className={`px-3 py-2 text-right tabular-nums font-medium ${
+          className={`px-3 py-2 text-right tabular-nums font-medium cursor-pointer ${
             transferIncome < 0 ? 'text-red-600 bg-yellow-50' : 'bg-yellow-50'
           }`}
+          onClick={onToggleMeta}
         >
           {transferIncome.toLocaleString('ko-KR')}
         </td>
-        <td className="px-3 py-2">
+        <td className="px-3 py-2" onClick={stopMetaToggle}>
           <input
             type="date"
             value={property.acquisition_date ?? ''}
@@ -64,7 +85,7 @@ export function PropertyRow({ property, isExpanded, onToggle, onChange }: Props)
             className="px-2 py-1 border border-gray-200 rounded text-xs focus:border-indigo-500 focus:outline-none"
           />
         </td>
-        <td className="px-3 py-2">
+        <td className="px-3 py-2" onClick={stopMetaToggle}>
           <input
             type="date"
             value={property.transfer_date ?? ''}
@@ -72,12 +93,23 @@ export function PropertyRow({ property, isExpanded, onToggle, onChange }: Props)
             className="px-2 py-1 border border-gray-200 rounded text-xs focus:border-indigo-500 focus:outline-none"
           />
         </td>
-        <td className="px-3 py-2 text-center text-xs bg-yellow-50">
+        <td
+          className="px-3 py-2 text-center text-xs bg-yellow-50 cursor-pointer"
+          onClick={onToggleMeta}
+        >
           {filingDeadline ?? '-'}
         </td>
       </tr>
 
-      {isExpanded && (
+      {isExpenseExpanded && (
+        <tr className="border-b border-gray-200">
+          <td colSpan={8} className="p-0">
+            <PropertyExpenseDetail propertyId={property.id} />
+          </td>
+        </tr>
+      )}
+
+      {isMetaExpanded && (
         <tr className="border-b border-gray-200 bg-gray-50">
           <td colSpan={8} className="px-3 py-3">
             <div className="grid grid-cols-6 gap-3 mb-3">
