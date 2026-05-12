@@ -16,6 +16,7 @@
     "jspdf": "^4.2.1",
     "lucide-react": "^0.511.0",
     "next": "15.5.15",
+    "pdf-parse": "^2.4.5",
     "react": "^19.2.5",
     "react-daum-postcode": "^4.0.0",
     "react-dom": "^19.2.5",
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@types/node": "^20",
+    "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.0.1",
