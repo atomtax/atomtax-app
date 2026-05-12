@@ -232,7 +232,7 @@ async function getLandValueByPnu(pnu: string): Promise<LandValueResult | null> {
   const url = new URL(VWORLD_LAND_PRICE)
   url.searchParams.set('pnu', pnu)
   url.searchParams.set('format', 'json')
-  url.searchParams.set('numOfRows', '30')
+  url.searchParams.set('numOfRows', '1000')
   url.searchParams.set('pageNo', '1')
   url.searchParams.set('key', apiKey)
   url.searchParams.set('domain', getBrowserDomain())
