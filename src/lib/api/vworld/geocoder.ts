@@ -3,7 +3,7 @@
  * 도로명 시도 후 실패하면 지번으로 폴백.
  */
 
-import { vworldFetch } from './client'
+import { getVworldDomain, vworldFetch } from './client'
 
 const VWORLD_BASE = 'https://api.vworld.kr/req/address'
 
@@ -44,6 +44,7 @@ async function geocodeOnce(
   url.searchParams.set('address', address)
   url.searchParams.set('format', 'json')
   url.searchParams.set('key', apiKey)
+  url.searchParams.set('domain', getVworldDomain())
 
   const data = (await vworldFetch(url)) as GeocodeApiResponse | null
   if (!data?.response || data.response.status !== 'OK') return null
