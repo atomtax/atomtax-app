@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import { geocodeAddress, getLandValueByPoint } from '@/lib/api/vworld'
 
+// VWorld는 한국 공공 API — 미국 region에서 호출 시 IP/네트워크 차단 가능성.
+// 이 라우트만 서울(icn1) region에서 실행하여 우회.
+export const runtime = 'nodejs'
+export const preferredRegion = 'icn1'
+
 export type LookupLandValueResponse =
   | {
       ok: true
