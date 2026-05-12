@@ -173,6 +173,16 @@ interface LandPriceItem {
 }
 
 interface LandPriceApiResponse {
+  // 실제 응답: indvdLandPrices.field 배열에 데이터
+  indvdLandPrices?: {
+    field?: LandPriceItem[]
+    totalCount?: string | number
+    numOfRows?: string | number
+    pageNo?: string | number
+    resultCode?: string
+    resultMsg?: string
+  }
+  // 백업 폴백 (구조 변경 대비)
   response?: {
     status?: string
     result?: {
@@ -187,12 +197,31 @@ interface LandPriceApiResponse {
 }
 
 function extractLandPriceItems(data: LandPriceApiResponse): LandPriceItem[] {
+  // 우선: indvdLandPrices.field (실제 응답 구조)
+  const field = data.indvdLandPrices?.field
+  if (field && Array.isArray(field)) return field
+  // 백업: response.result.items / item / body.items
   const result = data.response?.result
   if (result?.items && Array.isArray(result.items)) return result.items
   if (result?.item && Array.isArray(result.item)) return result.item
   const bodyItems = data.response?.body?.items
   if (bodyItems && Array.isArray(bodyItems)) return bodyItems
   return []
+}
+
+function extractPriceFromItem(item: LandPriceItem): number {
+  const candidates: unknown[] = [
+    item.pblntfPclnd,
+    (item as Record<string, unknown>).pblntf_pclnd,
+    (item as Record<string, unknown>).pblntfPclndAmount,
+    (item as Record<string, unknown>).price,
+  ]
+  for (const c of candidates) {
+    if (c === undefined || c === null || c === '') continue
+    const n = Number(c)
+    if (Number.isFinite(n) && n > 0) return n
+  }
+  return 0
 }
 
 /** PNU로 개별공시지가 조회 (가장 최근 공시연도 반환) */
@@ -215,10 +244,26 @@ async function getLandValueByPnu(pnu: string): Promise<LandValueResult | null> {
     console.warn('[vworld-browser] land-value no response')
     return null
   }
-  if (data?.response?.status && data.response.status !== 'OK') {
+
+  // 1) 백업 구조의 status (있다면 실패)
+  if (data.response?.status && data.response.status !== 'OK') {
     console.warn(
-      `[vworld-browser] land-value status=${data?.response?.status}`,
-      data?.response?.error,
+      `[vworld-browser] land-value status=${data.response.status}`,
+      data.response.error,
+    )
+    return null
+  }
+  // 2) 실제 구조의 resultCode (빈 문자열/'00'/'NORMAL'은 성공)
+  const resultCode = data.indvdLandPrices?.resultCode
+  if (
+    resultCode !== undefined &&
+    resultCode !== '' &&
+    resultCode !== '00' &&
+    resultCode !== 'NORMAL'
+  ) {
+    console.warn(
+      `[vworld-browser] land-value resultCode=${resultCode}`,
+      data.indvdLandPrices?.resultMsg,
     )
     return null
   }
@@ -228,6 +273,9 @@ async function getLandValueByPnu(pnu: string): Promise<LandValueResult | null> {
     console.warn('[vworld-browser] no land price records for this pnu')
     return null
   }
+  console.log(
+    `[vworld-browser] found ${items.length} records (total: ${data.indvdLandPrices?.totalCount ?? '?'})`,
+  )
 
   const sorted = [...items].sort((a, b) => {
     const yearA = Number(a.stdrYear ?? 0)
@@ -239,9 +287,9 @@ async function getLandValueByPnu(pnu: string): Promise<LandValueResult | null> {
   })
 
   const latest = sorted[0]
-  const price = Number(latest.pblntfPclnd)
-  if (!Number.isFinite(price) || price <= 0) {
-    console.warn('[vworld-browser] invalid price value', latest.pblntfPclnd)
+  const price = extractPriceFromItem(latest)
+  if (price <= 0) {
+    console.warn('[vworld-browser] invalid price value', latest)
     return null
   }
 
