@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   AlertCircle,
   CheckCircle2,
@@ -8,7 +8,7 @@ import {
   RefreshCw,
   Search,
 } from 'lucide-react'
-import { DecimalInput } from './NumberInput'
+import { AreaInput } from './AreaInput'
 
 type Status = 'idle' | 'looking' | 'success' | 'failed' | 'needDongHo'
 
@@ -39,15 +39,18 @@ interface Props {
   onChange: (v: number) => void
   /** VWorld 자동조회로 얻은 PNU (없으면 자동조회 안 함) */
   pnu: string
-  /** "상세 위치" 입력 — "302동 407호" 등 */
-  detailLocation: string
+  dongInput: string
+  hoInput: string
+  isBasement: boolean
 }
 
 export function BuildingAreaField({
   value,
   onChange,
   pnu,
-  detailLocation,
+  dongInput,
+  hoInput,
+  isBasement,
 }: Props) {
   const [status, setStatus] = useState<Status>('idle')
   const [info, setInfo] = useState<SuccessInfo | null>(null)
@@ -58,7 +61,9 @@ export function BuildingAreaField({
     async (force = false) => {
       console.log('[building-area] triggerLookup called', {
         pnu,
-        detailLocation,
+        dongInput,
+        hoInput,
+        isBasement,
         force,
       })
       if (!pnu) {
@@ -66,7 +71,7 @@ export function BuildingAreaField({
         setStatus('idle')
         return
       }
-      const key = `${pnu}|${detailLocation}`
+      const key = `${pnu}|${dongInput}|${hoInput}|${isBasement}`
       if (!force && lastKeyRef.current === key) return
       lastKeyRef.current = key
 
@@ -75,7 +80,7 @@ export function BuildingAreaField({
         const res = await fetch('/api/calculator/lookup-building-area', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pnu, detailLocation }),
+          body: JSON.stringify({ pnu, dongInput, hoInput, isBasement }),
         })
         const json = (await res.json()) as LookupResponse
         console.log('[building-area] response:', json)
@@ -106,22 +111,8 @@ export function BuildingAreaField({
         setStatus('failed')
       }
     },
-    [pnu, detailLocation, onChange],
+    [pnu, dongInput, hoInput, isBasement, onChange],
   )
-
-  // PNU 또는 detailLocation 변경 시 자동 트리거
-  useEffect(() => {
-    console.log('[building-area] useEffect fired', {
-      pnu,
-      detailLocation,
-      status,
-    })
-    if (!pnu) return
-    const key = `${pnu}|${detailLocation}`
-    if (lastKeyRef.current === key) return
-    triggerLookup(false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pnu, detailLocation])
 
   return (
     <div className="space-y-1.5">
@@ -162,7 +153,7 @@ export function BuildingAreaField({
         </div>
       </div>
 
-      <DecimalInput
+      <AreaInput
         value={value}
         onChange={(v) => {
           onChange(v)
@@ -171,7 +162,7 @@ export function BuildingAreaField({
             setInfo(null)
           }
         }}
-        placeholder="예: 242.8263"
+        placeholder="예: 242.83"
       />
 
       <p className="text-xs text-gray-500">
@@ -206,7 +197,7 @@ export function BuildingAreaField({
         ) : status === 'failed' ? (
           '자동 조회에 실패했습니다. 직접 입력하거나 자동계산 모달에서 건축물대장 PDF 업로드를 사용하세요.'
         ) : (
-          '공용부 + 전유부 모두 포함합니다. 주소 검색 시 자동 조회됩니다.'
+          '공용부 + 전유부 모두 포함합니다. [자동조회] 버튼을 클릭하세요.'
         )}
       </p>
     </div>

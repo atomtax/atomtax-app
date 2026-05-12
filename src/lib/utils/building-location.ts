@@ -1,46 +1,40 @@
 /**
- * 사용자의 "상세 위치" 입력에서 동/호 추출.
- * 추출 실패 시 null (집합건물 아닌 것으로 간주).
+ * 사용자의 동/호/지하 입력 → 건축물대장 API 파라미터 변환.
  *
- * 지원 형식:
- *  - "101동 801호", "302동 407호"
- *  - "B동 1502호" (영문 동)
- *  - "302-407", "302 407"
- *  - "407호" (동 단일인 경우)
+ * 변환 규칙:
+ *  - hoInput="407", isBasement=false → hoNm="407호"
+ *  - hoInput="407", isBasement=true  → hoNm="B407호"
+ *  - hoInput=""                       → hoNm="" (조회 안 됨)
+ *  - dongInput="302"                  → dongNm="302"
+ *
+ * 동/호 모두 비어있으면 null (단독주택 케이스, 표제부 조회 모드).
  */
 
-export interface DongHo {
+export interface DongHoInput {
+  dongInput: string
+  hoInput: string
+  isBasement: boolean
+}
+
+export interface DongHoApiParams {
   dongNm: string
   hoNm: string
 }
 
-export function parseDongHo(input: string | null | undefined): DongHo | null {
-  if (!input) return null
-  const trimmed = input.trim()
-  if (!trimmed) return null
+export function buildDongHoApiParams(
+  input: DongHoInput,
+): DongHoApiParams | null {
+  const dong = input.dongInput.trim()
+  const ho = input.hoInput.trim()
 
-  // 패턴 1: "302동 407호", "B동 1502호"
-  const p1 = /^([\w가-힣]+)\s*동\s+([\w가-힣]+)\s*호?\s*$/i
-  const m1 = trimmed.match(p1)
-  if (m1) {
-    const ho = m1[2].endsWith('호') ? m1[2] : `${m1[2]}호`
-    return { dongNm: m1[1], hoNm: ho }
+  if (!dong && !ho) return null
+
+  let hoNm = ''
+  if (ho) {
+    const prefix = input.isBasement ? 'B' : ''
+    const suffix = ho.endsWith('호') ? '' : '호'
+    hoNm = `${prefix}${ho}${suffix}`
   }
 
-  // 패턴 2: "302-407", "302,407"
-  const p2 = /^([\w가-힣]+)[-,\s]+([\w가-힣]+)호?\s*$/i
-  const m2 = trimmed.match(p2)
-  if (m2) {
-    const ho = m2[2].endsWith('호') ? m2[2] : `${m2[2]}호`
-    return { dongNm: m2[1], hoNm: ho }
-  }
-
-  // 패턴 3: "407호" 또는 "407"만
-  const p3 = /^(\d+)\s*호?\s*$/
-  const m3 = trimmed.match(p3)
-  if (m3) {
-    return { dongNm: '', hoNm: `${m3[1]}호` }
-  }
-
-  return null
+  return { dongNm: dong, hoNm }
 }
