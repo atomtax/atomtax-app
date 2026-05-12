@@ -108,7 +108,7 @@ function getBrowserDomain(): string {
  * 좌표 → PNU (필지 고유번호 19자리).
  * VWorld 연속지적도 데이터(LP_PA_CBND_BUBUN) 활용.
  */
-async function getPnuByPoint(x: number, y: number): Promise<string | null> {
+export async function getPnuByPoint(x: number, y: number): Promise<string | null> {
   const apiKey = process.env.NEXT_PUBLIC_VWORLD_API_KEY
   if (!apiKey) {
     console.error('[vworld-browser] NEXT_PUBLIC_VWORLD_API_KEY not set')
@@ -224,7 +224,7 @@ function extractPriceFromItem(item: LandPriceItem): number {
 }
 
 /** PNU로 개별공시지가 조회 (가장 최근 공시연도 반환) */
-async function getLandValueByPnu(pnu: string): Promise<LandValueResult | null> {
+export async function getLandValueByPnu(pnu: string): Promise<LandValueResult | null> {
   const apiKey = process.env.NEXT_PUBLIC_VWORLD_API_KEY
   if (!apiKey) return null
 
