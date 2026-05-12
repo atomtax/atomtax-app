@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useMemo, useState, useTransition } from 'react'
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import { fetchChecklist } from '@/app/actions/checklist'
+import { createClient as createBrowserClient } from '@/lib/supabase/client'
 import {
   filterByManager,
   filterByMonth,
@@ -62,6 +63,32 @@ export function ChecklistClient({ initialRows, options }: Props) {
       }
     })
   }, [])
+
+  // Realtime 구독: trader_properties 변경 감지 → refetch
+  // + 탭 활성화(visibilitychange) 시에도 refetch
+  useEffect(() => {
+    const supabase = createBrowserClient()
+    const channel = supabase
+      .channel('trader_properties_checklist')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'trader_properties' },
+        () => {
+          refetch()
+        },
+      )
+      .subscribe()
+
+    function onVisibility() {
+      if (document.visibilityState === 'visible') refetch()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      supabase.removeChannel(channel)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [refetch])
 
   // 낙관적 업데이트: 단일 row의 progress_status를 즉시 반영
   const applyOptimisticStatus = useCallback(
