@@ -42,7 +42,7 @@ export function ChecklistHeader({
       </div>
 
       <div className="flex items-center gap-2">
-        <label className="text-xs font-medium text-gray-600 whitespace-nowrap">년월</label>
+        <label className="text-xs font-medium text-gray-600 whitespace-nowrap">신고기한</label>
         <select
           value={yearMonth}
           onChange={(e) => onYearMonthChange(e.target.value)}
