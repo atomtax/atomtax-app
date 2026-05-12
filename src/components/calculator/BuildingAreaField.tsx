@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import {
   AlertCircle,
   CheckCircle2,
@@ -114,22 +114,6 @@ export function BuildingAreaField({
     [pnu, dongInput, hoInput, isBasement, onChange],
   )
 
-  // PNU 또는 동/호/지하 변경 시 자동 트리거
-  useEffect(() => {
-    console.log('[building-area] useEffect fired', {
-      pnu,
-      dongInput,
-      hoInput,
-      isBasement,
-      status,
-    })
-    if (!pnu) return
-    const key = `${pnu}|${dongInput}|${hoInput}|${isBasement}`
-    if (lastKeyRef.current === key) return
-    triggerLookup(false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pnu, dongInput, hoInput, isBasement])
-
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-2">
@@ -213,7 +197,7 @@ export function BuildingAreaField({
         ) : status === 'failed' ? (
           '자동 조회에 실패했습니다. 직접 입력하거나 자동계산 모달에서 건축물대장 PDF 업로드를 사용하세요.'
         ) : (
-          '공용부 + 전유부 모두 포함합니다. 주소 검색 시 자동 조회됩니다.'
+          '공용부 + 전유부 모두 포함합니다. [자동조회] 버튼을 클릭하세요.'
         )}
       </p>
     </div>
