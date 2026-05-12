@@ -162,11 +162,27 @@ export interface ExposResult {
   hoNm: string
 }
 
+/**
+ * 문자열에서 첫 번째 연속 숫자 그룹 추출.
+ *  - "가락금호아파트 105동 105동" → "105"
+ *  - "1702호" → "1702"
+ *  - "B1호" → "1"
+ *  - "상가동" → ""
+ */
+function extractNumber(s: unknown): string {
+  const str = String(s ?? '')
+  const match = str.match(/\d+/)
+  return match ? match[0] : ''
+}
+
 export async function getExposPubuseArea(
   parts: PnuParts,
   dongNm: string,
   hoNm: string,
 ): Promise<ExposResult | null> {
+  // dongNm은 API 측 literal과 형식이 달라 매칭 실패가 잦음
+  // (예: 사용자 "105" vs API "가락금호아파트 105동 105동")
+  // → API 파라미터에서 dongNm 제거, 전체 응답을 받아 클라이언트에서 숫자 일치로 필터링
   const params: Record<string, string> = {
     sigunguCd: parts.sigunguCd,
     bjdongCd: parts.bjdongCd,
@@ -175,7 +191,6 @@ export async function getExposPubuseArea(
     ji: parts.ji,
     hoNm,
   }
-  if (dongNm) params.dongNm = dongNm
 
   const items = await fetchApi<BrExposItem>(
     'getBrExposPubuseAreaInfo',
@@ -183,16 +198,53 @@ export async function getExposPubuseArea(
   )
   if (items.length === 0) return null
 
+  const targetDongNum = extractNumber(dongNm)
+  const targetHoNum = extractNumber(hoNm)
+
   let exposArea = 0
   let pubuseArea = 0
+  let matchedDongNm = ''
+  let matchedHoNm = ''
+  let matchedCount = 0
+
   for (const item of items) {
     const area = Number(item.area)
     if (!Number.isFinite(area) || area <= 0) continue
-    if (hoNm && item.hoNm && item.hoNm !== hoNm) continue
-    if (dongNm && item.dongNm && item.dongNm !== dongNm) continue
+
+    const itemDongNum = extractNumber(item.dongNm)
+    const itemHoNum = extractNumber(item.hoNm)
+
+    if (targetDongNum) {
+      if (!itemDongNum || itemDongNum !== targetDongNum) continue
+    }
+    if (targetHoNum) {
+      if (!itemHoNum || itemHoNum !== targetHoNum) continue
+    }
+
+    matchedCount++
+    if (!matchedDongNm) matchedDongNm = String(item.dongNm ?? '')
+    if (!matchedHoNm) matchedHoNm = String(item.hoNm ?? '')
+
     if (item.exposPubuseGbCdNm === '전유') exposArea += area
     else if (item.exposPubuseGbCdNm === '공용') pubuseArea += area
   }
+
+  console.log('[building-cert] exposPubuse summary', {
+    totalItems: items.length,
+    matched: matchedCount,
+    targetDongNum,
+    targetHoNum,
+    sampleResponses: items.slice(0, 5).map((i) => ({
+      hoNm: i.hoNm,
+      dongNm: i.dongNm,
+      dongNum: extractNumber(i.dongNm),
+      hoNum: extractNumber(i.hoNm),
+      area: i.area,
+      type: i.exposPubuseGbCdNm,
+    })),
+    exposArea,
+    pubuseArea,
+  })
 
   if (exposArea + pubuseArea <= 0) return null
 
@@ -200,7 +252,7 @@ export async function getExposPubuseArea(
     totalArea: exposArea + pubuseArea,
     exposArea,
     pubuseArea,
-    dongNm,
-    hoNm,
+    dongNm: dongNm || matchedDongNm,
+    hoNm: hoNm || matchedHoNm,
   }
 }
