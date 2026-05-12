@@ -131,7 +131,6 @@ async function getPnuByPoint(x: number, y: number): Promise<string | null> {
   url.searchParams.set('domain', getBrowserDomain())
 
   const data = await vworldJsonp<PnuApiResponse>(url)
-  console.log('[vworld-browser debug] pnu lookup response:', data)
 
   if (!data) {
     console.warn('[vworld-browser] pnu lookup no response')
@@ -238,7 +237,6 @@ async function getLandValueByPnu(pnu: string): Promise<LandValueResult | null> {
   url.searchParams.set('domain', getBrowserDomain())
 
   const data = await vworldJsonp<LandPriceApiResponse>(url)
-  console.log('[vworld-browser debug] land-value response:', data)
 
   if (!data) {
     console.warn('[vworld-browser] land-value no response')
@@ -273,9 +271,6 @@ async function getLandValueByPnu(pnu: string): Promise<LandValueResult | null> {
     console.warn('[vworld-browser] no land price records for this pnu')
     return null
   }
-  console.log(
-    `[vworld-browser] found ${items.length} records (total: ${data.indvdLandPrices?.totalCount ?? '?'})`,
-  )
 
   const sorted = [...items].sort((a, b) => {
     const yearA = Number(a.stdrYear ?? 0)
