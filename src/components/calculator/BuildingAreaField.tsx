@@ -56,7 +56,13 @@ export function BuildingAreaField({
 
   const triggerLookup = useCallback(
     async (force = false) => {
+      console.log('[building-area] triggerLookup called', {
+        pnu,
+        detailLocation,
+        force,
+      })
       if (!pnu) {
+        console.log('[building-area] no pnu, skip')
         setStatus('idle')
         return
       }
@@ -72,6 +78,7 @@ export function BuildingAreaField({
           body: JSON.stringify({ pnu, detailLocation }),
         })
         const json = (await res.json()) as LookupResponse
+        console.log('[building-area] response:', json)
         if (json.ok) {
           onChange(json.totalArea)
           setInfo({
@@ -104,6 +111,11 @@ export function BuildingAreaField({
 
   // PNU 또는 detailLocation 변경 시 자동 트리거
   useEffect(() => {
+    console.log('[building-area] useEffect fired', {
+      pnu,
+      detailLocation,
+      status,
+    })
     if (!pnu) return
     const key = `${pnu}|${detailLocation}`
     if (lastKeyRef.current === key) return
@@ -119,12 +131,22 @@ export function BuildingAreaField({
         </label>
         <div className="flex items-center gap-2">
           <StatusBadge status={status} />
-          {pnu && status !== 'looking' && (
+          {status !== 'looking' && (
             <button
               type="button"
-              onClick={() => triggerLookup(true)}
+              onClick={() => {
+                if (!pnu) {
+                  alert(
+                    '먼저 주소를 검색해주세요. 토지공시지가 자동조회가 완료되면 건물면적도 조회됩니다.',
+                  )
+                  return
+                }
+                triggerLookup(true)
+              }}
               className="text-xs px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 inline-flex items-center gap-1"
-              title="건축물대장에서 다시 조회"
+              title={
+                pnu ? '건축물대장에서 다시 조회' : '먼저 주소를 검색하세요'
+              }
             >
               {status === 'success' ? (
                 <>
