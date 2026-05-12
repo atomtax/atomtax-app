@@ -11,6 +11,7 @@ import {
   BarChart3,
   ChevronDown,
   ChevronRight,
+  ExternalLink,
   LogOut,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -58,7 +59,7 @@ const navItems: NavItem[] = [
     children: [
       { label: '매매사업자 데이터', href: '/traders' },
       { label: '매매사업자 체크리스트', href: '/traders/checklist' },
-      { label: '부가가치세 계산', href: '/traders/vat' },
+      { label: '부가가치세 계산', href: '/calculator/vat', external: true },
     ],
   },
   {
@@ -167,6 +168,22 @@ export default function Sidebar() {
                 <div className="bg-gray-50">
                   {item.children.map((child) => {
                     const isChildActive = !child.external && child.href === activeChildHref
+
+                    if (child.external) {
+                      return (
+                        <a
+                          key={child.href}
+                          href={child.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 pl-12 pr-5 py-2 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                        >
+                          <span className="flex-1">{child.label}</span>
+                          <ExternalLink size={12} className="opacity-60" />
+                        </a>
+                      )
+                    }
+
                     return (
                       <Link
                         key={child.href}
