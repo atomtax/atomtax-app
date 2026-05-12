@@ -3,14 +3,16 @@ import {
   getExposPubuseArea,
   getTitleInfo,
 } from '@/lib/api/building-cert/server'
-import { parseDongHo } from '@/lib/utils/building-location'
+import { buildDongHoApiParams } from '@/lib/utils/building-location'
 import { parsePnu } from '@/lib/utils/pnu'
 
 export const runtime = 'nodejs'
 
 export interface LookupBuildingAreaRequest {
   pnu: string
-  detailLocation?: string
+  dongInput?: string
+  hoInput?: string
+  isBasement?: boolean
 }
 
 export type LookupBuildingAreaResponse =
@@ -51,11 +53,19 @@ export async function POST(
       return NextResponse.json({ ok: false, reason: 'INVALID_PNU' })
     }
 
-    const dongHo = parseDongHo(body.detailLocation ?? '')
+    const apiParams = buildDongHoApiParams({
+      dongInput: body.dongInput ?? '',
+      hoInput: body.hoInput ?? '',
+      isBasement: body.isBasement ?? false,
+    })
 
-    // 1) 동/호수 있으면 전유공용면적 조회 우선
-    if (dongHo) {
-      const result = await getExposPubuseArea(parts, dongHo.dongNm, dongHo.hoNm)
+    // 동/호 있으면 전유공용면적 조회 우선
+    if (apiParams) {
+      const result = await getExposPubuseArea(
+        parts,
+        apiParams.dongNm,
+        apiParams.hoNm,
+      )
       if (result) {
         return NextResponse.json({
           ok: true,
@@ -67,21 +77,20 @@ export async function POST(
           hoNm: result.hoNm,
         })
       }
-      // 폴백: 전유공용 실패 시 표제부로 진행
+      // 폴백: 표제부 시도
     }
 
-    // 2) 표제부 조회
     const titleResult = await getTitleInfo(parts)
     if (!titleResult) {
       return NextResponse.json({ ok: false, reason: 'NO_DATA' })
     }
 
-    if (titleResult.isCollective && !dongHo) {
+    if (titleResult.isCollective && !apiParams) {
       return NextResponse.json({
         ok: false,
         reason: 'NO_DONG_HO_FOR_COLLECTIVE',
         message:
-          '집합건물(아파트/다세대)입니다. 상세 위치란에 동/호수를 입력해주세요.',
+          '집합건물(아파트/다세대)입니다. 동/호를 입력하고 다시 조회해주세요.',
       })
     }
 

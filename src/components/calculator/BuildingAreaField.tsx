@@ -52,13 +52,6 @@ export function BuildingAreaField({
   hoInput,
   isBasement,
 }: Props) {
-  // TODO Step 3에서 새 API 흐름으로 교체 — 일단 호환용 detailLocation 합성
-  const detailLocation = [
-    dongInput.trim() ? `${dongInput.trim()}동` : '',
-    hoInput.trim() ? `${isBasement ? 'B' : ''}${hoInput.trim()}호` : '',
-  ]
-    .filter(Boolean)
-    .join(' ')
   const [status, setStatus] = useState<Status>('idle')
   const [info, setInfo] = useState<SuccessInfo | null>(null)
   const [needDongHoMessage, setNeedDongHoMessage] = useState<string | null>(null)
@@ -68,7 +61,9 @@ export function BuildingAreaField({
     async (force = false) => {
       console.log('[building-area] triggerLookup called', {
         pnu,
-        detailLocation,
+        dongInput,
+        hoInput,
+        isBasement,
         force,
       })
       if (!pnu) {
@@ -76,7 +71,7 @@ export function BuildingAreaField({
         setStatus('idle')
         return
       }
-      const key = `${pnu}|${detailLocation}`
+      const key = `${pnu}|${dongInput}|${hoInput}|${isBasement}`
       if (!force && lastKeyRef.current === key) return
       lastKeyRef.current = key
 
@@ -85,7 +80,7 @@ export function BuildingAreaField({
         const res = await fetch('/api/calculator/lookup-building-area', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pnu, detailLocation }),
+          body: JSON.stringify({ pnu, dongInput, hoInput, isBasement }),
         })
         const json = (await res.json()) as LookupResponse
         console.log('[building-area] response:', json)
@@ -116,22 +111,24 @@ export function BuildingAreaField({
         setStatus('failed')
       }
     },
-    [pnu, detailLocation, onChange],
+    [pnu, dongInput, hoInput, isBasement, onChange],
   )
 
-  // PNU 또는 detailLocation 변경 시 자동 트리거
+  // PNU 또는 동/호/지하 변경 시 자동 트리거
   useEffect(() => {
     console.log('[building-area] useEffect fired', {
       pnu,
-      detailLocation,
+      dongInput,
+      hoInput,
+      isBasement,
       status,
     })
     if (!pnu) return
-    const key = `${pnu}|${detailLocation}`
+    const key = `${pnu}|${dongInput}|${hoInput}|${isBasement}`
     if (lastKeyRef.current === key) return
     triggerLookup(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pnu, detailLocation])
+  }, [pnu, dongInput, hoInput, isBasement])
 
   return (
     <div className="space-y-1.5">
