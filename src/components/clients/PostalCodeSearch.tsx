@@ -2,21 +2,6 @@
 
 import { useEffect } from 'react'
 
-declare global {
-  interface Window {
-    daum: {
-      Postcode: new (config: {
-        oncomplete: (data: {
-          zonecode: string
-          roadAddress: string
-          jibunAddress: string
-          buildingName?: string
-        }) => void
-      }) => { open: () => void }
-    }
-  }
-}
-
 type Props = {
   onComplete: (data: { postalCode: string; address: string }) => void
   children: (open: () => void) => React.ReactNode
