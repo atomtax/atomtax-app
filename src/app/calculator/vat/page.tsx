@@ -19,9 +19,10 @@ const FEATURES: { label: string; description: string; available: boolean }[] = [
     available: true,
   },
   {
-    label: '토지공시지가 조회',
-    description: '공공데이터포털 API 연동으로 자동 조회 (2단계 예정).',
-    available: false,
+    label: '토지공시지가 자동 조회',
+    description:
+      'VWorld API로 주소 → 개별공시지가 자동 매핑 (실패 시 직접 입력 폴백).',
+    available: true,
   },
   {
     label: 'OCR 자동 추출',

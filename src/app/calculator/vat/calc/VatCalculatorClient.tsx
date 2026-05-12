@@ -7,6 +7,7 @@ import {
   AddressSearchInput,
   type AddressSelection,
 } from '@/components/calculator/AddressSearchInput'
+import { LandValueField } from '@/components/calculator/LandValueField'
 import { DecimalInput, NumberInput } from '@/components/calculator/NumberInput'
 import { VatResultPanel } from '@/components/calculator/VatResultPanel'
 import {
@@ -153,17 +154,11 @@ export function VatCalculatorClient() {
           </p>
         </div>
 
-        <Field
-          label="토지공시지가(원/㎡)"
-          required
-          hint="realtyprice.kr에서 개별공시지가 최근자 확인"
-        >
-          <NumberInput
-            value={form.landUnitPrice}
-            onChange={(v) => update('landUnitPrice', v)}
-            placeholder="예: 3,553,000"
-          />
-        </Field>
+        <LandValueField
+          value={form.landUnitPrice}
+          onChange={(v) => update('landUnitPrice', v)}
+          address={form.address}
+        />
 
         <Field
           label="건물기준시가 (전체 금액, 원)"
