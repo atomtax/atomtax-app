@@ -21,6 +21,9 @@ export default function InvoiceRow({ row, onChangeCell, onPrint, onDelete }: Pro
           onChange={(e) => onChangeCell(row.rowId, 'selected', e.target.checked)}
         />
       </td>
+      <td className="p-2 text-center text-sm text-gray-700 whitespace-nowrap">
+        {row.manager ?? '-'}
+      </td>
       <td className="p-1 min-w-[120px]">
         <input
           type="text"
