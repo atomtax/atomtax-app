@@ -50,6 +50,7 @@ export function VatCalculatorClient() {
   const [resultSellingPrice, setResultSellingPrice] = useState<number>(0)
   const [showBuildingCalc, setShowBuildingCalc] = useState(false)
   const [downloading, setDownloading] = useState(false)
+  const [pnu, setPnu] = useState<string>('')
   const captureRef = useRef<HTMLDivElement>(null)
 
   async function handleDownloadPng() {
@@ -89,6 +90,7 @@ export function VatCalculatorClient() {
     setError(null)
     setResult(null)
     setResultSellingPrice(0)
+    setPnu('')
   }
 
   function handleCalculate() {
@@ -186,6 +188,7 @@ export function VatCalculatorClient() {
           value={form.landUnitPrice}
           onChange={(v) => update('landUnitPrice', v)}
           address={form.address}
+          onPnuResolved={setPnu}
         />
 
         <Field

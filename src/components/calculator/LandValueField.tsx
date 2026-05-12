@@ -18,6 +18,8 @@ interface Props {
   /** 도로명/지번 주소 — 변경 시 자동 조회 트리거 */
   address: string
   onAutoLookupDone?: (landValuePerSqm: number) => void
+  /** PNU(19자리)가 확인되면 호출 — 부모에서 건물면적 자동 조회용 */
+  onPnuResolved?: (pnu: string) => void
 }
 
 export function LandValueField({
@@ -25,6 +27,7 @@ export function LandValueField({
   onChange,
   address,
   onAutoLookupDone,
+  onPnuResolved,
 }: Props) {
   const [status, setStatus] = useState<AutoLookupStatus>('idle')
   const [fiscalYear, setFiscalYear] = useState<number | undefined>()
@@ -59,12 +62,13 @@ export function LandValueField({
         setNoticeDate(land.noticeDate)
         setStatus('success')
         onAutoLookupDone?.(land.landValuePerSqm)
+        if (land.pnu) onPnuResolved?.(land.pnu)
       } catch (e) {
         console.error('[land-value lookup]', e)
         setStatus('failed')
       }
     },
-    [address, onChange, onAutoLookupDone, status],
+    [address, onChange, onAutoLookupDone, onPnuResolved, status],
   )
 
   // 주소가 새로 들어오면 자동 트리거 (한 주소당 1회)
