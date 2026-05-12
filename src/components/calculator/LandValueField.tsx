@@ -122,12 +122,40 @@ export function LandValueField({
       />
 
       <p className="text-xs text-gray-500">
-        {status === 'success' && fiscalYear
-          ? `${fiscalYear}년 공시 (${noticeDate ?? '공시일자 미상'}) — VWorld API 자동 조회`
-          : status === 'failed'
-            ? '자동 조회에 실패했습니다. 직접 입력하거나 다시 시도하세요.'
-            : 'realtyprice.kr에서 개별공시지가 최근자 확인 가능 (주소 검색 시 자동 조회됩니다)'}
+        {status === 'success' && fiscalYear ? (
+          <>
+            {fiscalYear}년 공시 ({noticeDate ?? '공시일자 미상'}) — VWorld API 자동 조회.{' '}
+            실제 최신값은{' '}
+            <RealtyPriceLink />
+            에서 비교하세요.
+          </>
+        ) : status === 'failed' ? (
+          <>
+            자동 조회에 실패했습니다. 직접 입력하거나{' '}
+            <RealtyPriceLink />
+            에서 확인하세요.
+          </>
+        ) : (
+          <>
+            주소 검색 시 자동 조회됩니다. 실제 최신값은{' '}
+            <RealtyPriceLink />
+            에서 확인 가능합니다.
+          </>
+        )}
       </p>
     </div>
+  )
+}
+
+function RealtyPriceLink() {
+  return (
+    <a
+      href="https://www.realtyprice.kr/notice/gsindividual/search.htm"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-indigo-600 hover:text-indigo-700 underline"
+    >
+      개별공시지가 조회
+    </a>
   )
 }
