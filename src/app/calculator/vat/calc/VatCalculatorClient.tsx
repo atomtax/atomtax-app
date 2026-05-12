@@ -146,14 +146,6 @@ export function VatCalculatorClient() {
       <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
         <h2 className="text-sm font-bold text-gray-800">💰 조회 정보</h2>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-blue-800 leading-relaxed">
-          <p className="font-semibold mb-1">ℹ️ 조회 정보 안내</p>
-          <p>
-            토지공시지가는 <a className="underline" href="https://www.realtyprice.kr" target="_blank" rel="noopener noreferrer">개별공시지가 조회</a>에서,
-            건물기준시가는 <a className="underline" href="https://xn--mq1bt2icze.com" target="_blank" rel="noopener noreferrer">건물기준시가 계산기</a>에서 확인 후 입력하세요.
-          </p>
-        </div>
-
         <LandValueField
           value={form.landUnitPrice}
           onChange={(v) => update('landUnitPrice', v)}
