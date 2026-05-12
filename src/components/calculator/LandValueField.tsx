@@ -4,22 +4,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { RefreshCw, Search } from 'lucide-react'
 import { AutoLookupBadge, type AutoLookupStatus } from './AutoLookupBadge'
 import {
+  geocodeAddress,
+  getLandValueByPoint,
+} from '@/lib/api/vworld/browser'
+import {
   formatNumberWithCommas,
   parseNumberFromCommas,
 } from '@/lib/utils/format-number'
-
-interface LookupSuccess {
-  ok: true
-  landValuePerSqm: number
-  pnu: string
-  fiscalYear?: number
-  noticeDate?: string
-}
-interface LookupFailure {
-  ok: false
-  reason: string
-}
-type LookupResponse = LookupSuccess | LookupFailure
 
 interface Props {
   value: number
@@ -53,21 +44,21 @@ export function LandValueField({
       lastLookedUpRef.current = trimmed
       setStatus('looking')
       try {
-        const res = await fetch('/api/calculator/lookup-land-value', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: trimmed }),
-        })
-        const json = (await res.json()) as LookupResponse
-        if (json.ok) {
-          onChange(json.landValuePerSqm)
-          setFiscalYear(json.fiscalYear)
-          setNoticeDate(json.noticeDate)
-          setStatus('success')
-          onAutoLookupDone?.(json.landValuePerSqm)
-        } else {
+        const geo = await geocodeAddress(trimmed)
+        if (!geo) {
           setStatus('failed')
+          return
         }
+        const land = await getLandValueByPoint(geo.x, geo.y)
+        if (!land) {
+          setStatus('failed')
+          return
+        }
+        onChange(land.landValuePerSqm)
+        setFiscalYear(land.fiscalYear)
+        setNoticeDate(land.noticeDate)
+        setStatus('success')
+        onAutoLookupDone?.(land.landValuePerSqm)
       } catch (e) {
         console.error('[land-value lookup]', e)
         setStatus('failed')
