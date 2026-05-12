@@ -67,6 +67,7 @@ export default function ExcelImportModal({
           businessNumber,
           clientId: matched?.id ?? null,
           clientName: String(r['고객사명'] ?? matched?.company_name ?? ''),
+          manager: matched?.manager ?? null,
           revenue,
           settlementFee: calc.settlementFee,
           adjustmentFee: calc.adjustmentFee,

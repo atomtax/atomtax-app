@@ -20,6 +20,7 @@ export type RowState = {
   businessNumber: string
   clientId: string | null
   clientName: string
+  manager: string | null
   revenue: number
   settlementFee: number
   adjustmentFee: number
@@ -57,7 +58,15 @@ export default function AdjustmentInvoiceManager({
   const [pendingManagerFilter, setPendingManagerFilter] = useState('all')
   const [appliedManagerFilter, setAppliedManagerFilter] = useState('all')
 
-  const [rows, setRows] = useState<RowState[]>(() => initialInvoices.map(invoiceToRow))
+  const managerMap = useMemo(() => {
+    const m = new Map<string, string | null>()
+    for (const c of initialClients) m.set(c.id, c.manager ?? null)
+    return m
+  }, [initialClients])
+
+  const [rows, setRows] = useState<RowState[]>(() =>
+    initialInvoices.map((inv) => invoiceToRow(inv, managerMap)),
+  )
 
   const [previewRowId, setPreviewRowId] = useState<string | null>(null)
   const [excelModalOpen, setExcelModalOpen] = useState(false)
@@ -163,6 +172,7 @@ export default function AdjustmentInvoiceManager({
       businessNumber: c.business_number ?? '',
       clientId: c.id,
       clientName: c.company_name,
+      manager: c.manager ?? null,
       revenue: 0, settlementFee: 0, adjustmentFee: 0,
       taxCreditAdditional: 0, faithfulReportFee: 0, discount: 0,
       supplyAmount: 0, vatAmount: 0, totalAmount: 0,
@@ -182,6 +192,7 @@ export default function AdjustmentInvoiceManager({
         businessNumber: '',
         clientId: null,
         clientName: '',
+        manager: null,
         revenue: 0, settlementFee: 0, adjustmentFee: 0,
         taxCreditAdditional: 0, faithfulReportFee: 0, discount: 0,
         supplyAmount: 0, vatAmount: 0, totalAmount: 0,
@@ -209,7 +220,7 @@ export default function AdjustmentInvoiceManager({
           upserts: dirtyRows.map((r) => rowToPayload(r, initialYear, initialBusinessType)),
           deleteIds: deletedRows.map((r) => r.dbId!),
         })
-        setRows(refreshedInvoices.map(invoiceToRow))
+        setRows(refreshedInvoices.map((inv) => invoiceToRow(inv, managerMap)))
         alert(`저장 완료 — 변경 ${dirtyRows.length}건, 삭제 ${deletedRows.length}건`)
       } catch (err) {
         alert(`저장 실패: ${err instanceof Error ? err.message : String(err)}`)
@@ -625,13 +636,17 @@ export default function AdjustmentInvoiceManager({
   )
 }
 
-function invoiceToRow(inv: AdjustmentInvoice): RowState {
+function invoiceToRow(
+  inv: AdjustmentInvoice,
+  managerMap?: Map<string, string | null>,
+): RowState {
   return {
     rowId: inv.id,
     dbId: inv.id,
     businessNumber: inv.business_number ?? '',
     clientId: inv.client_id,
     clientName: inv.client_name,
+    manager: inv.client_id ? managerMap?.get(inv.client_id) ?? null : null,
     revenue: inv.revenue ?? 0,
     settlementFee: inv.settlement_fee ?? 0,
     adjustmentFee: inv.adjustment_fee ?? 0,
