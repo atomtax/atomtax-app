@@ -5,7 +5,6 @@ import { Check, Sparkles, X } from 'lucide-react'
 import {
   STRUCTURES,
   USAGES,
-  FISCAL_YEAR,
 } from '@/lib/calculators/building-standard-data'
 import {
   calculateBuildingStandardValue,
@@ -36,10 +35,12 @@ export function BuildingValueCalculator({
   onApply,
   onClose,
 }: Props) {
+  // 평가기준연도 — 매도예정 시나리오는 항상 "올해"
+  const currentYear = new Date().getFullYear()
   const [structureId, setStructureId] = useState(DEFAULT_STRUCTURE_ID)
   const [usageId, setUsageId] = useState(DEFAULT_USAGE_ID)
   const [buildingArea, setBuildingArea] = useState<number>(defaultBuildingArea)
-  const [builtYear, setBuiltYear] = useState<number>(FISCAL_YEAR)
+  const [builtYear, setBuiltYear] = useState<number>(currentYear)
 
   const result = useMemo(
     () =>
@@ -49,8 +50,9 @@ export function BuildingValueCalculator({
         landUnitPrice,
         buildingArea,
         builtYear,
+        fiscalYear: currentYear,
       }),
-    [structureId, usageId, landUnitPrice, buildingArea, builtYear],
+    [structureId, usageId, landUnitPrice, buildingArea, builtYear, currentYear],
   )
 
   const locationBracket = useMemo(
@@ -147,7 +149,7 @@ export function BuildingValueCalculator({
             <Field
               label="신축연도"
               required
-              hint={`평가기준연도 ${FISCAL_YEAR}년`}
+              hint={`평가기준연도 ${currentYear}년`}
             >
               <input
                 type="number"
@@ -155,9 +157,9 @@ export function BuildingValueCalculator({
                 max={2100}
                 value={builtYear || ''}
                 onChange={(e) =>
-                  setBuiltYear(Number(e.target.value) || FISCAL_YEAR)
+                  setBuiltYear(Number(e.target.value) || currentYear)
                 }
-                placeholder={String(FISCAL_YEAR)}
+                placeholder={String(currentYear)}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-right tabular-nums focus:border-indigo-500 focus:outline-none text-sm"
               />
             </Field>
