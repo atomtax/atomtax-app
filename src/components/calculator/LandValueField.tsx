@@ -5,7 +5,8 @@ import { RefreshCw, Search } from 'lucide-react'
 import { AutoLookupBadge, type AutoLookupStatus } from './AutoLookupBadge'
 import {
   geocodeAddress,
-  getLandValueByPoint,
+  getLandValueByPnu,
+  getPnuByPoint,
 } from '@/lib/api/vworld/browser'
 import {
   formatNumberWithCommas,
@@ -52,7 +53,13 @@ export function LandValueField({
           setStatus('failed')
           return
         }
-        const land = await getLandValueByPoint(geo.x, geo.y)
+        // PNU 먼저 추출해 부모에 즉시 전달 (공시지가 실패해도 건물면적 조회 가능하게)
+        const pnu = await getPnuByPoint(geo.x, geo.y)
+        if (pnu) {
+          console.log('[land-value] pnu obtained, calling onPnuResolved:', pnu)
+          onPnuResolved?.(pnu)
+        }
+        const land = pnu ? await getLandValueByPnu(pnu) : null
         if (!land) {
           setStatus('failed')
           return
@@ -62,7 +69,6 @@ export function LandValueField({
         setNoticeDate(land.noticeDate)
         setStatus('success')
         onAutoLookupDone?.(land.landValuePerSqm)
-        if (land.pnu) onPnuResolved?.(land.pnu)
       } catch (e) {
         console.error('[land-value lookup]', e)
         setStatus('failed')
