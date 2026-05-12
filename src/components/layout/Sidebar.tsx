@@ -59,7 +59,7 @@ const navItems: NavItem[] = [
     children: [
       { label: '매매사업자 데이터', href: '/traders' },
       { label: '매매사업자 체크리스트', href: '/traders/checklist' },
-      { label: '부가가치세 계산', href: '/calculator/vat', external: true },
+      { label: '부가가치세 계산', href: '/calculator/vat/calc', external: true },
     ],
   },
   {
