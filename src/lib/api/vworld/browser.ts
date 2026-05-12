@@ -1,15 +1,16 @@
 'use client'
 
 /**
- * VWorld API 클라이언트 측 호출 모듈.
- * - 브라우저에서 직접 호출 → Vercel IP 차단 회피
+ * VWorld API 클라이언트 측 호출 모듈 (JSONP).
+ * - VWorld는 CORS 헤더를 보내지 않아 fetch는 차단됨
+ * - `callback` 파라미터를 지원하므로 <script> 태그 로드 방식(JSONP)으로 우회
  * - API 키는 NEXT_PUBLIC_VWORLD_API_KEY (클라이언트 번들에 노출됨)
  *   → VWorld의 domain 검증으로 보호 (등록된 도메인에서만 키 동작)
  */
 
 const VWORLD_ADDRESS = 'https://api.vworld.kr/req/address'
 const VWORLD_DATA = 'https://api.vworld.kr/req/data'
-const TIMEOUT_MS = 5000
+const TIMEOUT_MS = 10_000
 const DATASET_ID = 'LT_C_LHBLPN'
 
 export interface GeocodeResult {
@@ -27,6 +28,48 @@ export interface LandValueResult {
 
 type AddressType = 'ROAD' | 'PARCEL'
 
+/** JSONP 헬퍼 — VWorld의 callback 파라미터 활용해 CORS 우회 */
+function vworldJsonp<T>(baseUrl: URL): Promise<T | null> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined') {
+      resolve(null)
+      return
+    }
+
+    const cbName = `__vworld_cb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    const winRef = window as unknown as Record<string, unknown>
+    const script = document.createElement('script')
+    let resolved = false
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+    const cleanup = () => {
+      if (timeoutId) clearTimeout(timeoutId)
+      if (script.parentNode) document.head.removeChild(script)
+      delete winRef[cbName]
+    }
+
+    const finish = (value: T | null) => {
+      if (resolved) return
+      resolved = true
+      cleanup()
+      resolve(value)
+    }
+
+    winRef[cbName] = (data: T) => finish(data)
+
+    const url = new URL(baseUrl.toString())
+    url.searchParams.set('callback', cbName)
+    script.src = url.toString()
+    script.onerror = () => {
+      console.error('[vworld-jsonp] script load failed')
+      finish(null)
+    }
+    timeoutId = setTimeout(() => finish(null), TIMEOUT_MS)
+
+    document.head.appendChild(script)
+  })
+}
+
 /** 주소 → 좌표. 도로명 우선, 실패 시 지번으로 자동 폴백 */
 export async function geocodeAddress(
   address: string,
@@ -36,6 +79,15 @@ export async function geocodeAddress(
   const road = await geocodeWithType(trimmed, 'ROAD')
   if (road) return road
   return geocodeWithType(trimmed, 'PARCEL')
+}
+
+interface GeocodeApiResponse {
+  response?: {
+    status?: string
+    result?: { point?: { x: string | number; y: string | number } }
+    refined?: { text?: string }
+    error?: { code?: string; text?: string }
+  }
 }
 
 async function geocodeWithType(
@@ -58,44 +110,29 @@ async function geocodeWithType(
   url.searchParams.set('format', 'json')
   url.searchParams.set('key', apiKey)
 
-  try {
-    const res = await fetch(url.toString(), {
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    })
-    if (!res.ok) {
-      console.warn(`[vworld-browser] geocode ${type} non-OK ${res.status}`)
-      return null
-    }
-    const data = (await res.json()) as GeocodeApiResponse
-    if (data?.response?.status !== 'OK') {
-      console.warn(
-        `[vworld-browser] geocode ${type} status=${data?.response?.status}`,
-      )
-      return null
-    }
-    const point = data.response.result?.point
-    if (!point) return null
-
-    const x = Number(point.x)
-    const y = Number(point.y)
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return null
-
-    return {
-      x,
-      y,
-      refinedAddress: data.response.refined?.text,
-    }
-  } catch (e) {
-    console.error(`[vworld-browser] geocode ${type} failed`, e)
+  const data = await vworldJsonp<GeocodeApiResponse>(url)
+  if (!data) {
+    console.warn(`[vworld-browser] geocode ${type} no response`)
     return null
   }
-}
+  if (data?.response?.status !== 'OK') {
+    console.warn(
+      `[vworld-browser] geocode ${type} status=${data?.response?.status}`,
+      data?.response?.error,
+    )
+    return null
+  }
+  const point = data.response.result?.point
+  if (!point) return null
 
-interface GeocodeApiResponse {
-  response?: {
-    status?: string
-    result?: { point?: { x: string | number; y: string | number } }
-    refined?: { text?: string }
+  const x = Number(point.x)
+  const y = Number(point.y)
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null
+
+  return {
+    x,
+    y,
+    refinedAddress: data.response.refined?.text,
   }
 }
 
@@ -121,6 +158,7 @@ interface LandApiResponse {
         features?: Array<{ properties?: LandFeatureProperties }>
       }
     }
+    error?: { code?: string; text?: string }
   }
 }
 
@@ -171,51 +209,46 @@ export async function getLandValueByPoint(
   url.searchParams.set('geometry', 'false')
   url.searchParams.set('attribute', 'true')
 
-  try {
-    const res = await fetch(url.toString(), {
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    })
-    if (!res.ok) {
-      console.warn(`[vworld-browser] land-value non-OK ${res.status}`)
-      return null
-    }
-    const data = (await res.json()) as LandApiResponse
-    // 응답 구조 확인용 디버그 (검증 후 제거)
-    console.log('[vworld-browser debug] land-value response:', data)
+  const data = await vworldJsonp<LandApiResponse>(url)
+  // 응답 구조 확인용 디버그 (검증 후 제거)
+  console.log('[vworld-browser debug] land-value response:', data)
 
-    if (data?.response?.status !== 'OK') {
-      console.warn(
-        `[vworld-browser] land-value status=${data?.response?.status}`,
-      )
-      return null
-    }
-
-    const features =
-      data.response.result?.featureCollection?.features ?? []
-    if (features.length === 0) return null
-
-    const sorted = [...features].sort((a, b) => {
-      const yearA = extractYear(a.properties ?? {})
-      const yearB = extractYear(b.properties ?? {})
-      if (yearA !== yearB) return yearB - yearA
-      const dateA = extractDate(a.properties ?? {})
-      const dateB = extractDate(b.properties ?? {})
-      return dateB.localeCompare(dateA)
-    })
-
-    const latest = sorted[0]?.properties
-    if (!latest) return null
-    const price = extractPrice(latest)
-    if (price <= 0) return null
-
-    return {
-      pnu: String(latest.pnu ?? ''),
-      landValuePerSqm: price,
-      fiscalYear: extractYear(latest) || undefined,
-      noticeDate: extractDate(latest) || undefined,
-    }
-  } catch (e) {
-    console.error('[vworld-browser] land-value failed', e)
+  if (!data) {
+    console.warn('[vworld-browser] land-value no response')
     return null
+  }
+  if (data?.response?.status !== 'OK') {
+    console.warn(
+      `[vworld-browser] land-value status=${data?.response?.status}`,
+      data?.response?.error,
+    )
+    return null
+  }
+
+  const features = data.response.result?.featureCollection?.features ?? []
+  if (features.length === 0) {
+    console.warn('[vworld-browser] no features at this point')
+    return null
+  }
+
+  const sorted = [...features].sort((a, b) => {
+    const yearA = extractYear(a.properties ?? {})
+    const yearB = extractYear(b.properties ?? {})
+    if (yearA !== yearB) return yearB - yearA
+    const dateA = extractDate(a.properties ?? {})
+    const dateB = extractDate(b.properties ?? {})
+    return dateB.localeCompare(dateA)
+  })
+
+  const latest = sorted[0]?.properties
+  if (!latest) return null
+  const price = extractPrice(latest)
+  if (price <= 0) return null
+
+  return {
+    pnu: String(latest.pnu ?? ''),
+    landValuePerSqm: price,
+    fiscalYear: extractYear(latest) || undefined,
+    noticeDate: extractDate(latest) || undefined,
   }
 }
