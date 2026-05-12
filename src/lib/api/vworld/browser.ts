@@ -158,6 +158,103 @@ async function getPnuByPoint(x: number, y: number): Promise<string | null> {
   return pnu
 }
 
+interface LandPriceItem {
+  pnu?: string
+  ldCode?: string
+  ldCodeNm?: string
+  regstrSeCode?: string
+  regstrSeCodeNm?: string
+  mnnmSlno?: string
+  stdrYear?: string | number
+  stdrMt?: string | number
+  pblntfPclnd?: string | number
+  pblntfDe?: string
+  stdLandAt?: string
+  lastUpdtDt?: string
+}
+
+interface LandPriceApiResponse {
+  response?: {
+    status?: string
+    result?: {
+      items?: LandPriceItem[]
+      item?: LandPriceItem[]
+    }
+    body?: {
+      items?: LandPriceItem[]
+    }
+    error?: { code?: string; text?: string }
+  }
+}
+
+function extractLandPriceItems(data: LandPriceApiResponse): LandPriceItem[] {
+  const result = data.response?.result
+  if (result?.items && Array.isArray(result.items)) return result.items
+  if (result?.item && Array.isArray(result.item)) return result.item
+  const bodyItems = data.response?.body?.items
+  if (bodyItems && Array.isArray(bodyItems)) return bodyItems
+  return []
+}
+
+/** PNU로 개별공시지가 조회 (가장 최근 공시연도 반환) */
+async function getLandValueByPnu(pnu: string): Promise<LandValueResult | null> {
+  const apiKey = process.env.NEXT_PUBLIC_VWORLD_API_KEY
+  if (!apiKey) return null
+
+  const url = new URL(VWORLD_LAND_PRICE)
+  url.searchParams.set('pnu', pnu)
+  url.searchParams.set('format', 'json')
+  url.searchParams.set('numOfRows', '30')
+  url.searchParams.set('pageNo', '1')
+  url.searchParams.set('key', apiKey)
+  url.searchParams.set('domain', getBrowserDomain())
+
+  const data = await vworldJsonp<LandPriceApiResponse>(url)
+  console.log('[vworld-browser debug] land-value response:', data)
+
+  if (!data) {
+    console.warn('[vworld-browser] land-value no response')
+    return null
+  }
+  if (data?.response?.status && data.response.status !== 'OK') {
+    console.warn(
+      `[vworld-browser] land-value status=${data?.response?.status}`,
+      data?.response?.error,
+    )
+    return null
+  }
+
+  const items = extractLandPriceItems(data)
+  if (items.length === 0) {
+    console.warn('[vworld-browser] no land price records for this pnu')
+    return null
+  }
+
+  const sorted = [...items].sort((a, b) => {
+    const yearA = Number(a.stdrYear ?? 0)
+    const yearB = Number(b.stdrYear ?? 0)
+    if (yearA !== yearB) return yearB - yearA
+    const dateA = String(a.pblntfDe ?? '')
+    const dateB = String(b.pblntfDe ?? '')
+    return dateB.localeCompare(dateA)
+  })
+
+  const latest = sorted[0]
+  const price = Number(latest.pblntfPclnd)
+  if (!Number.isFinite(price) || price <= 0) {
+    console.warn('[vworld-browser] invalid price value', latest.pblntfPclnd)
+    return null
+  }
+
+  const year = Number(latest.stdrYear)
+  return {
+    pnu: String(latest.pnu ?? pnu),
+    landValuePerSqm: price,
+    fiscalYear: Number.isFinite(year) && year > 0 ? year : undefined,
+    noticeDate: latest.pblntfDe ? String(latest.pblntfDe) : undefined,
+  }
+}
+
 interface GeocodeApiResponse {
   response?: {
     status?: string
