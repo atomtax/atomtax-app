@@ -7,6 +7,11 @@ import {
   type AddressSelection,
 } from '@/components/calculator/AddressSearchInput'
 import { DecimalInput, NumberInput } from '@/components/calculator/NumberInput'
+import { VatResultPanel } from '@/components/calculator/VatResultPanel'
+import {
+  calculateVatAllocation,
+  type VatAllocationResult,
+} from '@/lib/calculators/vat-allocation'
 
 interface FormState {
   address: string
@@ -31,6 +36,8 @@ const INITIAL_FORM: FormState = {
 export function VatCalculatorClient() {
   const [form, setForm] = useState<FormState>(INITIAL_FORM)
   const [error, setError] = useState<string | null>(null)
+  const [result, setResult] = useState<VatAllocationResult | null>(null)
+  const [resultSellingPrice, setResultSellingPrice] = useState<number>(0)
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -43,21 +50,27 @@ export function VatCalculatorClient() {
   function handleReset() {
     setForm(INITIAL_FORM)
     setError(null)
+    setResult(null)
+    setResultSellingPrice(0)
   }
 
   function handleCalculate() {
-    const required = [
-      form.sellingPrice,
-      form.landArea,
-      form.landUnitPrice,
-      form.buildingStandardValue,
-    ]
-    if (required.some((v) => !v || v <= 0)) {
-      setError('입력값을 모두 입력해주세요.')
+    const computed = calculateVatAllocation({
+      sellingPrice: form.sellingPrice,
+      landArea: form.landArea,
+      landUnitPrice: form.landUnitPrice,
+      buildingStandardValue: form.buildingStandardValue,
+    })
+
+    if (!computed) {
+      setError('매도예상가, 토지면적, 토지공시지가, 건물기준시가를 모두 0보다 큰 값으로 입력해주세요.')
+      setResult(null)
       return
     }
+
     setError(null)
-    // Step 7에서 계산 + 결과 표시 연결
+    setResult(computed)
+    setResultSellingPrice(form.sellingPrice)
   }
 
   return (
@@ -180,6 +193,10 @@ export function VatCalculatorClient() {
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
           {error}
         </div>
+      )}
+
+      {result && (
+        <VatResultPanel result={result} sellingPrice={resultSellingPrice} />
       )}
     </div>
   )
