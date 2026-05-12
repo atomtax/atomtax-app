@@ -20,7 +20,14 @@ interface NavItem {
   label: string
   href?: string
   icon: React.ReactNode
-  children?: { label: string; href: string }[]
+  children?: NavChild[]
+}
+
+interface NavChild {
+  label: string
+  href: string
+  /** true이면 새 탭 외부 링크 — active 하이라이트 대상 제외 */
+  external?: boolean
 }
 
 const navItems: NavItem[] = [
@@ -69,12 +76,26 @@ const navItems: NavItem[] = [
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+
+  /** 정확히 일치하거나 하위 경로일 때만 매칭 (false-positive 방지) */
+  function isPrefixMatch(href: string): boolean {
+    return pathname === href || pathname.startsWith(href + '/')
+  }
+
+  /** 자식 중 가장 긴 prefix 매치 — 형제 경로 충돌 시 더 구체적인 메뉴만 active */
+  function getActiveChildHref(children: NavChild[]): string | null {
+    const matches = children.filter((c) => !c.external && isPrefixMatch(c.href))
+    if (matches.length === 0) return null
+    return matches.reduce((best, c) =>
+      c.href.length > best.href.length ? c : best,
+    ).href
+  }
+
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {}
     navItems.forEach((item) => {
       if (item.children) {
-        const isActive = item.children.some((child) => pathname.startsWith(child.href))
-        initial[item.label] = isActive
+        initial[item.label] = getActiveChildHref(item.children) !== null
       }
     })
     return initial
@@ -125,7 +146,8 @@ export default function Sidebar() {
           }
 
           const isOpen = openGroups[item.label] ?? false
-          const hasActive = item.children.some((child) => pathname.startsWith(child.href))
+          const activeChildHref = getActiveChildHref(item.children)
+          const hasActive = activeChildHref !== null
 
           return (
             <div key={item.label}>
@@ -144,8 +166,7 @@ export default function Sidebar() {
               {isOpen && (
                 <div className="bg-gray-50">
                   {item.children.map((child) => {
-                    const isChildActive = pathname.startsWith(child.href) &&
-                      !(child.href === '/clients' && pathname.startsWith('/clients/terminated'))
+                    const isChildActive = !child.external && child.href === activeChildHref
                     return (
                       <Link
                         key={child.href}
