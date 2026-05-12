@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
-import { Calculator, RotateCcw, Sparkles } from 'lucide-react'
+import { Calculator, Download, RotateCcw, Sparkles } from 'lucide-react'
 import {
   AddressSearchInput,
   type AddressSelection,
@@ -49,6 +49,32 @@ export function VatCalculatorClient() {
   const [result, setResult] = useState<VatAllocationResult | null>(null)
   const [resultSellingPrice, setResultSellingPrice] = useState<number>(0)
   const [showBuildingCalc, setShowBuildingCalc] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+  const captureRef = useRef<HTMLDivElement>(null)
+
+  async function handleDownloadPng() {
+    if (!captureRef.current) return
+    setDownloading(true)
+    try {
+      const { default: html2canvas } = await import('html2canvas')
+      const canvas = await html2canvas(captureRef.current, {
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        logging: false,
+      })
+      const today = new Date().toISOString().slice(0, 10)
+      const link = document.createElement('a')
+      link.download = `부가가치세_계산_${today}.png`
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+    } catch (e) {
+      console.error('[png-download]', e)
+      alert(`PNG 다운로드 실패: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -86,6 +112,16 @@ export function VatCalculatorClient() {
 
   return (
     <div className="space-y-5">
+      <div ref={captureRef} className="space-y-5 bg-white">
+        {result && (
+          <div className="text-center pt-4 pb-2">
+            <h2 className="text-lg font-bold text-gray-900">건물분 부가가치세 계산서</h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              작성일: {new Date().toLocaleDateString('ko-KR')} · 아톰세무회계
+            </p>
+          </div>
+        )}
+
       {/* 1. 기본 정보 */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
         <h2 className="text-sm font-bold text-gray-800">📍 기본 정보</h2>
@@ -177,7 +213,13 @@ export function VatCalculatorClient() {
         </Field>
       </section>
 
-      {/* 3. 액션 */}
+      {result && (
+        <VatResultPanel result={result} sellingPrice={resultSellingPrice} />
+      )}
+      </div>
+      {/* /captureRef */}
+
+      {/* 3. 액션 (캡처 영역 밖) */}
       <div className="flex items-center justify-between gap-3">
         <button
           type="button"
@@ -204,8 +246,19 @@ export function VatCalculatorClient() {
         </div>
       )}
 
+      {/* PNG 다운로드 (캡처 영역 밖) */}
       {result && (
-        <VatResultPanel result={result} sellingPrice={resultSellingPrice} />
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={handleDownloadPng}
+            disabled={downloading}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 text-sm flex items-center gap-1.5"
+          >
+            <Download size={14} />
+            {downloading ? '생성 중...' : 'PNG 다운로드'}
+          </button>
+        </div>
       )}
 
       {showBuildingCalc && (
