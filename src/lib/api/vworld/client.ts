@@ -15,10 +15,19 @@ const REQUEST_HEADERS = {
   Accept: 'application/json, text/javascript, */*; q=0.01',
   'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
   Referer: 'https://atomtax-app.vercel.app/',
+  Origin: 'https://atomtax-app.vercel.app',
+  'Sec-Fetch-Dest': 'empty',
+  'Sec-Fetch-Mode': 'cors',
+  'Sec-Fetch-Site': 'cross-site',
+  'Cache-Control': 'no-cache',
+  Pragma: 'no-cache',
 } as const
 
 export async function vworldFetch(url: URL): Promise<unknown | null> {
   const safeUrl = url.toString().replace(/key=[^&]+/, 'key=***')
+  console.log(
+    `[vworld] region=${process.env.VERCEL_REGION ?? 'local'}, url=${safeUrl}`,
+  )
   try {
     const res = await fetch(url.toString(), {
       signal: AbortSignal.timeout(TIMEOUT_MS),
