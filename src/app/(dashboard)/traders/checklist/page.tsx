@@ -1,12 +1,28 @@
-import Header from '@/components/layout/Header'
+import { ClipboardList } from 'lucide-react'
+import { getChecklistData, getChecklistFilterOptions } from '@/lib/db/checklist'
+import { ChecklistClient } from './ChecklistClient'
 
-export default function TraderChecklistPage() {
+export default async function ChecklistPage() {
+  const [rows, options] = await Promise.all([
+    getChecklistData(),
+    getChecklistFilterOptions(),
+  ])
+
   return (
-    <div>
-      <Header title="체크리스트" subtitle="Phase 3에서 구현 예정" />
-      <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400 shadow-sm">
-        체크리스트 기능은 Phase 3에서 구현됩니다.
+    <div className="p-6 max-w-[1400px] mx-auto">
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <ClipboardList size={24} className="text-indigo-600" />
+            매매사업자 체크리스트
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            신고기한 임박 물건을 담당자/년월 단위로 관리합니다.
+          </p>
+        </div>
       </div>
+
+      <ChecklistClient initialRows={rows} options={options} />
     </div>
   )
 }
