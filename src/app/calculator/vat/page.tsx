@@ -60,37 +60,18 @@ export default function VatCalculatorLanding() {
 
       <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
         <h2 className="text-sm font-bold text-gray-800 mb-3">주요 기능</h2>
-        <ul className="space-y-2.5">
-          {FEATURES.map((f) => (
-            <li
-              key={f.label}
-              className={`flex items-start gap-3 ${f.available ? '' : 'opacity-60'}`}
-            >
-              <span
-                className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full text-xs flex items-center justify-center ${
-                  f.available
-                    ? 'bg-green-100 text-green-700'
-                    : 'bg-gray-200 text-gray-500'
-                }`}
-              >
-                {f.available ? '✓' : '·'}
-              </span>
-              <div className="text-sm">
-                <p
-                  className={`font-medium ${
-                    f.available ? 'text-gray-900' : 'text-gray-500'
-                  }`}
-                >
-                  {f.label}
-                  {!f.available && (
-                    <span className="ml-2 text-xs text-gray-400">(준비중)</span>
-                  )}
-                </p>
-                <p className="text-xs text-gray-500 mt-0.5">{f.description}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <FeatureGroup
+          title="✅ 현재 사용 가능"
+          features={FEATURES.filter((f) => f.available)}
+          available
+        />
+        <div className="mt-5 pt-5 border-t border-gray-100">
+          <FeatureGroup
+            title="🔜 2단계 예정"
+            features={FEATURES.filter((f) => !f.available)}
+            available={false}
+          />
+        </div>
       </section>
 
       <section className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
@@ -106,6 +87,56 @@ export default function VatCalculatorLanding() {
       <p className="text-center text-xs text-gray-400">
         © 아톰세무회계 — 부가가치세 자동 계산기
       </p>
+    </div>
+  )
+}
+
+function FeatureGroup({
+  title,
+  features,
+  available,
+}: {
+  title: string
+  features: { label: string; description: string }[]
+  available: boolean
+}) {
+  return (
+    <div>
+      <p
+        className={`text-xs font-semibold mb-2 ${
+          available ? 'text-green-700' : 'text-gray-500'
+        }`}
+      >
+        {title}
+      </p>
+      <ul className="space-y-2">
+        {features.map((f) => (
+          <li
+            key={f.label}
+            className={`flex items-start gap-3 ${available ? '' : 'opacity-70'}`}
+          >
+            <span
+              className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-full text-xs flex items-center justify-center ${
+                available
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-gray-200 text-gray-500'
+              }`}
+            >
+              {available ? '✓' : '·'}
+            </span>
+            <div className="text-sm">
+              <p
+                className={`font-medium ${
+                  available ? 'text-gray-900' : 'text-gray-500'
+                }`}
+              >
+                {f.label}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">{f.description}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
