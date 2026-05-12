@@ -10,8 +10,11 @@
 
 const VWORLD_ADDRESS = 'https://api.vworld.kr/req/address'
 const VWORLD_DATA = 'https://api.vworld.kr/req/data'
+const VWORLD_LAND_PRICE =
+  'https://api.vworld.kr/ned/data/getIndvdLandPriceAttr'
 const TIMEOUT_MS = 10_000
 const DATASET_ID = 'LT_C_LHBLPN'
+const CADASTRAL_DATASET = 'LP_PA_CBND_BUBUN'
 
 export interface GeocodeResult {
   x: number
@@ -79,6 +82,80 @@ export async function geocodeAddress(
   const road = await geocodeWithType(trimmed, 'ROAD')
   if (road) return road
   return geocodeWithType(trimmed, 'PARCEL')
+}
+
+interface PnuApiResponse {
+  response?: {
+    status?: string
+    result?: {
+      featureCollection?: {
+        features?: Array<{
+          properties?: {
+            pnu?: string
+            jibun?: string
+          }
+        }>
+      }
+    }
+    error?: { code?: string; text?: string }
+  }
+}
+
+function getBrowserDomain(): string {
+  return typeof window !== 'undefined' ? window.location.hostname : ''
+}
+
+/**
+ * 좌표 → PNU (필지 고유번호 19자리).
+ * VWorld 연속지적도 데이터(LP_PA_CBND_BUBUN) 활용.
+ */
+async function getPnuByPoint(x: number, y: number): Promise<string | null> {
+  const apiKey = process.env.NEXT_PUBLIC_VWORLD_API_KEY
+  if (!apiKey) {
+    console.error('[vworld-browser] NEXT_PUBLIC_VWORLD_API_KEY not set')
+    return null
+  }
+
+  const url = new URL(VWORLD_DATA)
+  url.searchParams.set('service', 'data')
+  url.searchParams.set('version', '2.0')
+  url.searchParams.set('request', 'GetFeature')
+  url.searchParams.set('data', CADASTRAL_DATASET)
+  url.searchParams.set('key', apiKey)
+  url.searchParams.set('format', 'json')
+  url.searchParams.set('geomFilter', `POINT(${x} ${y})`)
+  url.searchParams.set('crs', 'EPSG:4326')
+  url.searchParams.set('size', '1')
+  url.searchParams.set('page', '1')
+  url.searchParams.set('geometry', 'false')
+  url.searchParams.set('attribute', 'true')
+  url.searchParams.set('domain', getBrowserDomain())
+
+  const data = await vworldJsonp<PnuApiResponse>(url)
+  console.log('[vworld-browser debug] pnu lookup response:', data)
+
+  if (!data) {
+    console.warn('[vworld-browser] pnu lookup no response')
+    return null
+  }
+  if (data?.response?.status !== 'OK') {
+    console.warn(
+      `[vworld-browser] pnu lookup status=${data?.response?.status}`,
+      data?.response?.error,
+    )
+    return null
+  }
+  const features = data.response.result?.featureCollection?.features ?? []
+  if (features.length === 0) {
+    console.warn('[vworld-browser] no parcel at this point')
+    return null
+  }
+  const pnu = features[0]?.properties?.pnu
+  if (!pnu || pnu.length < 19) {
+    console.warn('[vworld-browser] invalid pnu format', pnu)
+    return null
+  }
+  return pnu
 }
 
 interface GeocodeApiResponse {
