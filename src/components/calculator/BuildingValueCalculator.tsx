@@ -144,11 +144,21 @@ export function BuildingValueCalculator({
                 placeholder="예: 242.8263"
               />
             </Field>
-            <Field label="신축연도" required hint={`평가기준연도 ${FISCAL_YEAR}년`}>
-              <NumberInput
-                value={builtYear}
-                onChange={setBuiltYear}
+            <Field
+              label="신축연도"
+              required
+              hint={`평가기준연도 ${FISCAL_YEAR}년`}
+            >
+              <input
+                type="number"
+                min={1900}
+                max={2100}
+                value={builtYear || ''}
+                onChange={(e) =>
+                  setBuiltYear(Number(e.target.value) || FISCAL_YEAR)
+                }
                 placeholder={String(FISCAL_YEAR)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-right tabular-nums focus:border-indigo-500 focus:outline-none text-sm"
               />
             </Field>
           </div>
