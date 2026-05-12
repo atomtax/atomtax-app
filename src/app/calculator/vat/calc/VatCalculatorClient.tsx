@@ -7,6 +7,7 @@ import {
   AddressSearchInput,
   type AddressSelection,
 } from '@/components/calculator/AddressSearchInput'
+import { BuildingAreaField } from '@/components/calculator/BuildingAreaField'
 import { LandValueField } from '@/components/calculator/LandValueField'
 import { DecimalInput, NumberInput } from '@/components/calculator/NumberInput'
 import { VatResultPanel } from '@/components/calculator/VatResultPanel'
@@ -154,17 +155,12 @@ export function VatCalculatorClient() {
               placeholder="예: 21.7512"
             />
           </Field>
-          <Field
-            label="건물 면적(㎡)"
-            required
-            hint="공용부 + 전유부 모두 포함합니다."
-          >
-            <DecimalInput
-              value={form.buildingArea}
-              onChange={(v) => update('buildingArea', v)}
-              placeholder="예: 242.8263"
-            />
-          </Field>
+          <BuildingAreaField
+            value={form.buildingArea}
+            onChange={(v) => update('buildingArea', v)}
+            pnu={pnu}
+            detailLocation={form.detailLocation}
+          />
         </div>
 
         <Field
