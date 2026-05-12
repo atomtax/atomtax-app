@@ -13,7 +13,6 @@ const VWORLD_DATA = 'https://api.vworld.kr/req/data'
 const VWORLD_LAND_PRICE =
   'https://api.vworld.kr/ned/data/getIndvdLandPriceAttr'
 const TIMEOUT_MS = 10_000
-const DATASET_ID = 'LT_C_LHBLPN'
 const CADASTRAL_DATASET = 'LP_PA_CBND_BUBUN'
 
 export interface GeocodeResult {
@@ -310,119 +309,18 @@ async function geocodeWithType(
   }
 }
 
-interface LandFeatureProperties {
-  pnu?: string
-  pblntf_pclnd?: string | number
-  jiga?: string | number
-  pblntf_pclnd_val?: string | number
-  amount?: string | number
-  stdr_year?: string | number
-  base_year?: string | number
-  stdrde?: string
-  pblntfde?: string
-  base_date?: string
-  notice_date?: string
-}
-
-interface LandApiResponse {
-  response?: {
-    status?: string
-    result?: {
-      featureCollection?: {
-        features?: Array<{ properties?: LandFeatureProperties }>
-      }
-    }
-    error?: { code?: string; text?: string }
-  }
-}
-
-function extractPrice(p: LandFeatureProperties): number {
-  const candidates = [p.pblntf_pclnd, p.pblntf_pclnd_val, p.jiga, p.amount]
-  for (const c of candidates) {
-    if (c === undefined || c === null || c === '') continue
-    const n = Number(c)
-    if (Number.isFinite(n) && n > 0) return n
-  }
-  return 0
-}
-
-function extractYear(p: LandFeatureProperties): number {
-  const candidates = [p.stdr_year, p.base_year]
-  for (const c of candidates) {
-    if (c === undefined || c === null || c === '') continue
-    const s = String(c).slice(0, 4)
-    const n = Number(s)
-    if (Number.isFinite(n) && n >= 1900 && n <= 2999) return n
-  }
-  return 0
-}
-
-function extractDate(p: LandFeatureProperties): string {
-  return p.stdrde ?? p.pblntfde ?? p.base_date ?? p.notice_date ?? ''
-}
-
-/** 좌표 → 개별공시지가 (가장 최근 공시연도 선택) */
+/**
+ * 좌표 → 공시지가 (내부적으로 PNU 변환 후 PNU 기반 조회).
+ * LandValueField에서는 좌표를 받아 호출하므로 기존 시그니처 유지.
+ */
 export async function getLandValueByPoint(
   x: number,
   y: number,
 ): Promise<LandValueResult | null> {
-  const apiKey = process.env.NEXT_PUBLIC_VWORLD_API_KEY
-  if (!apiKey) return null
-
-  const url = new URL(VWORLD_DATA)
-  url.searchParams.set('service', 'data')
-  url.searchParams.set('version', '2.0')
-  url.searchParams.set('request', 'GetFeature')
-  url.searchParams.set('data', DATASET_ID)
-  url.searchParams.set('key', apiKey)
-  url.searchParams.set('format', 'json')
-  url.searchParams.set('geomFilter', `POINT(${x} ${y})`)
-  url.searchParams.set('crs', 'EPSG:4326')
-  url.searchParams.set('size', '30')
-  url.searchParams.set('page', '1')
-  url.searchParams.set('geometry', 'false')
-  url.searchParams.set('attribute', 'true')
-
-  const data = await vworldJsonp<LandApiResponse>(url)
-  // 응답 구조 확인용 디버그 (검증 후 제거)
-  console.log('[vworld-browser debug] land-value response:', data)
-
-  if (!data) {
-    console.warn('[vworld-browser] land-value no response')
+  const pnu = await getPnuByPoint(x, y)
+  if (!pnu) {
+    console.warn('[vworld-browser] failed to get PNU from coordinates')
     return null
   }
-  if (data?.response?.status !== 'OK') {
-    console.warn(
-      `[vworld-browser] land-value status=${data?.response?.status}`,
-      data?.response?.error,
-    )
-    return null
-  }
-
-  const features = data.response.result?.featureCollection?.features ?? []
-  if (features.length === 0) {
-    console.warn('[vworld-browser] no features at this point')
-    return null
-  }
-
-  const sorted = [...features].sort((a, b) => {
-    const yearA = extractYear(a.properties ?? {})
-    const yearB = extractYear(b.properties ?? {})
-    if (yearA !== yearB) return yearB - yearA
-    const dateA = extractDate(a.properties ?? {})
-    const dateB = extractDate(b.properties ?? {})
-    return dateB.localeCompare(dateA)
-  })
-
-  const latest = sorted[0]?.properties
-  if (!latest) return null
-  const price = extractPrice(latest)
-  if (price <= 0) return null
-
-  return {
-    pnu: String(latest.pnu ?? ''),
-    landValuePerSqm: price,
-    fiscalYear: extractYear(latest) || undefined,
-    noticeDate: extractDate(latest) || undefined,
-  }
+  return getLandValueByPnu(pnu)
 }
