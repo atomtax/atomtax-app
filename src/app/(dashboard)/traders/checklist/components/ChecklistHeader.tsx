@@ -1,7 +1,10 @@
 'use client'
 
-import { Download, RefreshCw, Upload } from 'lucide-react'
-import { formatYearMonthLabel } from '@/lib/utils/checklist-filter'
+import { ChevronLeft, ChevronRight, Download, RefreshCw, Upload } from 'lucide-react'
+import {
+  formatYearMonthLabel,
+  shiftYearMonth,
+} from '@/lib/utils/checklist-filter'
 import type { ChecklistFilterOptions } from '../types'
 
 interface Props {
@@ -23,6 +26,10 @@ export function ChecklistHeader({
   onRefresh,
   isRefreshing,
 }: Props) {
+  const minYM = options.yearMonths[0] ?? yearMonth
+  const maxYM =
+    options.yearMonths[options.yearMonths.length - 1] ?? yearMonth
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-4 flex items-center gap-3 flex-wrap">
       <div className="flex items-center gap-2">
@@ -41,8 +48,19 @@ export function ChecklistHeader({
         </select>
       </div>
 
-      <div className="flex items-center gap-2">
-        <label className="text-xs font-medium text-gray-600 whitespace-nowrap">년월</label>
+      <div className="flex items-center gap-1">
+        <label className="text-xs font-medium text-gray-600 whitespace-nowrap mr-1">
+          신고기한
+        </label>
+        <button
+          type="button"
+          onClick={() => onYearMonthChange(shiftYearMonth(yearMonth, -1))}
+          disabled={yearMonth <= minYM}
+          aria-label="이전 월"
+          className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-gray-50 rounded disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <ChevronLeft size={16} />
+        </button>
         <select
           value={yearMonth}
           onChange={(e) => onYearMonthChange(e.target.value)}
@@ -54,6 +72,15 @@ export function ChecklistHeader({
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={() => onYearMonthChange(shiftYearMonth(yearMonth, 1))}
+          disabled={yearMonth >= maxYM}
+          aria-label="다음 월"
+          className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-gray-50 rounded disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <ChevronRight size={16} />
+        </button>
       </div>
 
       <div className="flex-1" />
