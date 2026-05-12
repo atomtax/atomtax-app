@@ -9,7 +9,7 @@
  * 보정 필요. 본 구현은 흔히 쓰이는 별칭들도 함께 검사한다.
  */
 
-import { vworldFetch } from './client'
+import { getVworldDomain, vworldFetch } from './client'
 
 const VWORLD_DATA = 'https://api.vworld.kr/req/data'
 const DATASET_ID = 'LT_C_LHBLPN'
@@ -106,6 +106,7 @@ export async function getLandValueByPoint(
   url.searchParams.set('request', 'GetFeature')
   url.searchParams.set('data', DATASET_ID)
   url.searchParams.set('key', apiKey)
+  url.searchParams.set('domain', getVworldDomain())
   url.searchParams.set('format', 'json')
   url.searchParams.set('geomFilter', `POINT(${x} ${y})`)
   url.searchParams.set('crs', 'EPSG:4326')
