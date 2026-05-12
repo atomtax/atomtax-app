@@ -7,9 +7,10 @@ import {
   AddressSearchInput,
   type AddressSelection,
 } from '@/components/calculator/AddressSearchInput'
+import { AreaInput } from '@/components/calculator/AreaInput'
 import { BuildingAreaField } from '@/components/calculator/BuildingAreaField'
 import { LandValueField } from '@/components/calculator/LandValueField'
-import { DecimalInput, NumberInput } from '@/components/calculator/NumberInput'
+import { NumberInput } from '@/components/calculator/NumberInput'
 import { VatResultPanel } from '@/components/calculator/VatResultPanel'
 import {
   calculateVatAllocation,
@@ -173,10 +174,10 @@ export function VatCalculatorClient() {
 
         <div className="grid grid-cols-2 gap-4">
           <Field label="토지 면적(㎡)" required>
-            <DecimalInput
+            <AreaInput
               value={form.landArea}
               onChange={(v) => update('landArea', v)}
-              placeholder="예: 21.7512"
+              placeholder="예: 21.75"
             />
           </Field>
           <BuildingAreaField

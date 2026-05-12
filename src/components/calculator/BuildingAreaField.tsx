@@ -8,7 +8,7 @@ import {
   RefreshCw,
   Search,
 } from 'lucide-react'
-import { DecimalInput } from './NumberInput'
+import { AreaInput } from './AreaInput'
 
 type Status = 'idle' | 'looking' | 'success' | 'failed' | 'needDongHo'
 
@@ -153,7 +153,7 @@ export function BuildingAreaField({
         </div>
       </div>
 
-      <DecimalInput
+      <AreaInput
         value={value}
         onChange={(v) => {
           onChange(v)
@@ -162,7 +162,7 @@ export function BuildingAreaField({
             setInfo(null)
           }
         }}
-        placeholder="예: 242.8263"
+        placeholder="예: 242.83"
       />
 
       <p className="text-xs text-gray-500">

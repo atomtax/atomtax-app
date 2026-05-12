@@ -16,7 +16,8 @@ import {
   calculateBuildingStandardValue,
   findLocationBracket,
 } from '@/lib/calculators/building-standard-value'
-import { DecimalInput, NumberInput } from './NumberInput'
+import { AreaInput } from './AreaInput'
+import { NumberInput } from './NumberInput'
 
 interface Props {
   /** 폼에 이미 입력된 토지공시지가 (원/㎡) — 위치지수 자동 매핑 */
@@ -232,7 +233,7 @@ export function BuildingValueCalculator({
                   {parseStatus === 'parsing' ? '분석 중...' : '건축물대장 PDF'}
                 </button>
               </div>
-              <DecimalInput
+              <AreaInput
                 value={buildingArea}
                 onChange={(v) => {
                   setBuildingArea(v)
