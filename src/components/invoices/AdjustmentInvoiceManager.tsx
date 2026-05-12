@@ -506,6 +506,7 @@ export default function AdjustmentInvoiceManager({
                   }
                 />
               </th>
+              <th className="text-center p-2 w-20">담당자</th>
               <th className="text-center p-2">고객사명</th>
               <th className="text-center p-2">매출액</th>
               <th className="text-center p-2">결산보수</th>
@@ -533,7 +534,7 @@ export default function AdjustmentInvoiceManager({
             ))}
             {visibleRows.length === 0 && (
               <tr>
-                <td colSpan={14} className="text-center py-12 text-gray-400 text-sm">
+                <td colSpan={15} className="text-center py-12 text-gray-400 text-sm">
                   데이터가 없습니다.{' '}
                   <button onClick={handleLoadClients} className="text-indigo-600 underline">
                     고객사 불러오기
@@ -550,7 +551,7 @@ export default function AdjustmentInvoiceManager({
           {visibleRows.length > 0 && (
             <tfoot className="bg-gray-100 border-t-2 border-gray-300 font-medium text-sm">
               <tr>
-                <td colSpan={2} className="p-2 text-right text-gray-600">합 계</td>
+                <td colSpan={3} className="p-2 text-right text-gray-600">합 계</td>
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.revenue)}</td>
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.settlementFee)}</td>
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.adjustmentFee)}</td>
