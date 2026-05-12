@@ -26,7 +26,9 @@ const BuildingValueCalculator = dynamic(
 
 interface FormState {
   address: string
-  detailLocation: string
+  dongInput: string
+  hoInput: string
+  isBasement: boolean
   landArea: number
   buildingArea: number
   sellingPrice: number
@@ -36,7 +38,9 @@ interface FormState {
 
 const INITIAL_FORM: FormState = {
   address: '',
-  detailLocation: '',
+  dongInput: '',
+  hoInput: '',
+  isBasement: false,
   landArea: 0,
   buildingArea: 0,
   sellingPrice: 0,
@@ -137,14 +141,34 @@ export function VatCalculatorClient() {
           />
         </Field>
 
-        <Field label="상세 위치" hint="동호수 등 상세 위치를 입력하세요.">
-          <input
-            type="text"
-            value={form.detailLocation}
-            onChange={(e) => update('detailLocation', e.target.value)}
-            placeholder="예: 101동 801호"
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 focus:outline-none"
-          />
+        <Field label="상세 위치">
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
+            <input
+              type="text"
+              value={form.dongInput}
+              onChange={(e) => update('dongInput', e.target.value)}
+              placeholder="동"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 focus:outline-none"
+            />
+            <input
+              type="text"
+              inputMode="numeric"
+              value={form.hoInput}
+              onChange={(e) => update('hoInput', e.target.value)}
+              placeholder="호 (숫자)"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 focus:outline-none"
+            />
+            <label className="flex items-center gap-1.5 text-sm text-gray-700 whitespace-nowrap px-2 py-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.isBasement}
+                onChange={(e) => update('isBasement', e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              지하
+            </label>
+          </div>
+          <p className="text-xs text-gray-500 mt-1.5">단독주택의 경우 빈칸</p>
         </Field>
 
         <div className="grid grid-cols-2 gap-4">
@@ -159,7 +183,9 @@ export function VatCalculatorClient() {
             value={form.buildingArea}
             onChange={(v) => update('buildingArea', v)}
             pnu={pnu}
-            detailLocation={form.detailLocation}
+            dongInput={form.dongInput}
+            hoInput={form.hoInput}
+            isBasement={form.isBasement}
           />
         </div>
 

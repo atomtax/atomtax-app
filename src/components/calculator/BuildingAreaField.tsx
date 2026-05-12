@@ -39,16 +39,26 @@ interface Props {
   onChange: (v: number) => void
   /** VWorld 자동조회로 얻은 PNU (없으면 자동조회 안 함) */
   pnu: string
-  /** "상세 위치" 입력 — "302동 407호" 등 */
-  detailLocation: string
+  dongInput: string
+  hoInput: string
+  isBasement: boolean
 }
 
 export function BuildingAreaField({
   value,
   onChange,
   pnu,
-  detailLocation,
+  dongInput,
+  hoInput,
+  isBasement,
 }: Props) {
+  // TODO Step 3에서 새 API 흐름으로 교체 — 일단 호환용 detailLocation 합성
+  const detailLocation = [
+    dongInput.trim() ? `${dongInput.trim()}동` : '',
+    hoInput.trim() ? `${isBasement ? 'B' : ''}${hoInput.trim()}호` : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
   const [status, setStatus] = useState<Status>('idle')
   const [info, setInfo] = useState<SuccessInfo | null>(null)
   const [needDongHoMessage, setNeedDongHoMessage] = useState<string | null>(null)
