@@ -32,12 +32,25 @@ export default function AdjustmentInvoiceFeeSchedule() {
       </div>
 
       {/* 기준표 테이블 */}
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '18px', fontSize: '13px' }}>
+      <table
+        style={{
+          width: '100%',
+          tableLayout: 'fixed',
+          borderCollapse: 'collapse',
+          marginBottom: '18px',
+          fontSize: '13px',
+        }}
+      >
+        <colgroup>
+          <col style={{ width: '20%' }} />
+          <col style={{ width: '40%' }} />
+          <col style={{ width: '40%' }} />
+        </colgroup>
         <thead>
           <tr style={{ background: '#0f172a', color: 'white' }}>
             <th style={{ textAlign: 'left', padding: '10px 14px', fontWeight: '500' }}>수입(자산)금액 구간</th>
-            <th style={{ textAlign: 'right', padding: '10px 14px', fontWeight: '500', width: '225px' }}>법인 · 의료사업자</th>
-            <th style={{ textAlign: 'right', padding: '10px 14px', fontWeight: '500', width: '205px' }}>개인사업자</th>
+            <th style={{ textAlign: 'right', padding: '10px 14px', fontWeight: '500' }}>법인 · 의료사업자</th>
+            <th style={{ textAlign: 'right', padding: '10px 14px', fontWeight: '500' }}>개인사업자</th>
           </tr>
         </thead>
         <tbody>
