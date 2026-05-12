@@ -13,13 +13,14 @@ const FEATURES: { label: string; description: string; available: boolean }[] = [
     available: true,
   },
   {
-    label: '토지공시지가 조회',
-    description: '공공데이터포털 API 연동으로 자동 조회 (2단계 예정).',
-    available: false,
+    label: '건물기준시가 자동 계산',
+    description:
+      '2025년 국세청 고시 기준 (구조·용도·위치·잔가율)으로 자동 계산합니다.',
+    available: true,
   },
   {
-    label: '건물기준시가 자동 계산',
-    description: '국세청 고시 기준으로 자동 계산 (2단계 예정).',
+    label: '토지공시지가 조회',
+    description: '공공데이터포털 API 연동으로 자동 조회 (2단계 예정).',
     available: false,
   },
   {

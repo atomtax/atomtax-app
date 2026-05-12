@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Calculator, RotateCcw } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { Calculator, RotateCcw, Sparkles } from 'lucide-react'
 import {
   AddressSearchInput,
   type AddressSelection,
@@ -12,6 +13,14 @@ import {
   calculateVatAllocation,
   type VatAllocationResult,
 } from '@/lib/calculators/vat-allocation'
+
+const BuildingValueCalculator = dynamic(
+  () =>
+    import('@/components/calculator/BuildingValueCalculator').then(
+      (m) => m.BuildingValueCalculator,
+    ),
+  { ssr: false },
+)
 
 interface FormState {
   address: string
@@ -38,6 +47,7 @@ export function VatCalculatorClient() {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<VatAllocationResult | null>(null)
   const [resultSellingPrice, setResultSellingPrice] = useState<number>(0)
+  const [showBuildingCalc, setShowBuildingCalc] = useState(false)
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -158,13 +168,25 @@ export function VatCalculatorClient() {
         <Field
           label="건물기준시가 (전체 금액, 원)"
           required
-          hint="건물기준시가 계산기에서 계산된 전체 금액 입력"
+          hint="직접 입력하거나 옆 [자동계산]을 사용하세요"
         >
-          <NumberInput
-            value={form.buildingStandardValue}
-            onChange={(v) => update('buildingStandardValue', v)}
-            placeholder="예: 265,800,000"
-          />
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <NumberInput
+                value={form.buildingStandardValue}
+                onChange={(v) => update('buildingStandardValue', v)}
+                placeholder="예: 265,800,000"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowBuildingCalc(true)}
+              title="2025년 국세청 고시 기준으로 자동 계산합니다"
+              className="px-3 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 flex items-center gap-1 whitespace-nowrap"
+            >
+              <Sparkles size={14} /> 자동계산
+            </button>
+          </div>
         </Field>
       </section>
 
@@ -197,6 +219,15 @@ export function VatCalculatorClient() {
 
       {result && (
         <VatResultPanel result={result} sellingPrice={resultSellingPrice} />
+      )}
+
+      {showBuildingCalc && (
+        <BuildingValueCalculator
+          landUnitPrice={form.landUnitPrice}
+          defaultBuildingArea={form.buildingArea}
+          onApply={(value) => update('buildingStandardValue', value)}
+          onClose={() => setShowBuildingCalc(false)}
+        />
       )}
     </div>
   )
