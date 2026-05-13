@@ -175,16 +175,16 @@ function extractNumber(s: unknown): string {
   return match ? match[0] : ''
 }
 
-export async function getExposPubuseArea(
+/**
+ * 내부 헬퍼: 주어진 hoNm으로 한 번 시도.
+ * 매칭된 결과가 있으면 ExposResult 반환, 없으면 null.
+ */
+async function tryExposLookup(
   parts: PnuParts,
   dongNm: string,
   hoNm: string,
+  attemptLabel: string,
 ): Promise<ExposResult | null> {
-  // 원래 작동하던 단순 흐름 복구:
-  // - hoNm 파라미터 사용 (API가 받는 형식 — 가락금호 등 대부분 단지)
-  // - dongNm은 응답 형식이 단지마다 달라 클라이언트에서 숫자 매칭
-  // - mgmBldrgstPk/numOfRows 파라미터 모두 API가 무시 → 시도 폐기
-  // - 일부 단지(예: 학하지구의 hoNm="103" 형식)는 자동 조회 실패 → 사용자가 수기 입력
   const params: Record<string, string> = {
     sigunguCd: parts.sigunguCd,
     bjdongCd: parts.bjdongCd,
@@ -194,8 +194,12 @@ export async function getExposPubuseArea(
   }
   if (hoNm) params.hoNm = hoNm
 
+  console.log(`[building-cert] exposLookup attempt=${attemptLabel}`, { hoNm })
   const items = await fetchApi<BrExposItem>('getBrExposPubuseAreaInfo', params)
-  if (items.length === 0) return null
+  if (items.length === 0) {
+    console.log(`[building-cert] attempt=${attemptLabel} no items`)
+    return null
+  }
 
   const targetDongNum = extractNumber(dongNm)
   const targetHoNum = extractNumber(hoNm)
@@ -228,19 +232,11 @@ export async function getExposPubuseArea(
     else if (item.exposPubuseGbCdNm === '공용') pubuseArea += area
   }
 
-  console.log('[building-cert] exposPubuse summary', {
+  console.log(`[building-cert] attempt=${attemptLabel} summary`, {
     totalItems: items.length,
     matched: matchedCount,
     targetDongNum,
     targetHoNum,
-    sampleResponses: items.slice(0, 5).map((i) => ({
-      hoNm: i.hoNm,
-      dongNm: i.dongNm,
-      dongNum: extractNumber(i.dongNm),
-      hoNum: extractNumber(i.hoNm),
-      area: i.area,
-      type: i.exposPubuseGbCdNm,
-    })),
     exposArea,
     pubuseArea,
   })
@@ -254,4 +250,30 @@ export async function getExposPubuseArea(
     dongNm: dongNm || matchedDongNm,
     hoNm: hoNm || matchedHoNm,
   }
+}
+
+/**
+ * 전유공용면적 조회 — 자동 재시도 포함.
+ * 1차: hoNm 그대로 (예: "1702호") — 가락금호 등 "호" 접미 단지
+ * 2차 폴백: 호 접미 제거한 숫자만 (예: "1702") — 학하지구 등 숫자만 단지
+ */
+export async function getExposPubuseArea(
+  parts: PnuParts,
+  dongNm: string,
+  hoNm: string,
+): Promise<ExposResult | null> {
+  const firstAttempt = await tryExposLookup(parts, dongNm, hoNm, 'with-suffix')
+  if (firstAttempt) return firstAttempt
+
+  if (!hoNm) return null
+
+  const hoNumber = extractNumber(hoNm)
+  if (!hoNumber || hoNumber === hoNm) {
+    return null
+  }
+
+  console.log(
+    `[building-cert] retrying without suffix: "${hoNm}" → "${hoNumber}"`,
+  )
+  return tryExposLookup(parts, dongNm, hoNumber, 'without-suffix')
 }
