@@ -16,16 +16,23 @@ export function TraderBulkUpload() {
   const [, startTransition] = useTransition()
 
   async function handleDownload() {
-    const { generateTraderTemplate } = await import(
-      '@/lib/excel/trader-template'
-    )
-    const blob = generateTraderTemplate()
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = '매매사업자_업로드양식.xlsx'
-    a.click()
-    URL.revokeObjectURL(url)
+    try {
+      const { generateTraderTemplate } = await import(
+        '@/lib/excel/trader-template'
+      )
+      const blob = await generateTraderTemplate()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = '매매사업자_업로드양식.xlsx'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('[trader-template]', err)
+      alert(
+        `양식 다운로드 실패: ${err instanceof Error ? err.message : String(err)}`,
+      )
+    }
   }
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {

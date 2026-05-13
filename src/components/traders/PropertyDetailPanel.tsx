@@ -201,6 +201,22 @@ export function PropertyDetailPanel({
     [expenses],
   )
 
+  // 합계가 변하면 부모 폼 state를 즉시 갱신 — 메인 행의 취득가액/기타필요경비/양도소득이
+  // 저장 전에도 화면에 반영되도록. 로딩 중에는 무시 (초기 0이 DB값을 덮어쓰는 것 방지).
+  useEffect(() => {
+    if (loading) return
+    if (
+      Number(property.acquisition_amount) !== acquisitionTotal ||
+      Number(property.other_expenses) !== otherExpensesTotal
+    ) {
+      onChange({
+        acquisition_amount: acquisitionTotal,
+        other_expenses: otherExpensesTotal,
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [acquisitionTotal, otherExpensesTotal, loading])
+
   const progressStyle = PROGRESS_STYLES[property.progress_status]
 
   return (
@@ -409,7 +425,7 @@ export function PropertyDetailPanel({
             className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-xs"
           >
             <Save size={12} />
-            {isPending ? '저장 중...' : '저장 및 반영'}
+            {isPending ? '저장 중...' : '저장'}
           </button>
         </div>
         {loading ? (
@@ -569,8 +585,9 @@ export function PropertyDetailPanel({
       </div>
 
       <p className="text-xs text-gray-500">
-        💡 예정신고 비용인정이 <strong>O</strong>인 항목만 합계에 포함됩니다. [저장 및 반영]을
-        누르면 메인 표의 모든 정보(물건명·취득가액·기타필요경비·양도소득)가 업데이트됩니다.
+        💡 예정신고 비용인정이 <strong>O</strong>인 항목만 합계에 포함됩니다.
+        입력 즉시 메인 표의 취득가액·기타필요경비·양도소득이 갱신되며,
+        [저장] 버튼을 눌러 DB에 반영하세요.
       </p>
 
       {showReference && (

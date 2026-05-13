@@ -1,4 +1,8 @@
 import * as XLSX from 'xlsx'
+import {
+  EXPENSE_NAMES,
+  type ExpenseName,
+} from '@/lib/constants/property-expense'
 import type { TraderExpenseCategory } from '@/types/database'
 
 export interface ParsedProperty {
@@ -17,7 +21,7 @@ export interface ParsedExpense {
   business_number: string
   property_name: string
   row_no: number
-  expense_name: string
+  expense_name: ExpenseName
   amount: number
   predeclaration_allowed: boolean
   income_tax_allowed: boolean
@@ -80,8 +84,8 @@ export async function parseTraderUploadExcel(file: File): Promise<ParseResult> {
   for (const row of rawExpenses) {
     const biz = normalizeBusinessNumber(row['사업자등록번호'])
     const name = String(row['물건명'] ?? '').trim()
-    const expenseName = String(row['비용명'] ?? '').trim()
-    if (!biz || !name || !expenseName) continue
+    const rawExpenseName = String(row['비용명'] ?? '').trim()
+    if (!biz || !name || !rawExpenseName) continue
 
     const categoryRaw = String(row['카테고리'] ?? '').trim()
     const category: TraderExpenseCategory =
@@ -91,7 +95,7 @@ export async function parseTraderUploadExcel(file: File): Promise<ParseResult> {
       business_number: biz,
       property_name: name,
       row_no: Number(row['순번']) || 0,
-      expense_name: expenseName,
+      expense_name: mapExpenseName(rawExpenseName),
       amount: parseNumber(row['금액']),
       predeclaration_allowed: parseOX(row['예정신고비용인정']),
       income_tax_allowed: parseOX(row['종합소득세비용인정']),
@@ -100,6 +104,29 @@ export async function parseTraderUploadExcel(file: File): Promise<ParseResult> {
   }
 
   return { properties, expenses }
+}
+
+/**
+ * 엑셀의 비용명을 시스템 EXPENSE_NAMES 옵션 중 하나로 매핑.
+ * 정확 일치는 그대로, 키워드 포함은 카테고리화, 미매치는 '기타비용'.
+ */
+export function mapExpenseName(raw: string): ExpenseName {
+  const name = raw.trim()
+  if (!name) return '기타비용'
+
+  // 정확 일치
+  for (const opt of EXPENSE_NAMES) {
+    if (name === opt) return opt
+  }
+
+  // 키워드 매핑 (구체적인 케이스부터)
+  if (name.includes('취득세') || name.includes('등기')) return '취득세 등'
+  if (name.includes('신탁')) return '신탁말소비용'
+  if (name.includes('중개')) return '중개수수료'
+  if (name.includes('관리비')) return '관리비정산'
+  if (name === '취득가액') return '취득가액'
+
+  return '기타비용'
 }
 
 /**
