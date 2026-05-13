@@ -110,7 +110,9 @@ export interface TitleInfoResult {
   buildingName?: string
   isCollective: boolean
   completionYear?: number
-  structure?: string
+  structureRaw?: string
+  structureId?: string
+  usageId?: string
 }
 
 function extractYearFromYmd(ymd: unknown): number | undefined {
@@ -120,8 +122,104 @@ function extractYearFromYmd(ymd: unknown): number | undefined {
   return undefined
 }
 
+/**
+ * 표제부 API의 strctCdNm("철근콘크리트구조" 등) → STRUCTURES의 id 매핑.
+ * 구체적인 키워드부터 검사 (철골 vs 철골철근콘크리트, 목구조 vs 목조 등).
+ */
+function mapStructureNameToId(name: string | undefined): string | undefined {
+  if (!name) return undefined
+  const s = name.replace(/\s+/g, '')
+
+  if (s.includes('철골') && s.includes('철근') && s.includes('콘크리트')) {
+    return 'cheolgolcheolgeun'
+  }
+  if (s.includes('철근') && s.includes('콘크리트')) return 'cheolgeun'
+  if (s.includes('보강') && s.includes('콘크리트')) return 'bogangconcrete'
+  if (s.includes('프리캐스트') || s.includes('PC조')) return 'precast'
+  if (s.includes('라멘')) return 'rahmen'
+  if (s.includes('EPS') || (s.includes('조립식') && s.includes('패널') && s.includes('철골'))) {
+    return 'eps_panel'
+  }
+  if (s.includes('경량') && s.includes('철골')) return 'kyungryang'
+  if (s.includes('철골')) return 'cheolgol'
+  if (s.includes('통나무')) return 'tongnamu'
+  if (s.includes('목구조')) return 'mokgu'
+  if (s.includes('목조')) return 'moko'
+  if (s.includes('ALC')) return 'alc'
+  if (s.includes('스틸하우스')) return 'steelhouse'
+  if (s.includes('연와')) return 'yeonwa'
+  if (s.includes('보강') && s.includes('블록')) return 'bogangblock'
+  if (s.includes('시멘트벽돌')) return 'cementbrick'
+  if (s.includes('황토')) return 'hwangto'
+  if (s.includes('시멘트블록')) return 'cementblock'
+  if (s.includes('와이어패널')) return 'wirepanel'
+  if (s.includes('조립식') && s.includes('패널')) return 'joriphsik'
+  if (s.includes('석회') || s.includes('흙벽돌') || s.includes('돌담') || s.includes('토담')) {
+    return 'seokhwe_etc'
+  }
+  if (s.includes('철파이프')) return 'cheolpipe'
+  if (s.includes('컨테이너')) return 'container'
+  if (s.includes('석조')) return 'seokjo'
+  return undefined
+}
+
+/**
+ * 표제부 API의 mainPurpsCdNm("공동주택" 등) → USAGES의 id 매핑.
+ * 비주거 용도는 매핑하지 않음 (계산기가 주거용만 지원).
+ */
+function mapMainPurpsToUsageId(name: string | undefined): string | undefined {
+  if (!name) return undefined
+  if (name.includes('아파트')) return 'apartment'
+  if (name.includes('공동주택')) return 'apartment'
+  if (
+    name.includes('단독주택') ||
+    name.includes('다가구주택') ||
+    name.includes('다중주택') ||
+    name.includes('연립주택') ||
+    name.includes('다세대주택') ||
+    name.includes('기숙사') ||
+    name.includes('도시형')
+  ) {
+    return 'residential_other'
+  }
+  return undefined
+}
+
+function extractNumber(s: unknown): string {
+  const str = String(s ?? '')
+  const match = str.match(/\d+/)
+  return match ? match[0] : ''
+}
+
+/**
+ * 사용자 입력 동수와 매칭되는 표제부 항목 선택.
+ * - dongNm 비어있거나 매칭 실패 시 totArea 가장 큰 항목으로 폴백.
+ */
+function pickTitleItemForDong(
+  items: BrTitleItem[],
+  dongNm: string,
+): BrTitleItem | undefined {
+  const targetDongNum = extractNumber(dongNm)
+  if (targetDongNum) {
+    const matched = items.find(
+      (item) => extractNumber(item.dongNm) === targetDongNum,
+    )
+    if (matched) return matched
+  }
+  return [...items].sort((a, b) => {
+    const aArea = Number(a.totArea ?? 0)
+    const bArea = Number(b.totArea ?? 0)
+    return bArea - aArea
+  })[0]
+}
+
+/**
+ * 표제부 조회 — 사용자 입력 동(dongNm) 기준으로 매칭되는 동의 메타 정보 반환.
+ * dongNm 미지정 시 가장 큰 동 (단독주택 케이스).
+ */
 export async function getTitleInfo(
   parts: PnuParts,
+  dongNm: string = '',
 ): Promise<TitleInfoResult | null> {
   const items = await fetchApi<BrTitleItem>('getBrTitleInfo', {
     sigunguCd: parts.sigunguCd,
@@ -132,23 +230,21 @@ export async function getTitleInfo(
   })
   if (items.length === 0) return null
 
-  const sorted = [...items].sort((a, b) => {
-    const aArea = Number(a.totArea ?? 0)
-    const bArea = Number(b.totArea ?? 0)
-    return bArea - aArea
-  })
+  const picked = pickTitleItemForDong(items, dongNm)
+  if (!picked) return null
 
-  const best = sorted[0]
-  const totalArea = Number(best.totArea)
+  const totalArea = Number(picked.totArea)
   if (!Number.isFinite(totalArea) || totalArea <= 0) return null
 
   return {
     totalArea,
-    buildingType: best.mainPurpsCdNm ?? '',
-    buildingName: best.bldNm,
-    isCollective: best.regstrGbCdNm === '집합',
-    completionYear: extractYearFromYmd(best.useAprDay),
-    structure: best.strctCdNm,
+    buildingType: picked.mainPurpsCdNm ?? '',
+    buildingName: picked.bldNm,
+    isCollective: picked.regstrGbCdNm === '집합',
+    completionYear: extractYearFromYmd(picked.useAprDay),
+    structureRaw: picked.strctCdNm,
+    structureId: mapStructureNameToId(picked.strctCdNm),
+    usageId: mapMainPurpsToUsageId(picked.mainPurpsCdNm),
   }
 }
 
@@ -167,19 +263,6 @@ export interface ExposResult {
   pubuseArea: number
   dongNm: string
   hoNm: string
-}
-
-/**
- * 문자열에서 첫 번째 연속 숫자 그룹 추출.
- *  - "가락금호아파트 105동 105동" → "105"
- *  - "1702호" → "1702"
- *  - "B1호" → "1"
- *  - "상가동" → ""
- */
-function extractNumber(s: unknown): string {
-  const str = String(s ?? '')
-  const match = str.match(/\d+/)
-  return match ? match[0] : ''
 }
 
 /**
