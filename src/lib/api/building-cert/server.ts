@@ -71,7 +71,7 @@ async function fetchApi<T>(
     const json = (await res.json()) as ApiResponse<T>
     console.log(
       `[building-cert] response`,
-      JSON.stringify(json).slice(0, 800),
+      JSON.stringify(json).slice(0, 2500),
     )
 
     const resultCode = json.response?.header?.resultCode
