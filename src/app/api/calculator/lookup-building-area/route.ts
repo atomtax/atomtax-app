@@ -79,11 +79,11 @@ export async function POST(
           hoNm: result.hoNm,
         })
       }
+      const label = `${apiParams.dongNm ? `${apiParams.dongNm}동 ` : ''}${apiParams.hoNm}`
       return NextResponse.json({
         ok: false,
         reason: 'EXPOS_PUBUSE_NOT_FOUND',
-        message:
-          '입력한 동/호에 해당하는 전유공용면적 데이터를 찾지 못했습니다. 동/호 입력을 확인하거나 직접 입력해주세요.',
+        message: `${label}의 전유공용면적 데이터를 찾지 못했습니다. 동/호를 확인하거나 직접 입력하세요.`,
       })
     }
 
