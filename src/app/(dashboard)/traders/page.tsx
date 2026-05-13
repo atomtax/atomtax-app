@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Building2 } from 'lucide-react'
 import { listTraderClientsGroupedByManager } from '@/lib/db/trader-properties'
+import { TraderBulkUpload } from '@/components/traders/TraderBulkUpload'
 import { TraderSearchFilter } from '@/components/traders/TraderSearchFilter'
 
 export default async function TradersListPage() {
@@ -9,7 +10,7 @@ export default async function TradersListPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Building2 size={24} className="text-indigo-600" />
@@ -19,6 +20,7 @@ export default async function TradersListPage() {
             업종코드 703011, 703012 · 총 {totalCount}개 사업자
           </p>
         </div>
+        <TraderBulkUpload />
       </div>
 
       <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
@@ -27,7 +29,8 @@ export default async function TradersListPage() {
         <Link href="/clients" className="underline">
           고객 관리
         </Link>
-        에서 수정하세요.
+        에서 수정하세요. 물건 데이터를 한 번에 등록하려면 우측{' '}
+        <strong>[양식 다운로드] → 입력 → [일괄 업로드]</strong> 사용 (사업자등록번호로 자동 매칭).
       </div>
 
       <TraderSearchFilter groups={groups} />
