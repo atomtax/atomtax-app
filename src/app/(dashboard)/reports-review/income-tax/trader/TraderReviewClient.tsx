@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  ExternalLink,
   Save,
 } from 'lucide-react'
 import { saveTraderReviewNotes } from '@/app/actions/trader-review'
@@ -252,6 +253,9 @@ const ManagerSection = memo(function ManagerSection({
               <th className="px-2 py-2 text-center w-14 whitespace-nowrap">
                 확인
               </th>
+              <th className="px-2 py-2 text-center w-12 whitespace-nowrap">
+                이동
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -348,10 +352,24 @@ const TraderRowItem = memo(function TraderRowItem({
             className="rounded"
           />
         </td>
+        <td
+          className="px-2 py-2 text-center"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <a
+            href={`/traders/${row.client_id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center w-7 h-7 rounded text-indigo-600 hover:bg-indigo-100"
+            title="매매사업자 상세 페이지 (새 탭)"
+          >
+            <ExternalLink size={13} />
+          </a>
+        </td>
       </tr>
       {isExpanded && (
         <tr className="bg-blue-50/50">
-          <td colSpan={9} className="px-4 py-3 border-t border-blue-100">
+          <td colSpan={10} className="px-4 py-3 border-t border-blue-100">
             <TraderExpandedDetail row={row} year={year} />
           </td>
         </tr>
