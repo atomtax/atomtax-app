@@ -59,15 +59,7 @@ export function BuildingAreaField({
 
   const triggerLookup = useCallback(
     async (force = false) => {
-      console.log('[building-area] triggerLookup called', {
-        pnu,
-        dongInput,
-        hoInput,
-        isBasement,
-        force,
-      })
       if (!pnu) {
-        console.log('[building-area] no pnu, skip')
         setStatus('idle')
         return
       }
@@ -83,7 +75,6 @@ export function BuildingAreaField({
           body: JSON.stringify({ pnu, dongInput, hoInput, isBasement }),
         })
         const json = (await res.json()) as LookupResponse
-        console.log('[building-area] response:', json)
         if (json.ok) {
           onChange(json.totalArea)
           setInfo({
