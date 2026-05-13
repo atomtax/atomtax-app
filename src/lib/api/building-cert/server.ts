@@ -49,8 +49,6 @@ async function fetchApi<T>(
     if (v != null && v !== '') url.searchParams.set(k, v)
   }
 
-  console.log(`[building-cert] calling ${endpoint}`, params)
-
   try {
     const res = await fetch(url.toString(), {
       signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -69,10 +67,6 @@ async function fetchApi<T>(
     }
 
     const json = (await res.json()) as ApiResponse<T>
-    console.log(
-      `[building-cert] response`,
-      JSON.stringify(json).slice(0, 2500),
-    )
 
     const resultCode = json.response?.header?.resultCode
     if (resultCode && resultCode !== '00') {
@@ -148,8 +142,6 @@ export async function getTitleInfo(
   const totalArea = Number(best.totArea)
   if (!Number.isFinite(totalArea) || totalArea <= 0) return null
 
-  console.log('[building-cert] title best item keys', Object.keys(best))
-
   return {
     totalArea,
     buildingType: best.mainPurpsCdNm ?? '',
@@ -198,7 +190,6 @@ async function tryExposLookup(
   parts: PnuParts,
   dongNm: string,
   hoNm: string,
-  attemptLabel: string,
 ): Promise<ExposResult | null> {
   const params: Record<string, string> = {
     sigunguCd: parts.sigunguCd,
@@ -209,12 +200,8 @@ async function tryExposLookup(
   }
   if (hoNm) params.hoNm = hoNm
 
-  console.log(`[building-cert] exposLookup attempt=${attemptLabel}`, { hoNm })
   const items = await fetchApi<BrExposItem>('getBrExposPubuseAreaInfo', params)
-  if (items.length === 0) {
-    console.log(`[building-cert] attempt=${attemptLabel} no items`)
-    return null
-  }
+  if (items.length === 0) return null
 
   const targetDongNum = extractNumber(dongNm)
   const targetHoNum = extractNumber(hoNm)
@@ -223,7 +210,6 @@ async function tryExposLookup(
   let pubuseArea = 0
   let matchedDongNm = ''
   let matchedHoNm = ''
-  let matchedCount = 0
 
   for (const item of items) {
     const area = Number(item.area)
@@ -239,22 +225,12 @@ async function tryExposLookup(
       if (!itemHoNum || itemHoNum !== targetHoNum) continue
     }
 
-    matchedCount++
     if (!matchedDongNm) matchedDongNm = String(item.dongNm ?? '')
     if (!matchedHoNm) matchedHoNm = String(item.hoNm ?? '')
 
     if (item.exposPubuseGbCdNm === '전유') exposArea += area
     else if (item.exposPubuseGbCdNm === '공용') pubuseArea += area
   }
-
-  console.log(`[building-cert] attempt=${attemptLabel} summary`, {
-    totalItems: items.length,
-    matched: matchedCount,
-    targetDongNum,
-    targetHoNum,
-    exposArea,
-    pubuseArea,
-  })
 
   if (exposArea + pubuseArea <= 0) return null
 
@@ -277,18 +253,13 @@ export async function getExposPubuseArea(
   dongNm: string,
   hoNm: string,
 ): Promise<ExposResult | null> {
-  const firstAttempt = await tryExposLookup(parts, dongNm, hoNm, 'with-suffix')
+  const firstAttempt = await tryExposLookup(parts, dongNm, hoNm)
   if (firstAttempt) return firstAttempt
 
   if (!hoNm) return null
 
   const hoNumber = extractNumber(hoNm)
-  if (!hoNumber || hoNumber === hoNm) {
-    return null
-  }
+  if (!hoNumber || hoNumber === hoNm) return null
 
-  console.log(
-    `[building-cert] retrying without suffix: "${hoNm}" → "${hoNumber}"`,
-  )
-  return tryExposLookup(parts, dongNm, hoNumber, 'without-suffix')
+  return tryExposLookup(parts, dongNm, hoNumber)
 }
