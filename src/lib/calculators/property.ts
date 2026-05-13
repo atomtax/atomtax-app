@@ -1,12 +1,16 @@
 import type { TraderExpenseCategory } from '@/types/database'
 
-/** 양도소득 = 양도가액 − 취득가액 − 기타필요경비 (음수 가능) */
+/**
+ * 양도소득 = 양도가액 − 취득가액 − 기타필요경비.
+ * 양도가액이 0 이하면(미양도) 0 반환 — 마이너스 양도소득 방지.
+ */
 export function calculateTransferIncome(
   transferAmount: number,
   acquisitionAmount: number,
   otherExpenses: number,
 ): number {
   const transfer = Number(transferAmount) || 0
+  if (transfer <= 0) return 0
   const acquisition = Number(acquisitionAmount) || 0
   const other = Number(otherExpenses) || 0
   return transfer - acquisition - other

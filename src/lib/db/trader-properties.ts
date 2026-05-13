@@ -53,7 +53,9 @@ export async function listTraderClientsGroupedByManager(): Promise<TraderClientM
   return Array.from(map.entries()).map(([manager, clients]) => ({ manager, clients }))
 }
 
-/** 특정 사업자의 물건 목록 */
+/** 특정 사업자의 물건 목록.
+ *  취득가액/기타필요경비/양도소득은 필요경비 실시간 집계로 갱신
+ *  (DB 컬럼이 stale 일 수 있어 매 조회마다 정확한 값 반환). */
 export async function listPropertiesByClient(clientId: string): Promise<TraderProperty[]> {
   const supabase = await createClient()
 
@@ -65,7 +67,59 @@ export async function listPropertiesByClient(clientId: string): Promise<TraderPr
     .order('created_at', { ascending: true })
 
   if (error) throw new Error(error.message)
-  return (data ?? []) as TraderProperty[]
+  const properties = (data ?? []) as TraderProperty[]
+  if (properties.length === 0) return properties
+
+  // 모든 물건의 필요경비를 한 번에 조회하여 클라이언트에서 집계
+  const propertyIds = properties.map((p) => p.id)
+  const { data: expenseData, error: expErr } = await supabase
+    .from('trader_property_expenses')
+    .select('property_id, category, amount, predeclaration_allowed')
+    .in('property_id', propertyIds)
+
+  if (expErr) {
+    console.error('[listPropertiesByClient] expense load failed', expErr.message)
+    return properties
+  }
+
+  const sumsByProperty = new Map<
+    string,
+    { acquisition_amount: number; other_expenses: number }
+  >()
+  for (const row of (expenseData ?? []) as Array<{
+    property_id: string
+    category: string | null
+    amount: number | string | null
+    predeclaration_allowed: boolean | null
+  }>) {
+    if (!row.predeclaration_allowed) continue
+    const amount = Number(row.amount ?? 0)
+    if (!Number.isFinite(amount)) continue
+    const cur = sumsByProperty.get(row.property_id) ?? {
+      acquisition_amount: 0,
+      other_expenses: 0,
+    }
+    if (row.category === '취득가액') cur.acquisition_amount += amount
+    else if (row.category === '기타필요경비') cur.other_expenses += amount
+    sumsByProperty.set(row.property_id, cur)
+  }
+
+  return properties.map((p) => {
+    const sums = sumsByProperty.get(p.id)
+    const acquisition_amount = sums?.acquisition_amount ?? 0
+    const other_expenses = sums?.other_expenses ?? 0
+    const transferAmount = Number(p.transfer_amount) || 0
+    const transfer_income =
+      transferAmount > 0
+        ? transferAmount - acquisition_amount - other_expenses
+        : 0
+    return {
+      ...p,
+      acquisition_amount,
+      other_expenses,
+      transfer_income,
+    }
+  })
 }
 
 /** 특정 사업자의 클라이언트 정보 (회사명, 부동산 폴더 URL 등) */
