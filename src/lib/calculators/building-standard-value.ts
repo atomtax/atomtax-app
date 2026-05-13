@@ -15,7 +15,6 @@
 import {
   BASE_VALUE_PER_SQM,
   DEPRECIATION_GROUPS,
-  FISCAL_YEAR,
   LOCATION_INDEX,
   STRUCTURES,
   USAGES,
@@ -70,7 +69,7 @@ export function findLocationBracket(landUnitPrice: number): LocationBracket | nu
 export function calculateResidualRate(
   group: DepreciationGroup,
   builtYear: number,
-  fiscalYear: number = FISCAL_YEAR,
+  fiscalYear: number = new Date().getFullYear(),
 ): { yearsElapsed: number; residualRate: number } {
   const info = DEPRECIATION_GROUPS[group]
   const yearsElapsed = Math.max(0, fiscalYear - builtYear)
@@ -89,7 +88,7 @@ export function calculateBuildingStandardValue(
     landUnitPrice,
     buildingArea,
     builtYear,
-    fiscalYear = FISCAL_YEAR,
+    fiscalYear = new Date().getFullYear(),
   } = input
 
   const structure = STRUCTURES.find((s) => s.id === structureId)
