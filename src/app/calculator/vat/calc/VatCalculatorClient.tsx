@@ -211,10 +211,7 @@ export function VatCalculatorClient() {
           value={form.landUnitPrice}
           onChange={(v) => update('landUnitPrice', v)}
           address={form.address}
-          onPnuResolved={(p) => {
-            console.log('[vat-calculator] pnu received:', p)
-            setPnu(p)
-          }}
+          onPnuResolved={setPnu}
         />
 
         <Field

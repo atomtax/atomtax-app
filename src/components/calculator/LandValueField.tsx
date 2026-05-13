@@ -56,7 +56,6 @@ export function LandValueField({
         // PNU 먼저 추출해 부모에 즉시 전달 (공시지가 실패해도 건물면적 조회 가능하게)
         const pnu = await getPnuByPoint(geo.x, geo.y)
         if (pnu) {
-          console.log('[land-value] pnu obtained, calling onPnuResolved:', pnu)
           onPnuResolved?.(pnu)
         }
         const land = pnu ? await getLandValueByPnu(pnu) : null
