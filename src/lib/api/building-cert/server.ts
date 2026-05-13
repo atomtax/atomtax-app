@@ -244,6 +244,41 @@ export async function getTitleInfo(
   }
 }
 
+export interface TitleBuildingPk {
+  dongNm: string
+  mgmBldrgstPk: string
+  totArea: number
+  bldNm: string
+  isCollective: boolean
+}
+
+/**
+ * 표제부 조회로 단지의 모든 동 목록 + 각 동의 mgmBldrgstPk 반환.
+ * 전유공용면적 조회 시 PK 필터로 데이터를 한 건물로 좁히는 용도.
+ */
+export async function getTitleListWithPk(
+  parts: PnuParts,
+): Promise<TitleBuildingPk[]> {
+  const items = await fetchApi<BrTitleItem>('getBrTitleInfo', {
+    sigunguCd: parts.sigunguCd,
+    bjdongCd: parts.bjdongCd,
+    platGbCd: parts.platGbCd,
+    bun: parts.bun,
+    ji: parts.ji,
+  })
+  if (items.length === 0) return []
+
+  return items
+    .map<TitleBuildingPk>((item) => ({
+      dongNm: String(item.dongNm ?? ''),
+      mgmBldrgstPk: String(item.mgmBldrgstPk ?? ''),
+      totArea: Number(item.totArea) || 0,
+      bldNm: String(item.bldNm ?? ''),
+      isCollective: item.regstrGbCdNm === '집합',
+    }))
+    .filter((b) => b.mgmBldrgstPk)
+}
+
 interface BrExposItem {
   area?: string | number
   exposPubuseGbCdNm?: string
