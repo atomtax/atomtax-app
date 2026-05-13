@@ -55,6 +55,7 @@ export function BuildingAreaField({
   const [status, setStatus] = useState<Status>('idle')
   const [info, setInfo] = useState<SuccessInfo | null>(null)
   const [needDongHoMessage, setNeedDongHoMessage] = useState<string | null>(null)
+  const [failedMessage, setFailedMessage] = useState<string | null>(null)
   const lastKeyRef = useRef<string>('')
 
   const triggerLookup = useCallback(
@@ -88,12 +89,15 @@ export function BuildingAreaField({
             hoNm: json.hoNm,
           })
           setNeedDongHoMessage(null)
+          setFailedMessage(null)
           setStatus('success')
         } else if (json.reason === 'NO_DONG_HO_FOR_COLLECTIVE') {
           setNeedDongHoMessage(json.message ?? '집합건물입니다. 동/호수를 입력하세요.')
+          setFailedMessage(null)
           setInfo(null)
           setStatus('needDongHo')
         } else {
+          setFailedMessage(json.message ?? null)
           setInfo(null)
           setStatus('failed')
         }
@@ -186,7 +190,11 @@ export function BuildingAreaField({
               '집합건물입니다. 상세 위치란에 "동/호수"를 입력하면 자동 조회됩니다 (예: 302동 407호).'}
           </span>
         ) : status === 'failed' ? (
-          '자동 조회에 실패했습니다. 직접 입력하거나 자동계산 모달에서 건축물대장 PDF 업로드를 사용하세요.'
+          <span className="text-orange-700">
+            ⚠️{' '}
+            {failedMessage ??
+              '자동 조회에 실패했습니다. 직접 입력하거나 자동계산 모달에서 건축물대장 PDF 업로드를 사용하세요.'}
+          </span>
         ) : (
           '공용부 + 전유부 모두 포함합니다. [자동조회] 버튼을 클릭하세요.'
         )}
