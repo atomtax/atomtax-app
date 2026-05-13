@@ -59,6 +59,7 @@ export function VatCalculatorClient() {
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<VatAllocationResult | null>(null)
   const [resultSellingPrice, setResultSellingPrice] = useState<number>(0)
+  const [resetKey, setResetKey] = useState(0)
   const [downloading, setDownloading] = useState(false)
   const [pnu, setPnu] = useState<string>('')
   const captureRef = useRef<HTMLDivElement>(null)
@@ -99,15 +100,15 @@ export function VatCalculatorClient() {
   }
 
   function handleAutoLookupDone(meta: AutoLookupMeta) {
+    // [자동 조회] / [다시 조회] 누를 때마다 API 매핑 결과 항상 덮어쓰기.
+    // 사용자가 수동으로 수정한 값을 유지하려면 [다시 조회]를 누르지 않으면 됨.
     setForm((prev) => {
       const next = { ...prev }
       let changed = false
-      if (meta.completionYear && !prev.completionYear) {
+      if (meta.completionYear) {
         next.completionYear = String(meta.completionYear)
         changed = true
       }
-      // structureId/usageId 는 INITIAL_FORM 기본값(cheolgeun/apartment)이 들어있어
-      // "비어있을 때만 채움" 조건이 작동하지 않음. API 매핑 결과가 있으면 우선 적용.
       if (meta.structureId) {
         next.structureId = meta.structureId
         changed = true
@@ -121,11 +122,13 @@ export function VatCalculatorClient() {
   }
 
   function handleReset() {
+    if (!confirm('모든 입력값을 초기화하시겠습니까?')) return
     setForm(INITIAL_FORM)
     setError(null)
     setResult(null)
     setResultSellingPrice(0)
     setPnu('')
+    setResetKey((k) => k + 1)
   }
 
   function handleCalculate() {
@@ -153,19 +156,30 @@ export function VatCalculatorClient() {
     <div className="space-y-5">
       <div ref={captureRef} className="space-y-5 bg-white">
         {result && (
-          <div className="text-center pt-4 pb-2">
+          <div className="text-center pt-4 pb-2 space-y-2">
             <h2 className="text-lg font-bold text-gray-900">
               건물분 부가가치세 계산서
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
-              작성일: {new Date().toLocaleDateString('ko-KR')} · 아톰세무회계
+            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded inline-block">
+              ⚠️ 자동계산 수치는 반드시 공시지가 조회 사이트, 건축물대장과
+              비교하여 검증하시기 바랍니다.
             </p>
           </div>
         )}
 
         {/* 1. 기본 정보 */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
-          <h2 className="text-sm font-bold text-gray-800">📍 기본 정보</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-800">📍 기본 정보</h2>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="text-xs px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 inline-flex items-center gap-1 text-gray-600"
+              title="모든 입력값 초기화"
+            >
+              <RotateCcw size={11} /> 초기화
+            </button>
+          </div>
 
           <Field label="물건 위치" required>
             <AddressSearchInput
@@ -205,23 +219,28 @@ export function VatCalculatorClient() {
             <p className="text-xs text-gray-500 mt-1.5">단독주택의 경우 빈칸</p>
           </Field>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="토지 면적(㎡)" required>
-              <AreaInput
-                value={form.landArea}
-                onChange={(v) => update('landArea', v)}
-                placeholder="예: 21.75"
+          <div className="grid grid-cols-5 gap-4">
+            <div className="col-span-2">
+              <Field label="토지 면적(㎡)" required>
+                <AreaInput
+                  value={form.landArea}
+                  onChange={(v) => update('landArea', v)}
+                  placeholder="예: 21.75"
+                />
+              </Field>
+            </div>
+            <div className="col-span-3">
+              <BuildingAreaField
+                key={resetKey}
+                value={form.buildingArea}
+                onChange={(v) => update('buildingArea', v)}
+                pnu={pnu}
+                dongInput={form.dongInput}
+                hoInput={form.hoInput}
+                isBasement={form.isBasement}
+                onAutoLookupDone={handleAutoLookupDone}
               />
-            </Field>
-            <BuildingAreaField
-              value={form.buildingArea}
-              onChange={(v) => update('buildingArea', v)}
-              pnu={pnu}
-              dongInput={form.dongInput}
-              hoInput={form.hoInput}
-              isBasement={form.isBasement}
-              onAutoLookupDone={handleAutoLookupDone}
-            />
+            </div>
           </div>
 
           <Field
@@ -291,6 +310,7 @@ export function VatCalculatorClient() {
           <h2 className="text-sm font-bold text-gray-800">💰 조회 정보</h2>
 
           <LandValueField
+            key={resetKey}
             value={form.landUnitPrice}
             onChange={(v) => update('landUnitPrice', v)}
             address={form.address}
@@ -314,26 +334,17 @@ export function VatCalculatorClient() {
       </div>
       {/* /captureRef */}
 
-      {/* 액션 (캡처 영역 밖) */}
-      <div className="flex items-center justify-between gap-3">
-        <button
-          type="button"
-          onClick={handleCalculate}
-          className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-white font-medium shadow hover:shadow-md transition-shadow"
-          style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          }}
-        >
-          <Calculator size={16} /> 부가가치세 계산하기
-        </button>
-        <button
-          type="button"
-          onClick={handleReset}
-          className="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm flex items-center gap-1"
-        >
-          <RotateCcw size={14} /> 초기화
-        </button>
-      </div>
+      {/* 액션 (캡처 영역 밖) — 초기화는 기본 정보 헤더로 이동 */}
+      <button
+        type="button"
+        onClick={handleCalculate}
+        className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-white font-medium shadow hover:shadow-md transition-shadow"
+        style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        }}
+      >
+        <Calculator size={16} /> 부가가치세 계산하기
+      </button>
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
