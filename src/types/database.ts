@@ -308,3 +308,18 @@ export interface IncomeClientWithReport {
   }
   report: Pick<IncomeTaxReport, 'id' | 'status' | 'completed_at' | 'updated_at'> | null
 }
+
+// ============================================================
+// 결산참고 메모 (v22) — 종합소득세 일반사업자 참고용
+// 매출액/세액 등은 income_tax_reports를 실시간 조회.
+// 이 테이블은 사용자 메모 + 확인여부만 저장.
+// ============================================================
+export interface IncomeTaxReviewNote {
+  id: string
+  client_id: string
+  report_year: number
+  memo: string
+  is_confirmed: boolean
+  created_at: string
+  updated_at: string
+}

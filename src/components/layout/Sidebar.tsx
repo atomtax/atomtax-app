@@ -9,6 +9,7 @@ import {
   FileText,
   Building2,
   BarChart3,
+  ClipboardList,
   ChevronDown,
   ChevronRight,
   ExternalLink,
@@ -43,6 +44,15 @@ const navItems: NavItem[] = [
     children: [
       { label: '기장고객 목록', href: '/clients' },
       { label: '해지고객', href: '/clients/terminated' },
+    ],
+  },
+  {
+    label: '결산참고',
+    icon: <ClipboardList size={18} />,
+    children: [
+      { label: '부가가치세', href: '/reports-review/vat' },
+      { label: '종합소득세', href: '/reports-review/income-tax' },
+      { label: '법인세', href: '/reports-review/corporate-tax' },
     ],
   },
   {
