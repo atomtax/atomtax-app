@@ -215,59 +215,24 @@ export async function getExposPubuseArea(
   dongNm: string,
   hoNm: string,
 ): Promise<ExposResult | null> {
-  // Step 1: 표제부로 단지의 모든 동 + 각 동의 mgmBldrgstPk 받기.
-  const titleList = await getTitleListWithPk(parts)
-  if (titleList.length === 0) {
-    console.warn('[building-cert] no title info for this PNU')
-    return null
-  }
-
-  // Step 2: 사용자 입력 동수와 일치하는 동의 mgmBldrgstPk 찾기.
-  const targetDongNum = extractNumber(dongNm)
-  if (!targetDongNum) {
-    console.warn('[building-cert] target dong number not extracted', dongNm)
-    return null
-  }
-
-  const matchedBuilding = titleList.find((b) => {
-    const itemDongNum = extractNumber(b.dongNm)
-    return itemDongNum && itemDongNum === targetDongNum
-  })
-
-  if (!matchedBuilding) {
-    console.warn('[building-cert] no matching dong in title list', {
-      targetDongNum,
-      availableDongs: titleList.map((b) => ({
-        dongNm: b.dongNm,
-        dongNum: extractNumber(b.dongNm),
-      })),
-    })
-    return null
-  }
-
-  console.log('[building-cert] matched building', {
-    dongNm: matchedBuilding.dongNm,
-    mgmBldrgstPk: matchedBuilding.mgmBldrgstPk,
-    bldNm: matchedBuilding.bldNm,
-  })
-
-  // Step 3: mgmBldrgstPk 파라미터로 전유공용면적 조회 (한 건물 단위로 좁아짐).
-  const items = await fetchApi<BrExposItem>('getBrExposPubuseAreaInfo', {
+  // 원래 작동하던 단순 흐름 복구:
+  // - hoNm 파라미터 사용 (API가 받는 형식 — 가락금호 등 대부분 단지)
+  // - dongNm은 응답 형식이 단지마다 달라 클라이언트에서 숫자 매칭
+  // - mgmBldrgstPk/numOfRows 파라미터 모두 API가 무시 → 시도 폐기
+  // - 일부 단지(예: 학하지구의 hoNm="103" 형식)는 자동 조회 실패 → 사용자가 수기 입력
+  const params: Record<string, string> = {
     sigunguCd: parts.sigunguCd,
     bjdongCd: parts.bjdongCd,
     platGbCd: parts.platGbCd,
     bun: parts.bun,
     ji: parts.ji,
-    mgmBldrgstPk: matchedBuilding.mgmBldrgstPk,
-  })
-  if (items.length === 0) {
-    console.warn('[building-cert] no expos data for matched building')
-    return null
   }
+  if (hoNm) params.hoNm = hoNm
 
-  // Step 4: 호 매칭 + 전유/공용 합산.
-  // dongNm은 이미 PK로 필터되므로 호만 매칭하면 됨.
-  // 단, 가락금호처럼 한 PK가 단지 전체일 수도 있어 dong 필터도 안전망으로 유지.
+  const items = await fetchApi<BrExposItem>('getBrExposPubuseAreaInfo', params)
+  if (items.length === 0) return null
+
+  const targetDongNum = extractNumber(dongNm)
   const targetHoNum = extractNumber(hoNm)
 
   let exposArea = 0
@@ -280,7 +245,12 @@ export async function getExposPubuseArea(
     const area = Number(item.area)
     if (!Number.isFinite(area) || area <= 0) continue
 
+    const itemDongNum = extractNumber(item.dongNm)
     const itemHoNum = extractNumber(item.hoNm)
+
+    if (targetDongNum) {
+      if (!itemDongNum || itemDongNum !== targetDongNum) continue
+    }
     if (targetHoNum) {
       if (!itemHoNum || itemHoNum !== targetHoNum) continue
     }
@@ -296,12 +266,12 @@ export async function getExposPubuseArea(
   console.log('[building-cert] exposPubuse summary', {
     totalItems: items.length,
     matched: matchedCount,
-    mgmBldrgstPk: matchedBuilding.mgmBldrgstPk,
     targetDongNum,
     targetHoNum,
     sampleResponses: items.slice(0, 5).map((i) => ({
       hoNm: i.hoNm,
       dongNm: i.dongNm,
+      dongNum: extractNumber(i.dongNm),
       hoNum: extractNumber(i.hoNm),
       area: i.area,
       type: i.exposPubuseGbCdNm,
