@@ -49,6 +49,8 @@ async function fetchApi<T>(
     if (v != null && v !== '') url.searchParams.set(k, v)
   }
 
+  console.log(`[building-cert] calling ${endpoint}`, params)
+
   try {
     const res = await fetch(url.toString(), {
       signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -67,6 +69,10 @@ async function fetchApi<T>(
     }
 
     const json = (await res.json()) as ApiResponse<T>
+    console.log(
+      `[building-cert] response`,
+      JSON.stringify(json).slice(0, 800),
+    )
 
     const resultCode = json.response?.header?.resultCode
     if (resultCode && resultCode !== '00') {
@@ -200,6 +206,7 @@ export async function getExposPubuseArea(
   let pubuseArea = 0
   let matchedDongNm = ''
   let matchedHoNm = ''
+  let matchedCount = 0
 
   for (const item of items) {
     const area = Number(item.area)
@@ -215,12 +222,30 @@ export async function getExposPubuseArea(
       if (!itemHoNum || itemHoNum !== targetHoNum) continue
     }
 
+    matchedCount++
     if (!matchedDongNm) matchedDongNm = String(item.dongNm ?? '')
     if (!matchedHoNm) matchedHoNm = String(item.hoNm ?? '')
 
     if (item.exposPubuseGbCdNm === '전유') exposArea += area
     else if (item.exposPubuseGbCdNm === '공용') pubuseArea += area
   }
+
+  console.log('[building-cert] exposPubuse summary', {
+    totalItems: items.length,
+    matched: matchedCount,
+    targetDongNum,
+    targetHoNum,
+    sampleResponses: items.slice(0, 5).map((i) => ({
+      hoNm: i.hoNm,
+      dongNm: i.dongNm,
+      dongNum: extractNumber(i.dongNm),
+      hoNum: extractNumber(i.hoNm),
+      area: i.area,
+      type: i.exposPubuseGbCdNm,
+    })),
+    exposArea,
+    pubuseArea,
+  })
 
   if (exposArea + pubuseArea <= 0) return null
 
