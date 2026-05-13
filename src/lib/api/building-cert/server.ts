@@ -96,105 +96,6 @@ async function fetchApi<T>(
   }
 }
 
-/**
- * 페이지네이션 자동 처리 — 모든 페이지의 items를 합쳐서 반환.
- * 매칭이 클라이언트 측이므로 한 단지의 전체 데이터를 받아야 함.
- * API가 numOfRows를 내부적으로 100건 등으로 캡할 수 있어 페이지 순회로 보완.
- * 최대 10페이지(10,000건) 안전 한계.
- */
-async function fetchApiAll<T>(
-  endpoint: string,
-  params: Record<string, string>,
-): Promise<T[]> {
-  const apiKey = process.env.BUILDING_REGISTER_API_KEY
-  if (!apiKey) {
-    console.error('[building-cert] BUILDING_REGISTER_API_KEY not set')
-    return []
-  }
-
-  const MAX_PAGES = 10
-  const NUM_OF_ROWS = 1000
-  const all: T[] = []
-  let totalCount = 0
-
-  for (let pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
-    const url = new URL(`${BASE_URL}/${endpoint}`)
-    url.searchParams.set('serviceKey', apiKey)
-    url.searchParams.set('_type', 'json')
-    url.searchParams.set('numOfRows', String(NUM_OF_ROWS))
-    url.searchParams.set('pageNo', String(pageNo))
-    for (const [k, v] of Object.entries(params)) {
-      if (v != null && v !== '') url.searchParams.set(k, v)
-    }
-
-    console.log(`[building-cert] calling ${endpoint} (page ${pageNo})`, params)
-
-    try {
-      const res = await fetch(url.toString(), {
-        signal: AbortSignal.timeout(15_000),
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; AtomTax/1.0)',
-          Accept: 'application/json',
-        },
-      })
-      if (!res.ok) {
-        const body = await res.text().catch(() => '')
-        console.error(
-          `[building-cert] page ${pageNo} non-OK ${res.status}`,
-          body.slice(0, 300),
-        )
-        break
-      }
-      const json = (await res.json()) as ApiResponse<T>
-
-      const resultCode = json.response?.header?.resultCode
-      if (resultCode && resultCode !== '00') {
-        console.warn(
-          `[building-cert] page ${pageNo} api error code=${resultCode}`,
-          json.response?.header?.resultMsg,
-        )
-        break
-      }
-
-      if (pageNo === 1) {
-        const tc = json.response?.body?.totalCount
-        totalCount = Number(tc) || 0
-        console.log(`[building-cert] ${endpoint} totalCount=${totalCount}`)
-      }
-
-      const body = json.response?.body
-      if (!body || !body.items) break
-
-      let pageItems: T[] = []
-      if (Array.isArray(body.items)) {
-        pageItems = body.items as T[]
-      } else {
-        const itemContainer = body.items as { item?: T | T[] }
-        if (!itemContainer.item) break
-        if (Array.isArray(itemContainer.item)) {
-          pageItems = itemContainer.item
-        } else {
-          pageItems = [itemContainer.item]
-        }
-      }
-
-      if (pageItems.length === 0) break
-      all.push(...pageItems)
-
-      if (totalCount > 0 && all.length >= totalCount) break
-      if (pageItems.length < NUM_OF_ROWS) break
-    } catch (e) {
-      console.error(`[building-cert] page ${pageNo} failed`, e)
-      break
-    }
-  }
-
-  console.log(
-    `[building-cert] ${endpoint} totalReceived=${all.length} (of ${totalCount})`,
-  )
-  return all
-}
-
 interface BrTitleItem {
   totArea?: string | number
   platArea?: string | number
@@ -244,6 +145,41 @@ export async function getTitleInfo(
   }
 }
 
+export interface TitleBuildingPk {
+  dongNm: string
+  mgmBldrgstPk: string
+  totArea: number
+  bldNm: string
+  isCollective: boolean
+}
+
+/**
+ * 표제부 조회로 단지의 모든 동 목록 + 각 동의 mgmBldrgstPk 반환.
+ * 전유공용면적 조회 시 PK 필터로 데이터를 한 건물로 좁히는 용도.
+ */
+export async function getTitleListWithPk(
+  parts: PnuParts,
+): Promise<TitleBuildingPk[]> {
+  const items = await fetchApi<BrTitleItem>('getBrTitleInfo', {
+    sigunguCd: parts.sigunguCd,
+    bjdongCd: parts.bjdongCd,
+    platGbCd: parts.platGbCd,
+    bun: parts.bun,
+    ji: parts.ji,
+  })
+  if (items.length === 0) return []
+
+  return items
+    .map<TitleBuildingPk>((item) => ({
+      dongNm: String(item.dongNm ?? ''),
+      mgmBldrgstPk: String(item.mgmBldrgstPk ?? ''),
+      totArea: Number(item.totArea) || 0,
+      bldNm: String(item.bldNm ?? ''),
+      isCollective: item.regstrGbCdNm === '집합',
+    }))
+    .filter((b) => b.mgmBldrgstPk)
+}
+
 interface BrExposItem {
   area?: string | number
   exposPubuseGbCdNm?: string
@@ -279,26 +215,59 @@ export async function getExposPubuseArea(
   dongNm: string,
   hoNm: string,
 ): Promise<ExposResult | null> {
-  // dongNm/hoNm 모두 API 측 literal과 형식이 달라 정확 일치 검색이 0건 반환됨
-  //   - dong: "105" vs API "가락금호아파트 105동 105동"
-  //   - ho:   "103호" vs API "103" (호 접미 없음)
-  // → API 파라미터에서 둘 다 제거. 해당 PNU의 모든 전유/공용 데이터를 받아
-  //   클라이언트에서 숫자 추출 정확 일치로 필터링.
-  const params: Record<string, string> = {
+  // Step 1: 표제부로 단지의 모든 동 + 각 동의 mgmBldrgstPk 받기.
+  const titleList = await getTitleListWithPk(parts)
+  if (titleList.length === 0) {
+    console.warn('[building-cert] no title info for this PNU')
+    return null
+  }
+
+  // Step 2: 사용자 입력 동수와 일치하는 동의 mgmBldrgstPk 찾기.
+  const targetDongNum = extractNumber(dongNm)
+  if (!targetDongNum) {
+    console.warn('[building-cert] target dong number not extracted', dongNm)
+    return null
+  }
+
+  const matchedBuilding = titleList.find((b) => {
+    const itemDongNum = extractNumber(b.dongNm)
+    return itemDongNum && itemDongNum === targetDongNum
+  })
+
+  if (!matchedBuilding) {
+    console.warn('[building-cert] no matching dong in title list', {
+      targetDongNum,
+      availableDongs: titleList.map((b) => ({
+        dongNm: b.dongNm,
+        dongNum: extractNumber(b.dongNm),
+      })),
+    })
+    return null
+  }
+
+  console.log('[building-cert] matched building', {
+    dongNm: matchedBuilding.dongNm,
+    mgmBldrgstPk: matchedBuilding.mgmBldrgstPk,
+    bldNm: matchedBuilding.bldNm,
+  })
+
+  // Step 3: mgmBldrgstPk 파라미터로 전유공용면적 조회 (한 건물 단위로 좁아짐).
+  const items = await fetchApi<BrExposItem>('getBrExposPubuseAreaInfo', {
     sigunguCd: parts.sigunguCd,
     bjdongCd: parts.bjdongCd,
     platGbCd: parts.platGbCd,
     bun: parts.bun,
     ji: parts.ji,
+    mgmBldrgstPk: matchedBuilding.mgmBldrgstPk,
+  })
+  if (items.length === 0) {
+    console.warn('[building-cert] no expos data for matched building')
+    return null
   }
 
-  const items = await fetchApiAll<BrExposItem>(
-    'getBrExposPubuseAreaInfo',
-    params,
-  )
-  if (items.length === 0) return null
-
-  const targetDongNum = extractNumber(dongNm)
+  // Step 4: 호 매칭 + 전유/공용 합산.
+  // dongNm은 이미 PK로 필터되므로 호만 매칭하면 됨.
+  // 단, 가락금호처럼 한 PK가 단지 전체일 수도 있어 dong 필터도 안전망으로 유지.
   const targetHoNum = extractNumber(hoNm)
 
   let exposArea = 0
@@ -311,12 +280,7 @@ export async function getExposPubuseArea(
     const area = Number(item.area)
     if (!Number.isFinite(area) || area <= 0) continue
 
-    const itemDongNum = extractNumber(item.dongNm)
     const itemHoNum = extractNumber(item.hoNm)
-
-    if (targetDongNum) {
-      if (!itemDongNum || itemDongNum !== targetDongNum) continue
-    }
     if (targetHoNum) {
       if (!itemHoNum || itemHoNum !== targetHoNum) continue
     }
@@ -332,12 +296,12 @@ export async function getExposPubuseArea(
   console.log('[building-cert] exposPubuse summary', {
     totalItems: items.length,
     matched: matchedCount,
+    mgmBldrgstPk: matchedBuilding.mgmBldrgstPk,
     targetDongNum,
     targetHoNum,
     sampleResponses: items.slice(0, 5).map((i) => ({
       hoNm: i.hoNm,
       dongNm: i.dongNm,
-      dongNum: extractNumber(i.dongNm),
       hoNum: extractNumber(i.hoNm),
       area: i.area,
       type: i.exposPubuseGbCdNm,
