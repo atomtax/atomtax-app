@@ -31,22 +31,26 @@ export default function IncomeTaxReviewBranchPage() {
           </p>
         </Link>
 
-        <div className="bg-white border border-gray-200 rounded-xl p-6 opacity-60 cursor-not-allowed">
+        <Link
+          href="/reports-review/income-tax/trader"
+          className="group bg-white border border-gray-200 rounded-xl p-6 hover:border-indigo-500 hover:shadow-md transition-all"
+        >
           <div className="flex items-center justify-between">
-            <div className="p-3 bg-gray-100 rounded-lg text-gray-500">
+            <div className="p-3 bg-indigo-50 rounded-lg text-indigo-600">
               <Building2 size={24} />
             </div>
-            <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
-              준비 중
-            </span>
+            <ArrowRight
+              size={18}
+              className="text-gray-400 group-hover:text-indigo-600 transition-colors"
+            />
           </div>
           <h2 className="text-lg font-semibold text-gray-900 mt-4">
             매매사업자 참고
           </h2>
           <p className="text-sm text-gray-500 mt-1">
-            매매사업자 결산 현황 (다음 단계 구현 예정)
+            매매사업자(703011/703012) 결산 현황 (양도/기말재고 자동 집계)
           </p>
-        </div>
+        </Link>
       </div>
     </div>
   )
