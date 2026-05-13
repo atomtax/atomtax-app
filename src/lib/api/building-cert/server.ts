@@ -96,6 +96,105 @@ async function fetchApi<T>(
   }
 }
 
+/**
+ * 페이지네이션 자동 처리 — 모든 페이지의 items를 합쳐서 반환.
+ * 매칭이 클라이언트 측이므로 한 단지의 전체 데이터를 받아야 함.
+ * API가 numOfRows를 내부적으로 100건 등으로 캡할 수 있어 페이지 순회로 보완.
+ * 최대 10페이지(10,000건) 안전 한계.
+ */
+async function fetchApiAll<T>(
+  endpoint: string,
+  params: Record<string, string>,
+): Promise<T[]> {
+  const apiKey = process.env.BUILDING_REGISTER_API_KEY
+  if (!apiKey) {
+    console.error('[building-cert] BUILDING_REGISTER_API_KEY not set')
+    return []
+  }
+
+  const MAX_PAGES = 10
+  const NUM_OF_ROWS = 1000
+  const all: T[] = []
+  let totalCount = 0
+
+  for (let pageNo = 1; pageNo <= MAX_PAGES; pageNo++) {
+    const url = new URL(`${BASE_URL}/${endpoint}`)
+    url.searchParams.set('serviceKey', apiKey)
+    url.searchParams.set('_type', 'json')
+    url.searchParams.set('numOfRows', String(NUM_OF_ROWS))
+    url.searchParams.set('pageNo', String(pageNo))
+    for (const [k, v] of Object.entries(params)) {
+      if (v != null && v !== '') url.searchParams.set(k, v)
+    }
+
+    console.log(`[building-cert] calling ${endpoint} (page ${pageNo})`, params)
+
+    try {
+      const res = await fetch(url.toString(), {
+        signal: AbortSignal.timeout(15_000),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; AtomTax/1.0)',
+          Accept: 'application/json',
+        },
+      })
+      if (!res.ok) {
+        const body = await res.text().catch(() => '')
+        console.error(
+          `[building-cert] page ${pageNo} non-OK ${res.status}`,
+          body.slice(0, 300),
+        )
+        break
+      }
+      const json = (await res.json()) as ApiResponse<T>
+
+      const resultCode = json.response?.header?.resultCode
+      if (resultCode && resultCode !== '00') {
+        console.warn(
+          `[building-cert] page ${pageNo} api error code=${resultCode}`,
+          json.response?.header?.resultMsg,
+        )
+        break
+      }
+
+      if (pageNo === 1) {
+        const tc = json.response?.body?.totalCount
+        totalCount = Number(tc) || 0
+        console.log(`[building-cert] ${endpoint} totalCount=${totalCount}`)
+      }
+
+      const body = json.response?.body
+      if (!body || !body.items) break
+
+      let pageItems: T[] = []
+      if (Array.isArray(body.items)) {
+        pageItems = body.items as T[]
+      } else {
+        const itemContainer = body.items as { item?: T | T[] }
+        if (!itemContainer.item) break
+        if (Array.isArray(itemContainer.item)) {
+          pageItems = itemContainer.item
+        } else {
+          pageItems = [itemContainer.item]
+        }
+      }
+
+      if (pageItems.length === 0) break
+      all.push(...pageItems)
+
+      if (totalCount > 0 && all.length >= totalCount) break
+      if (pageItems.length < NUM_OF_ROWS) break
+    } catch (e) {
+      console.error(`[building-cert] page ${pageNo} failed`, e)
+      break
+    }
+  }
+
+  console.log(
+    `[building-cert] ${endpoint} totalReceived=${all.length} (of ${totalCount})`,
+  )
+  return all
+}
+
 interface BrTitleItem {
   totArea?: string | number
   platArea?: string | number
@@ -193,7 +292,7 @@ export async function getExposPubuseArea(
     ji: parts.ji,
   }
 
-  const items = await fetchApi<BrExposItem>(
+  const items = await fetchApiAll<BrExposItem>(
     'getBrExposPubuseAreaInfo',
     params,
   )
