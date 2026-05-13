@@ -35,6 +35,7 @@ export type LookupBuildingAreaResponse =
         | 'INVALID_PNU'
         | 'NO_DATA'
         | 'NO_DONG_HO_FOR_COLLECTIVE'
+        | 'EXPOS_PUBUSE_NOT_FOUND'
         | 'INTERNAL_ERROR'
       message?: string
     }
@@ -59,7 +60,8 @@ export async function POST(
       isBasement: body.isBasement ?? false,
     })
 
-    // 동/호 있으면 전유공용면적 조회 우선
+    // 동/호 입력 시 → 전유공용면적만 시도 (표제부 폴백 금지)
+    // 표제부로 폴백하면 단지 전체 연면적이 반환되어 사용자에게 잘못된 값 전달.
     if (apiParams) {
       const result = await getExposPubuseArea(
         parts,
@@ -77,15 +79,21 @@ export async function POST(
           hoNm: result.hoNm,
         })
       }
-      // 폴백: 표제부 시도
+      return NextResponse.json({
+        ok: false,
+        reason: 'EXPOS_PUBUSE_NOT_FOUND',
+        message:
+          '입력한 동/호에 해당하는 전유공용면적 데이터를 찾지 못했습니다. 동/호 입력을 확인하거나 직접 입력해주세요.',
+      })
     }
 
+    // 동/호 미입력 (단독주택 케이스) → 표제부 조회
     const titleResult = await getTitleInfo(parts)
     if (!titleResult) {
       return NextResponse.json({ ok: false, reason: 'NO_DATA' })
     }
 
-    if (titleResult.isCollective && !apiParams) {
+    if (titleResult.isCollective) {
       return NextResponse.json({
         ok: false,
         reason: 'NO_DONG_HO_FOR_COLLECTIVE',
