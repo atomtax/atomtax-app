@@ -106,6 +106,8 @@ interface BrTitleItem {
   bldNm?: string
   dongNm?: string
   mgmBldrgstPk?: string
+  useAprDay?: string
+  strctCdNm?: string
 }
 
 export interface TitleInfoResult {
@@ -113,6 +115,15 @@ export interface TitleInfoResult {
   buildingType: string
   buildingName?: string
   isCollective: boolean
+  completionYear?: number
+  structure?: string
+}
+
+function extractYearFromYmd(ymd: unknown): number | undefined {
+  if (typeof ymd !== 'string' || ymd.length < 4) return undefined
+  const year = parseInt(ymd.substring(0, 4), 10)
+  if (Number.isFinite(year) && year >= 1900 && year <= 2100) return year
+  return undefined
 }
 
 export async function getTitleInfo(
@@ -137,11 +148,15 @@ export async function getTitleInfo(
   const totalArea = Number(best.totArea)
   if (!Number.isFinite(totalArea) || totalArea <= 0) return null
 
+  console.log('[building-cert] title best item keys', Object.keys(best))
+
   return {
     totalArea,
     buildingType: best.mainPurpsCdNm ?? '',
     buildingName: best.bldNm,
     isCollective: best.regstrGbCdNm === '집합',
+    completionYear: extractYearFromYmd(best.useAprDay),
+    structure: best.strctCdNm,
   }
 }
 

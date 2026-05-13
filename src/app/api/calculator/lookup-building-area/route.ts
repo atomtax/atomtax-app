@@ -27,6 +27,8 @@ export type LookupBuildingAreaResponse =
       pubuseArea?: number
       dongNm?: string
       hoNm?: string
+      completionYear?: number
+      structure?: string
     }
   | {
       ok: false
@@ -69,6 +71,8 @@ export async function POST(
         apiParams.hoNm,
       )
       if (result) {
+        // 준공연도/구조 메타데이터는 표제부에서 — 부가 호출 1회.
+        const titleForMeta = await getTitleInfo(parts)
         return NextResponse.json({
           ok: true,
           totalArea: result.totalArea,
@@ -77,6 +81,10 @@ export async function POST(
           pubuseArea: result.pubuseArea,
           dongNm: result.dongNm,
           hoNm: result.hoNm,
+          completionYear: titleForMeta?.completionYear,
+          structure: titleForMeta?.structure,
+          buildingType: titleForMeta?.buildingType,
+          buildingName: titleForMeta?.buildingName,
         })
       }
       const label = `${apiParams.dongNm ? `${apiParams.dongNm}동 ` : ''}${apiParams.hoNm}`
@@ -109,6 +117,8 @@ export async function POST(
       buildingType: titleResult.buildingType,
       buildingName: titleResult.buildingName,
       isCollective: titleResult.isCollective,
+      completionYear: titleResult.completionYear,
+      structure: titleResult.structure,
     })
   } catch (e) {
     console.error('[lookup-building-area] error', e)
