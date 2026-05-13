@@ -43,7 +43,7 @@ async function fetchApi<T>(
   const url = new URL(`${BASE_URL}/${endpoint}`)
   url.searchParams.set('serviceKey', apiKey)
   url.searchParams.set('_type', 'json')
-  url.searchParams.set('numOfRows', '100')
+  url.searchParams.set('numOfRows', '1000')
   url.searchParams.set('pageNo', '1')
   for (const [k, v] of Object.entries(params)) {
     if (v != null && v !== '') url.searchParams.set(k, v)
@@ -174,16 +174,17 @@ export async function getExposPubuseArea(
   dongNm: string,
   hoNm: string,
 ): Promise<ExposResult | null> {
-  // dongNm은 API 측 literal과 형식이 달라 매칭 실패가 잦음
-  // (예: 사용자 "105" vs API "가락금호아파트 105동 105동")
-  // → API 파라미터에서 dongNm 제거, 전체 응답을 받아 클라이언트에서 숫자 일치로 필터링
+  // dongNm/hoNm 모두 API 측 literal과 형식이 달라 정확 일치 검색이 0건 반환됨
+  //   - dong: "105" vs API "가락금호아파트 105동 105동"
+  //   - ho:   "103호" vs API "103" (호 접미 없음)
+  // → API 파라미터에서 둘 다 제거. 해당 PNU의 모든 전유/공용 데이터를 받아
+  //   클라이언트에서 숫자 추출 정확 일치로 필터링.
   const params: Record<string, string> = {
     sigunguCd: parts.sigunguCd,
     bjdongCd: parts.bjdongCd,
     platGbCd: parts.platGbCd,
     bun: parts.bun,
     ji: parts.ji,
-    hoNm,
   }
 
   const items = await fetchApi<BrExposItem>(
