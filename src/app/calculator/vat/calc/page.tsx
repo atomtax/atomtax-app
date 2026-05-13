@@ -9,7 +9,12 @@ export default function VatCalculatorCalcPage() {
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         }}
       >
-        <h1 className="text-xl font-bold">🏢 건물분 부가가치세 계산기</h1>
+        <h1 className="text-xl font-bold">
+          🏢 건물분 부가가치세 계산기
+          <span className="ml-2 text-sm font-normal opacity-80">
+            by 아톰세무회계
+          </span>
+        </h1>
         <p className="text-sm opacity-90 mt-1">
           매매사업자용 부가가치세 자동 계산 도구
         </p>
