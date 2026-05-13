@@ -323,3 +323,18 @@ export interface IncomeTaxReviewNote {
   created_at: string
   updated_at: string
 }
+
+// ============================================================
+// 매매사업자 결산참고 메모 (v23)
+// 매출액/매출원가/기말재고/세금은 trader_properties 실시간 집계.
+// 이 테이블은 사용자 메모 + 확인여부만 저장.
+// ============================================================
+export interface TraderReviewNote {
+  id: string
+  client_id: string
+  report_year: number
+  memo: string
+  is_confirmed: boolean
+  created_at: string
+  updated_at: string
+}

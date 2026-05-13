@@ -1,15 +1,39 @@
 import Header from '@/components/layout/Header'
+import { getTraderManagers, getTraderReviewData } from '@/lib/db/trader-review'
+import { TraderReviewClient } from './TraderReviewClient'
 
-export default function TraderReviewPage() {
+interface SearchParams {
+  year?: string
+  manager?: string
+}
+
+export default async function TraderReviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>
+}) {
+  const sp = await searchParams
+  const currentYear = new Date().getFullYear()
+  const year = Number.parseInt(sp.year ?? String(currentYear - 1), 10)
+  const manager = sp.manager?.trim() || undefined
+
+  const [rows, managers] = await Promise.all([
+    getTraderReviewData({ year, manager }),
+    getTraderManagers(),
+  ])
+
   return (
-    <div>
+    <div className="space-y-4">
       <Header
-        title="매매사업자 결산참고"
-        subtitle="다음 단계에서 구현 예정"
+        title="매매사업자 결산참고 (종합소득세)"
+        subtitle="업종코드 703011/703012 — 양도/기말재고 자동 집계 + 메모/확인 저장"
       />
-      <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400 shadow-sm">
-        매매사업자 결산참고는 다음 단계에서 구현됩니다.
-      </div>
+      <TraderReviewClient
+        initialRows={rows}
+        managers={managers}
+        year={year}
+        manager={manager}
+      />
     </div>
   )
 }
