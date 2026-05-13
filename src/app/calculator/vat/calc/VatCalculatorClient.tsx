@@ -100,10 +100,23 @@ export function VatCalculatorClient() {
 
   function handleAutoLookupDone(meta: AutoLookupMeta) {
     setForm((prev) => {
+      const next = { ...prev }
+      let changed = false
       if (meta.completionYear && !prev.completionYear) {
-        return { ...prev, completionYear: String(meta.completionYear) }
+        next.completionYear = String(meta.completionYear)
+        changed = true
       }
-      return prev
+      // structureId/usageId 는 INITIAL_FORM 기본값(cheolgeun/apartment)이 들어있어
+      // "비어있을 때만 채움" 조건이 작동하지 않음. API 매핑 결과가 있으면 우선 적용.
+      if (meta.structureId) {
+        next.structureId = meta.structureId
+        changed = true
+      }
+      if (meta.usageId) {
+        next.usageId = meta.usageId
+        changed = true
+      }
+      return changed ? next : prev
     })
   }
 

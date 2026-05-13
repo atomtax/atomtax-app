@@ -24,7 +24,9 @@ interface SuccessInfo {
   dongNm?: string
   hoNm?: string
   completionYear?: number
-  structure?: string
+  structureRaw?: string
+  structureId?: string
+  usageId?: string
 }
 
 interface LookupResponseSuccess extends SuccessInfo {
@@ -63,7 +65,9 @@ interface PdfInfo {
 export interface AutoLookupMeta {
   totalArea: number
   completionYear?: number
-  structure?: string
+  structureId?: string
+  usageId?: string
+  structureRaw?: string
   buildingType?: string
 }
 
@@ -128,7 +132,9 @@ export function BuildingAreaField({
             dongNm: json.dongNm,
             hoNm: json.hoNm,
             completionYear: json.completionYear,
-            structure: json.structure,
+            structureRaw: json.structureRaw,
+            structureId: json.structureId,
+            usageId: json.usageId,
           })
           setPdfInfo(null)
           setNeedDongHoMessage(null)
@@ -137,7 +143,9 @@ export function BuildingAreaField({
           onAutoLookupDone?.({
             totalArea: json.totalArea,
             completionYear: json.completionYear,
-            structure: json.structure,
+            structureId: json.structureId,
+            usageId: json.usageId,
+            structureRaw: json.structureRaw,
             buildingType: json.buildingType,
           })
         } else if (json.reason === 'NO_DONG_HO_FOR_COLLECTIVE') {
