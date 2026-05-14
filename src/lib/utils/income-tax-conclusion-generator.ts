@@ -43,16 +43,40 @@ ${data.report_year}년도 결산 결과 매출액은 ${formatBillionOrZero(reven
 
 /**
  * 주요 경비 항목 (조건부).
- * 손익계산서 요약에서 0보다 큰 항목 중 상위 4개를 만원 단위로 표시.
- * (현재 데이터 모델은 판매비와관리비를 단일 합계로 저장 — 세부 항목 표시 불가)
+ * - 손익계산서 details(판관비/매출원가/영업외비용) 세부 항목이 있으면 그것 우선 사용
+ * - 없으면 카테고리 합계로 폴백 (이전 동작)
+ * - 0 초과 항목 중 금액 내림차순 상위 4개를 만원 단위로 표시.
  */
 function buildExpenseSection(summary: IncomeStatementSummary | null): string {
   if (!summary) return ''
-  const candidates = [
-    { name: '매출원가', amount: Number(summary.cogs) || 0 },
-    { name: '판매비와 관리비', amount: Number(summary.sga) || 0 },
-    { name: '영업외비용', amount: Number(summary.non_operating_expense) || 0 },
-  ]
+
+  const candidates: Array<{ name: string; amount: number }> = []
+  const details = summary.details
+
+  // 매출원가
+  if (details?.cogs && details.cogs.length > 0) {
+    candidates.push(...details.cogs)
+  } else if (Number(summary.cogs) > 0) {
+    candidates.push({ name: '매출원가', amount: Number(summary.cogs) })
+  }
+
+  // 판매비와 관리비 세부 항목 (가장 중요 — 사용자 요구 사항의 핵심)
+  if (details?.sga && details.sga.length > 0) {
+    candidates.push(...details.sga)
+  } else if (Number(summary.sga) > 0) {
+    candidates.push({ name: '판매비와 관리비', amount: Number(summary.sga) })
+  }
+
+  // 영업외비용
+  if (details?.non_operating_expense && details.non_operating_expense.length > 0) {
+    candidates.push(...details.non_operating_expense)
+  } else if (Number(summary.non_operating_expense) > 0) {
+    candidates.push({
+      name: '영업외비용',
+      amount: Number(summary.non_operating_expense),
+    })
+  }
+
   const top = candidates
     .filter((e) => e.amount > 0)
     .sort((a, b) => b.amount - a.amount)
