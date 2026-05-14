@@ -409,21 +409,23 @@ export default function AdjustmentInvoiceManager({
 
   return (
     <div className="p-6 max-w-[1600px] mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">조정료 청구서 관리</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {initialYear}년 · {initialBusinessType === 'corporate' ? '법인·의료사업자' : '개인사업자'} ·
-            {' '}{visibleRows.length}건
-            {dirtyCount > 0 && (
-              <span className="ml-2 text-amber-600 font-medium">미저장 {dirtyCount}건</span>
-            )}
-          </p>
+      {/* 상단 메뉴 + 컨트롤 바 — sticky (스크롤 시 항상 상단 고정) */}
+      <div className="sticky top-0 -mx-6 px-6 -mt-6 pt-6 pb-3 bg-gray-50 z-30 border-b border-gray-200">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">조정료 청구서 관리</h1>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {initialYear}년 · {initialBusinessType === 'corporate' ? '법인·의료사업자' : '개인사업자'} ·
+              {' '}{visibleRows.length}건
+              {dirtyCount > 0 && (
+                <span className="ml-2 text-amber-600 font-medium">미저장 {dirtyCount}건</span>
+              )}
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* 컨트롤 바 */}
-      <div className="bg-white border border-gray-200 rounded-lg p-3 mb-4 flex flex-wrap items-center gap-2">
+        {/* 컨트롤 바 */}
+        <div className="bg-white border border-gray-200 rounded-lg p-3 flex flex-wrap items-center gap-2">
         {/* 사업유형 토글 */}
         <div className="inline-flex rounded-md overflow-hidden border border-gray-300">
           {(['corporate', 'individual'] as const).map((t) => (
@@ -539,12 +541,13 @@ export default function AdjustmentInvoiceManager({
             일괄 출력
           </button>
         </div>
+        </div>
       </div>
 
-      {/* 테이블 */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
+      {/* 테이블 — thead 가 sticky 헤더 바로 아래에 고정. top 은 상단 sticky 영역 높이 (대략 128px) */}
+      <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto mt-4">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-600">
+          <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-600 sticky top-[128px] z-20 shadow-sm">
             <tr>
               <th className="w-10 p-2 text-center">
                 <input
