@@ -5,7 +5,11 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // 공개 경로는 인증 검사 완전 통과 (Supabase 호출 자체를 안 함)
-  if (pathname.startsWith('/calculator')) {
+  if (
+    pathname.startsWith('/calculator') ||
+    pathname.startsWith('/share/') ||
+    pathname.startsWith('/api/cron/')
+  ) {
     return NextResponse.next()
   }
 

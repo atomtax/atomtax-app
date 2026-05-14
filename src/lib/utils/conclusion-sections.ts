@@ -174,15 +174,19 @@ function buildReviewBody(report: IncomeTaxReport): string {
   const taxCredit = Number(report.income_tax_credit) || 0
   if (incomeDeduction === 0 && taxReduction === 0 && taxCredit === 0) return ''
 
-  const parts: string[] = []
+  const items: string[] = []
   if (incomeDeduction > 0)
-    parts.push(`소득공제 ${incomeDeduction.toLocaleString('ko-KR')}원`)
+    items.push(`- 소득공제 ${incomeDeduction.toLocaleString('ko-KR')}원`)
   if (taxReduction > 0)
-    parts.push(`세액감면 ${taxReduction.toLocaleString('ko-KR')}원`)
+    items.push(`- 세액감면 ${taxReduction.toLocaleString('ko-KR')}원`)
   if (taxCredit > 0)
-    parts.push(`세액공제 ${taxCredit.toLocaleString('ko-KR')}원`)
+    items.push(`- 세액공제 ${taxCredit.toLocaleString('ko-KR')}원`)
 
-  return `대표님께 적용 가능한 모든 세액공제·감면을 검토한 결과 ${parts.join(', ')} 적용되었습니다.`
+  // 마지막 줄에 "이 적용되었습니다." 자연스럽게 붙임 ('원'은 받침 → '이')
+  const lastIdx = items.length - 1
+  items[lastIdx] = `${items[lastIdx]}이 적용되었습니다.`
+
+  return ['대표님께 적용 가능한 모든 세액공제·감면을 검토한 결과', ...items].join('\n')
 }
 
 function buildDetailBody(report: IncomeTaxReport): string {
