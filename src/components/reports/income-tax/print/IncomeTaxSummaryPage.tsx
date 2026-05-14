@@ -169,6 +169,7 @@ export function IncomeTaxSummaryPage({
                   fontSize: '14px',
                   fontWeight: 600,
                   lineHeight: 1,
+                  paddingBottom: '2px',
                   flexShrink: 0,
                   WebkitPrintColorAdjust: 'exact',
                   printColorAdjust: 'exact',
