@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import * as XLSX from 'xlsx'
 import { Save, Plus, Download, Upload, Printer, RefreshCw, Trash2, Search } from 'lucide-react'
@@ -253,9 +253,60 @@ export default function AdjustmentInvoiceManager({
     ])
   }
 
+  function recomputeAllMaemaeRows(rows: RowState[]): RowState[] {
+    let anyChanged = false
+    const next = rows.map((r) => {
+      if (r.isDeleted) return r
+      if (!isMaemaeBusinessCode(r.businessCategoryCode)) return r
+      // 수동 모드는 건너뜀 (사용자 의도 보존)
+      if (r.isMaemaeDiscountManual) return r
+      const calc = calculateInvoiceRow({
+        revenue: r.revenue,
+        businessType: initialBusinessType,
+        taxCreditAdditional: r.taxCreditAdditional,
+        faithfulReportFee: r.faithfulReportFee,
+        discount: r.discount,
+        isMaemaeClient: true,
+        isMaemaeDiscountManual: false,
+        currentMaemaeDiscount: 0,
+      })
+      if (
+        calc.maemaeDiscount === r.maemaeDiscount &&
+        calc.supplyAmount === r.supplyAmount &&
+        calc.vatAmount === r.vatAmount &&
+        calc.totalAmount === r.totalAmount
+      ) {
+        return r
+      }
+      anyChanged = true
+      return {
+        ...r,
+        settlementFee: calc.settlementFee,
+        adjustmentFee: calc.adjustmentFee,
+        maemaeDiscount: calc.maemaeDiscount,
+        supplyAmount: calc.supplyAmount,
+        vatAmount: calc.vatAmount,
+        totalAmount: calc.totalAmount,
+        isDirty: true,
+      }
+    })
+    return anyChanged ? next : rows
+  }
+
+  // 페이지 로드 후 한 번 — 매매업 고객 행을 자동 재계산
+  useEffect(() => {
+    setRows((prev) => recomputeAllMaemaeRows(prev))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   function handleSaveAll() {
-    const dirtyRows = rows.filter((r) => r.isDirty && !r.isDeleted)
-    const deletedRows = rows.filter((r) => r.isDeleted && r.dbId)
+    // 저장 직전 일괄 재계산
+    const recomputed = recomputeAllMaemaeRows(rows)
+    if (recomputed !== rows) {
+      setRows(recomputed)
+    }
+    const dirtyRows = recomputed.filter((r) => r.isDirty && !r.isDeleted)
+    const deletedRows = recomputed.filter((r) => r.isDeleted && r.dbId)
 
     if (dirtyRows.length === 0 && deletedRows.length === 0) {
       alert('저장할 변경사항이 없습니다.')
@@ -605,7 +656,7 @@ export default function AdjustmentInvoiceManager({
             )}
           </tbody>
           {visibleRows.length > 0 && (
-            <tfoot className="bg-gray-100 border-t-2 border-gray-300 font-medium text-sm sticky bottom-0 z-20 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
+            <tfoot className="bg-gray-100 border-t-2 border-gray-300 font-medium text-sm">
               <tr>
                 <td colSpan={3} className="p-2 text-right text-gray-600">합 계</td>
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.revenue)}</td>
