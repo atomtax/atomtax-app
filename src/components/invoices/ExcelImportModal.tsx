@@ -53,12 +53,19 @@ export default function ExcelImportModal({
         const taxCreditAdditional = Number(r['세액공제'] ?? 0)
         const faithfulReportFee = Number(r['성실신고'] ?? 0)
         const discount = Number(r['할인'] ?? 0)
+        const maemaeDiscountFromExcel = Number(r['매매업할인'] ?? 0)
+        const isMaemaeManual = maemaeDiscountFromExcel > 0
         const calc = calculateInvoiceRow({
           revenue,
           businessType,
           taxCreditAdditional,
           faithfulReportFee,
           discount,
+          isMaemaeClient: !!matched?.business_category_code &&
+            (matched.business_category_code === '703011' ||
+              matched.business_category_code === '703012'),
+          isMaemaeDiscountManual: isMaemaeManual,
+          currentMaemaeDiscount: maemaeDiscountFromExcel,
         })
         const pm = String(r['납부방법'] ?? '미확인')
         return {
@@ -68,12 +75,15 @@ export default function ExcelImportModal({
           clientId: matched?.id ?? null,
           clientName: String(r['고객사명'] ?? matched?.company_name ?? ''),
           manager: matched?.manager ?? null,
+          businessCategoryCode: matched?.business_category_code ?? null,
           revenue,
           settlementFee: calc.settlementFee,
           adjustmentFee: calc.adjustmentFee,
           taxCreditAdditional,
           faithfulReportFee,
           discount,
+          maemaeDiscount: calc.maemaeDiscount,
+          isMaemaeDiscountManual: isMaemaeManual,
           supplyAmount: calc.supplyAmount,
           vatAmount: calc.vatAmount,
           totalAmount: calc.totalAmount,
