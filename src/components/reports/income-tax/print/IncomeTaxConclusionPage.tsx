@@ -4,8 +4,8 @@ import {
   formatNumber, toBillionWon,
 } from '@/components/reports/print/CorporateTaxPrintTokens'
 import { highlightAmounts } from '@/lib/utils/highlight-amounts'
-import { parseIncomeTaxConclusion } from '@/lib/utils/income-tax-conclusion-parser'
-import type { IncomeTaxReport } from '@/types/database'
+import { migrateConclusionToSections } from '@/lib/utils/conclusion-sections'
+import type { ConclusionSection, IncomeTaxReport } from '@/types/database'
 
 interface Props {
   reportYear: number
@@ -28,7 +28,15 @@ export function IncomeTaxConclusionPage({
   const reductionTotal = report.tax_reductions.reduce((s, r) => s + (r.current_amount ?? 0), 0)
   const totalBenefit = creditTotal + reductionTotal
 
-  const { cards, closing } = parseIncomeTaxConclusion(report.conclusion_notes)
+  const allSections: ConclusionSection[] =
+    report.conclusion_sections && report.conclusion_sections.length > 0
+      ? report.conclusion_sections
+      : migrateConclusionToSections(report.conclusion_notes)
+  const visible = allSections
+    .filter((s) => s.is_visible && s.body.trim())
+    .sort((a, b) => a.order - b.order)
+  const closingSection = visible.find((s) => s.section_key === 'closing') ?? null
+  const cards = visible.filter((s) => s.section_key !== 'closing')
 
   const keyMetrics = [
     {
@@ -93,31 +101,31 @@ export function IncomeTaxConclusionPage({
           </div>
         )}
 
-        {/* 결론 카드 (최대 4개, "마무리 인사" 제외) */}
+        {/* 결론 카드 — "마무리 인사" 제외, 2열 그리드, body 줄바꿈 보존 */}
         {cards.length > 0 && (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: cards.length === 1 ? '1fr' : cards.length === 2 ? '1fr 1fr' : cards.length === 3 ? '1fr 1fr 1fr' : '1fr 1fr',
+            gridTemplateColumns: cards.length === 1 ? '1fr' : '1fr 1fr',
             gap: '10px',
           }}>
-            {cards.map((point, i) => (
-              <div key={i} style={{
+            {cards.map((section) => (
+              <div key={section.id} style={{
                 border: `1px solid ${PRINT_TOKENS.border}`,
                 borderRadius: '8px',
                 padding: '14px 16px',
                 borderTop: `3px solid ${PRINT_TOKENS.primaryAccent}`,
                 WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
               } as React.CSSProperties}>
-                {point.title && (
-                  <p style={{ fontSize: '14px', fontWeight: 700, color: PRINT_TOKENS.primary, margin: '0 0 6px' }}>
-                    {point.title}
-                  </p>
-                )}
-                {point.body && (
-                  <p style={{ fontSize: '13px', color: PRINT_TOKENS.textSecondary, margin: 0, lineHeight: 1.6 }}>
-                    {highlightAmounts(point.body)}
-                  </p>
-                )}
+                <p style={{ fontSize: '14px', fontWeight: 700, color: PRINT_TOKENS.primary, margin: '0 0 6px' }}>
+                  {section.header}
+                </p>
+                <div style={{ fontSize: '13px', color: PRINT_TOKENS.textSecondary, lineHeight: 1.6 }}>
+                  {section.body.split('\n').map((line, idx) => (
+                    <p key={idx} style={{ margin: idx === 0 ? 0 : '4px 0 0' }}>
+                      {highlightAmounts(line)}
+                    </p>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
@@ -152,12 +160,16 @@ export function IncomeTaxConclusionPage({
         } as React.CSSProperties}>
           <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
           <div style={{ position: 'relative' }}>
-            {/* 인사말 (자동 생성 시) */}
-            {closing && (
+            {/* 인사말 — closing 섹션. 줄바꿈 보존 */}
+            {closingSection && (
               <>
-                <p style={{ fontSize: '16px', fontWeight: 600, color: 'white', margin: '0 0 14px', lineHeight: 1.7 }}>
-                  {highlightAmounts(closing, { color: '#fef3c7' })}
-                </p>
+                <div style={{ fontSize: '16px', fontWeight: 600, color: 'white', margin: '0 0 14px', lineHeight: 1.7 }}>
+                  {closingSection.body.split('\n').map((line, idx) => (
+                    <p key={idx} style={{ margin: idx === 0 ? 0 : '4px 0 0' }}>
+                      {highlightAmounts(line, { color: '#fef3c7' })}
+                    </p>
+                  ))}
+                </div>
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.2)', margin: '0 0 12px' }} />
               </>
             )}

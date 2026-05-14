@@ -91,6 +91,7 @@ export async function saveIncomeTaxReportFull(reportId: string, input: SaveInput
       is_sincere_filing: input.is_sincere_filing,
       additional_notes: input.additional_notes,
       conclusion_notes: input.conclusion_notes,
+      conclusion_sections: input.conclusion_sections,
     })
     .eq('id', reportId)
     .select('id, client_id')
