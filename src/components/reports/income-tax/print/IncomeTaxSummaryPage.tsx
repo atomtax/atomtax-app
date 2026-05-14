@@ -37,20 +37,29 @@ const ROWS: RowDef[] = [
 interface Props {
   reportYear: number
   report: IncomeTaxReport
+  chapterNumber?: string
+  pageNumber?: number
+  totalPages?: number
 }
 
-export function IncomeTaxSummaryPage({ reportYear, report }: Props) {
+export function IncomeTaxSummaryPage({
+  reportYear,
+  report,
+  chapterNumber = '02',
+  pageNumber = 2,
+  totalPages = 5,
+}: Props) {
   const finalWithLocal = report.income_final_with_local
   const isRefund = finalWithLocal < 0
 
   return (
     <div className="page-container" style={a4PageStyle}>
-      <ChapterHeader number="02" titleKo="신고 개요" titleEn="FILING OVERVIEW" reportYear={reportYear} />
+      <ChapterHeader number={chapterNumber} titleKo="신고 개요" titleEn="FILING OVERVIEW" reportYear={reportYear} />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Hero 카드 — 페이지 상단 */}
+        {/* Hero 카드 — 옵션 C: 좌(명칭) ↔ 우(금액) */}
         <div style={{
-          padding: '20px 24px',
+          padding: '24px 28px',
           background: isRefund
             ? 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)'
             : 'linear-gradient(135deg, #047857 0%, #059669 100%)',
@@ -62,20 +71,31 @@ export function IncomeTaxSummaryPage({ reportYear, report }: Props) {
         } as React.CSSProperties}>
           <div style={{ position: 'absolute', top: '-30px', right: '-30px', width: '120px', height: '120px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
           <div style={{ position: 'absolute', bottom: '-40px', right: '30px', width: '80px', height: '80px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
-          <div style={{ position: 'relative' }}>
-            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.9)', margin: '0 0 8px', letterSpacing: '1px', fontWeight: 500 }}>
-              {isRefund ? 'FINAL TAX REFUND · 최종 환급세액' : 'FINAL TAX PAYABLE · 최종 납부할 세액'}
-            </p>
-            <p style={{ fontSize: '36px', fontWeight: 600, color: 'white', margin: 0, letterSpacing: '-1px', lineHeight: 1 }}>
+          <div style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+            gap: '20px',
+          }}>
+            <div>
+              <p style={{ fontSize: '22px', fontWeight: 700, color: 'white', margin: 0, lineHeight: 1.1 }}>
+                {isRefund ? '최종 환급세액' : '최종 납부할 세액'}
+              </p>
+              <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.75)', margin: '6px 0 0', letterSpacing: '1.2px', fontWeight: 500 }}>
+                {isRefund ? 'FINAL TAX REFUND' : 'FINAL TAX PAYABLE'}
+              </p>
+            </div>
+            <p style={{ fontSize: '38px', fontWeight: 600, color: 'white', margin: 0, letterSpacing: '-1px', lineHeight: 1, whiteSpace: 'nowrap' }}>
               {formatNumber(Math.abs(finalWithLocal))}
-              <span style={{ fontSize: '16px', fontWeight: 400, color: 'rgba(255,255,255,0.85)', marginLeft: '6px' }}>원</span>
-            </p>
-            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', margin: '10px 0 0' }}>
-              {isRefund
-                ? '기납부세액이 결정세액보다 많아 환급 대상입니다 (지방소득세 포함)'
-                : '종합소득세 + 지방소득세 (납부할 총세액 × 10%)'}
+              <span style={{ fontSize: '18px', fontWeight: 400, color: 'rgba(255,255,255,0.85)', marginLeft: '6px' }}>원</span>
             </p>
           </div>
+          <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', margin: '14px 0 0', position: 'relative' }}>
+            {isRefund
+              ? '기납부세액이 결정세액보다 많아 환급 대상입니다 (지방소득세 포함)'
+              : '종합소득세 + 지방소득세 (납부할 총세액 × 10%)'}
+          </p>
         </div>
 
         {/* 부호 배지 표 */}
@@ -200,7 +220,7 @@ export function IncomeTaxSummaryPage({ reportYear, report }: Props) {
         </div>
       </div>
 
-      <PageFooter pageNumber={2} totalPages={5} />
+      <PageFooter pageNumber={pageNumber} totalPages={totalPages} />
     </div>
   )
 }

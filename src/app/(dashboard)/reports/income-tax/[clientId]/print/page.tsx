@@ -52,6 +52,15 @@ export default async function IncomeTaxPrintPage({ params, searchParams }: Props
 
   const report = reportRaw as IncomeTaxReport
 
+  // 세액공제/감면 추가 항목이 있을 때만 CHAPTER 04 표시.
+  // 표시 여부에 따라 후속 챕터 번호 자동 재정렬 (Conclusion 04 또는 05).
+  const hasCreditsOrReductions =
+    (report.tax_credits?.length ?? 0) > 0 ||
+    (report.tax_reductions?.length ?? 0) > 0
+  const totalPages = hasCreditsOrReductions ? 5 : 4
+  const conclusionChapter = hasCreditsOrReductions ? '05' : '04'
+  const conclusionPage = hasCreditsOrReductions ? 5 : 4
+
   return (
     <>
       <div className="no-print" style={{
@@ -84,25 +93,45 @@ export default async function IncomeTaxPrintPage({ params, searchParams }: Props
         reportYear={year}
       />
 
-      {/* 02 신고개요 — 부호 배지 표 */}
-      <IncomeTaxSummaryPage reportYear={year} report={report} />
+      {/* 02 신고개요 */}
+      <IncomeTaxSummaryPage
+        reportYear={year}
+        report={report}
+        chapterNumber="02"
+        pageNumber={2}
+        totalPages={totalPages}
+      />
 
       {/* 03 손익계산서 */}
       <IncomeStatementPage
         reportYear={year}
         summary={report.income_statement_summary}
         periodLabel={report.income_statement_period_label ?? null}
+        chapterNumber="03"
+        pageNumber={3}
+        totalPages={totalPages}
       />
 
-      {/* 04 세액공제·감면 */}
-      <IncomeTaxCreditsPage
+      {/* 04 세액공제·감면 — 항목 있을 때만 */}
+      {hasCreditsOrReductions && (
+        <IncomeTaxCreditsPage
+          reportYear={year}
+          taxCredits={report.tax_credits}
+          taxReductions={report.tax_reductions}
+          chapterNumber="04"
+          pageNumber={4}
+          totalPages={totalPages}
+        />
+      )}
+
+      {/* 05 (또는 04) 종합결론 */}
+      <IncomeTaxConclusionPage
         reportYear={year}
-        taxCredits={report.tax_credits}
-        taxReductions={report.tax_reductions}
+        report={report}
+        chapterNumber={conclusionChapter}
+        pageNumber={conclusionPage}
+        totalPages={totalPages}
       />
-
-      {/* 05 종합결론 */}
-      <IncomeTaxConclusionPage reportYear={year} report={report} />
     </>
   )
 }
