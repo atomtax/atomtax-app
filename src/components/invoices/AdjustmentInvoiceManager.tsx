@@ -408,9 +408,9 @@ export default function AdjustmentInvoiceManager({
   const previewRow = previewRowId ? rows.find((r) => r.rowId === previewRowId) ?? null : null
 
   return (
-    <div className="p-6 max-w-[1600px] mx-auto">
-      {/* 상단 메뉴 + 컨트롤 바 — sticky (스크롤 시 항상 상단 고정) */}
-      <div className="sticky top-0 -mx-6 px-6 -mt-6 pt-6 pb-3 bg-gray-50 z-30 border-b border-gray-200">
+    <div className="flex flex-col h-[calc(100vh-4rem)] -m-8 p-8 max-w-[1600px] mx-auto overflow-hidden">
+      {/* 상단 영역 — 자연 흐름. 스크롤은 아래 테이블 컨테이너에서만 발생 */}
+      <div className="flex-shrink-0">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">조정료 청구서 관리</h1>
@@ -425,7 +425,7 @@ export default function AdjustmentInvoiceManager({
         </div>
 
         {/* 컨트롤 바 */}
-        <div className="bg-white border border-gray-200 rounded-lg p-3 flex flex-wrap items-center gap-2">
+        <div className="bg-white border border-gray-200 rounded-lg p-3 mb-4 flex flex-wrap items-center gap-2">
         {/* 사업유형 토글 */}
         <div className="inline-flex rounded-md overflow-hidden border border-gray-300">
           {(['corporate', 'individual'] as const).map((t) => (
@@ -544,10 +544,10 @@ export default function AdjustmentInvoiceManager({
         </div>
       </div>
 
-      {/* 테이블 — thead 가 sticky 헤더 바로 아래에 고정. top 은 상단 sticky 영역 높이 (대략 128px) */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto mt-4">
+      {/* 테이블 — 내부 스크롤 컨테이너. thead 가 이 컨테이너 기준 sticky top-0 */}
+      <div className="flex-1 min-h-0 bg-white border border-gray-200 rounded-lg overflow-auto">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-600 sticky top-[128px] z-20 shadow-sm">
+          <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-600 sticky top-0 z-20 shadow-sm">
             <tr>
               <th className="w-10 p-2 text-center">
                 <input
@@ -605,7 +605,7 @@ export default function AdjustmentInvoiceManager({
             )}
           </tbody>
           {visibleRows.length > 0 && (
-            <tfoot className="bg-gray-100 border-t-2 border-gray-300 font-medium text-sm">
+            <tfoot className="bg-gray-100 border-t-2 border-gray-300 font-medium text-sm sticky bottom-0 z-20 shadow-[0_-2px_4px_rgba(0,0,0,0.05)]">
               <tr>
                 <td colSpan={3} className="p-2 text-right text-gray-600">합 계</td>
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.revenue)}</td>
