@@ -6,7 +6,9 @@ interface Props {
   summary: IncomeStatementSummary
 }
 
-const ROWS: Array<{ label: string; key: keyof IncomeStatementSummary; bold?: boolean }> = [
+type NumericKey = Exclude<keyof IncomeStatementSummary, 'details'>
+
+const ROWS: Array<{ label: string; key: NumericKey; bold?: boolean }> = [
   { label: 'Ⅰ. 매출액', key: 'revenue', bold: true },
   { label: 'Ⅱ. 매출원가', key: 'cogs' },
   { label: 'Ⅲ. 매출총이익', key: 'gross_profit', bold: true },

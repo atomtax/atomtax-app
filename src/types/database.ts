@@ -71,6 +71,19 @@ export type ClientUpdate = Partial<ClientInsert>
 // ============================================================
 export type CorporateTaxReportStatus = 'draft' | 'completed'
 
+export interface IncomeStatementDetailItem {
+  name: string
+  amount: number
+}
+
+export interface IncomeStatementDetails {
+  revenue?: IncomeStatementDetailItem[]
+  cogs?: IncomeStatementDetailItem[]
+  sga?: IncomeStatementDetailItem[]
+  non_operating_revenue?: IncomeStatementDetailItem[]
+  non_operating_expense?: IncomeStatementDetailItem[]
+}
+
 export interface IncomeStatementSummary {
   revenue: number
   cogs: number
@@ -82,6 +95,8 @@ export interface IncomeStatementSummary {
   pretax_income: number
   corporate_tax: number
   net_income: number
+  /** 위하고 손익계산서 세부 항목 (선택, v22 파서 이후 업로드 분만 채워짐) */
+  details?: IncomeStatementDetails
 }
 
 export interface TaxCredit {

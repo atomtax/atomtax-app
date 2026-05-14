@@ -14,10 +14,12 @@ interface Props {
   totalPages?: number
 }
 
+type NumericSummaryKey = Exclude<keyof IncomeStatementSummary, 'details'>
+
 interface RowDef {
   sign: '+' | '−' | '=' | null
   label: string
-  key: keyof IncomeStatementSummary
+  key: NumericSummaryKey
   isResult: boolean
   isFinal: boolean
 }
