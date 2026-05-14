@@ -20,7 +20,9 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
     invoice.tax_credit_additional +
     invoice.faithful_report_fee
 
-  const supplyAmount = invoice.supply_amount ?? Math.max(0, subtotal - invoice.discount)
+  const supplyAmount =
+    invoice.supply_amount ??
+    Math.max(0, subtotal - invoice.discount - (invoice.maemae_discount ?? 0))
   const vatAmount = invoice.vat_amount ?? Math.round(supplyAmount * 0.1)
   const totalAmount = invoice.total_amount ?? invoice.final_fee
 
@@ -171,6 +173,14 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
               <td colSpan={2} style={{ padding: '8px 16px', textAlign: 'right', fontSize: '13px', color: '#dc2626' }}>할 인</td>
               <td style={{ padding: '8px 16px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#dc2626' }}>
                 - {formatCurrency(invoice.discount)}
+              </td>
+            </tr>
+          )}
+          {invoice.maemae_discount > 0 && (
+            <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+              <td colSpan={2} style={{ padding: '8px 16px', textAlign: 'right', fontSize: '13px', color: '#dc2626' }}>매매업 할인</td>
+              <td style={{ padding: '8px 16px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#dc2626' }}>
+                - {formatCurrency(invoice.maemae_discount)}
               </td>
             </tr>
           )}

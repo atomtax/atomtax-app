@@ -161,11 +161,12 @@ export function IncomeTaxReportForm({ client, report, year }: Props) {
         onParsed={handleStatementParsed}
       />
 
-      {/* 손익계산서 표 (업로드 후 표시) */}
+      {/* 손익계산서 표 (업로드 후 표시) — 개인사업자는 법인세 차감전/법인세 비용 제외 */}
       {summary && (
         <IncomeStatementTable
           periodLabel={periodLabel}
           summary={summary}
+          hideCorporateTaxRows
         />
       )}
 

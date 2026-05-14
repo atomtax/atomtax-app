@@ -32,8 +32,7 @@ const ROWS: RowDef[] = [
   { sign: '=',  label: '영업이익',         key: 'operating_income',      isResult: true,  isFinal: false },
   { sign: '+',  label: '영업외수익',       key: 'non_operating_revenue', isResult: false, isFinal: false },
   { sign: '−',  label: '영업외비용',       key: 'non_operating_expense', isResult: false, isFinal: false },
-  { sign: '=',  label: '법인세차감전이익', key: 'pretax_income',         isResult: true,  isFinal: false },
-  { sign: '−',  label: '법인세 비용',      key: 'corporate_tax',         isResult: false, isFinal: false },
+  // 개인사업자 보고서: 법인세 차감전 이익 / 법인세 비용 두 행 제거 (당기순이익 = 법차전이익 + 0)
   { sign: '=',  label: '당기순이익',       key: 'net_income',            isResult: true,  isFinal: true  },
 ]
 

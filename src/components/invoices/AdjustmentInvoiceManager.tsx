@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation'
 import * as XLSX from 'xlsx'
 import { Save, Plus, Download, Upload, Printer, RefreshCw, Trash2, Search } from 'lucide-react'
 import type { Client, AdjustmentInvoice } from '@/types/database'
-import { calculateInvoiceRow } from '@/lib/calculators/fee-schedule'
+import {
+  calculateInvoiceRow,
+  isMaemaeBusinessCode,
+} from '@/lib/calculators/fee-schedule'
 import { saveInvoiceBatch } from '@/app/actions/adjustment-invoices'
 import { downloadInvoice, downloadInvoicesBatch } from '@/lib/utils/invoice-export'
 import { formatCurrency } from '@/lib/utils/format'
@@ -21,12 +24,15 @@ export type RowState = {
   clientId: string | null
   clientName: string
   manager: string | null
+  businessCategoryCode: string | null
   revenue: number
   settlementFee: number
   adjustmentFee: number
   taxCreditAdditional: number
   faithfulReportFee: number
   discount: number
+  maemaeDiscount: number
+  isMaemaeDiscountManual: boolean
   supplyAmount: number
   vatAmount: number
   totalAmount: number
@@ -64,8 +70,14 @@ export default function AdjustmentInvoiceManager({
     return m
   }, [initialClients])
 
+  const categoryMap = useMemo(() => {
+    const m = new Map<string, string | null>()
+    for (const c of initialClients) m.set(c.id, c.business_category_code ?? null)
+    return m
+  }, [initialClients])
+
   const [rows, setRows] = useState<RowState[]>(() =>
-    initialInvoices.map((inv) => invoiceToRow(inv, managerMap)),
+    initialInvoices.map((inv) => invoiceToRow(inv, managerMap, categoryMap)),
   )
 
   const [previewRowId, setPreviewRowId] = useState<string | null>(null)
@@ -94,6 +106,7 @@ export default function AdjustmentInvoiceManager({
     const acc = {
       revenue: 0, settlementFee: 0, adjustmentFee: 0,
       taxCreditAdditional: 0, faithfulReportFee: 0, discount: 0,
+      maemaeDiscount: 0,
       supplyAmount: 0, vatAmount: 0, totalAmount: 0,
       paidCount: 0, unpaidCount: 0,
     }
@@ -104,6 +117,7 @@ export default function AdjustmentInvoiceManager({
       acc.taxCreditAdditional += r.taxCreditAdditional
       acc.faithfulReportFee += r.faithfulReportFee
       acc.discount += r.discount
+      acc.maemaeDiscount += r.maemaeDiscount
       acc.supplyAmount += r.supplyAmount
       acc.vatAmount += r.vatAmount
       acc.totalAmount += r.totalAmount
@@ -136,15 +150,47 @@ export default function AdjustmentInvoiceManager({
       prev.map((r) => {
         if (r.rowId !== rowId) return r
         const next = { ...r, [field]: value, isDirty: field !== 'selected' ? true : r.isDirty }
+        // 사용자가 매매업 할인을 직접 수정하면 수동 모드 ON
+        if (field === 'maemaeDiscount') {
+          next.isMaemaeDiscountManual = true
+        }
         const calc = calculateInvoiceRow({
           revenue: next.revenue,
           businessType: initialBusinessType,
           taxCreditAdditional: next.taxCreditAdditional,
           faithfulReportFee: next.faithfulReportFee,
           discount: next.discount,
+          isMaemaeClient: isMaemaeBusinessCode(next.businessCategoryCode),
+          isMaemaeDiscountManual: next.isMaemaeDiscountManual,
+          currentMaemaeDiscount: next.maemaeDiscount,
         })
         next.settlementFee = calc.settlementFee
         next.adjustmentFee = calc.adjustmentFee
+        next.maemaeDiscount = calc.maemaeDiscount
+        next.supplyAmount = calc.supplyAmount
+        next.vatAmount = calc.vatAmount
+        next.totalAmount = calc.totalAmount
+        return next
+      })
+    )
+  }
+
+  function resetMaemaeDiscount(rowId: string) {
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.rowId !== rowId) return r
+        const next = { ...r, isMaemaeDiscountManual: false, isDirty: true }
+        const calc = calculateInvoiceRow({
+          revenue: next.revenue,
+          businessType: initialBusinessType,
+          taxCreditAdditional: next.taxCreditAdditional,
+          faithfulReportFee: next.faithfulReportFee,
+          discount: next.discount,
+          isMaemaeClient: isMaemaeBusinessCode(next.businessCategoryCode),
+          isMaemaeDiscountManual: false,
+          currentMaemaeDiscount: 0,
+        })
+        next.maemaeDiscount = calc.maemaeDiscount
         next.supplyAmount = calc.supplyAmount
         next.vatAmount = calc.vatAmount
         next.totalAmount = calc.totalAmount
@@ -173,8 +219,10 @@ export default function AdjustmentInvoiceManager({
       clientId: c.id,
       clientName: c.company_name,
       manager: c.manager ?? null,
+      businessCategoryCode: c.business_category_code ?? null,
       revenue: 0, settlementFee: 0, adjustmentFee: 0,
       taxCreditAdditional: 0, faithfulReportFee: 0, discount: 0,
+      maemaeDiscount: 0, isMaemaeDiscountManual: false,
       supplyAmount: 0, vatAmount: 0, totalAmount: 0,
       paymentMethod: '미확인',
       isPaid: false,
@@ -193,8 +241,10 @@ export default function AdjustmentInvoiceManager({
         clientId: null,
         clientName: '',
         manager: null,
+        businessCategoryCode: null,
         revenue: 0, settlementFee: 0, adjustmentFee: 0,
         taxCreditAdditional: 0, faithfulReportFee: 0, discount: 0,
+        maemaeDiscount: 0, isMaemaeDiscountManual: false,
         supplyAmount: 0, vatAmount: 0, totalAmount: 0,
         paymentMethod: '미확인',
         isPaid: false,
@@ -220,7 +270,7 @@ export default function AdjustmentInvoiceManager({
           upserts: dirtyRows.map((r) => rowToPayload(r, initialYear, initialBusinessType)),
           deleteIds: deletedRows.map((r) => r.dbId!),
         })
-        setRows(refreshedInvoices.map((inv) => invoiceToRow(inv, managerMap)))
+        setRows(refreshedInvoices.map((inv) => invoiceToRow(inv, managerMap, categoryMap)))
         alert(`저장 완료 — 변경 ${dirtyRows.length}건, 삭제 ${deletedRows.length}건`)
       } catch (err) {
         alert(`저장 실패: ${err instanceof Error ? err.message : String(err)}`)
@@ -340,6 +390,7 @@ export default function AdjustmentInvoiceManager({
       세액공제: r.taxCreditAdditional,
       성실신고: r.faithfulReportFee,
       할인: r.discount,
+      매매업할인: r.maemaeDiscount,
       최종수수료: r.supplyAmount,
       부가세: r.vatAmount,
       최종청구액: r.totalAmount,
@@ -514,6 +565,7 @@ export default function AdjustmentInvoiceManager({
               <th className="text-center p-2">세액공제</th>
               <th className="text-center p-2">성실신고</th>
               <th className="text-center p-2">할인</th>
+              <th className="text-center p-2" title="매매업(703011/703012) 고객: (결산보수+세무조정료) × 30%">매매업 할인</th>
               <th className="text-center p-2 bg-blue-50">최종수수료</th>
               <th className="text-center p-2 bg-blue-50">부가세</th>
               <th className="text-center p-2 bg-blue-50 font-semibold">최종청구액</th>
@@ -530,11 +582,12 @@ export default function AdjustmentInvoiceManager({
                 onChangeCell={updateCell}
                 onPrint={handlePrintPreview}
                 onDelete={handleDeleteRow}
+                onResetMaemaeDiscount={resetMaemaeDiscount}
               />
             ))}
             {visibleRows.length === 0 && (
               <tr>
-                <td colSpan={15} className="text-center py-12 text-gray-400 text-sm">
+                <td colSpan={16} className="text-center py-12 text-gray-400 text-sm">
                   데이터가 없습니다.{' '}
                   <button onClick={handleLoadClients} className="text-indigo-600 underline">
                     고객사 불러오기
@@ -558,6 +611,7 @@ export default function AdjustmentInvoiceManager({
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.taxCreditAdditional)}</td>
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.faithfulReportFee)}</td>
                 <td className="p-2 text-right tabular-nums">{formatCurrency(totals.discount)}</td>
+                <td className="p-2 text-right tabular-nums">{formatCurrency(totals.maemaeDiscount)}</td>
                 <td className="p-2 text-right tabular-nums bg-blue-50">{formatCurrency(totals.supplyAmount)}</td>
                 <td className="p-2 text-right tabular-nums bg-blue-50">{formatCurrency(totals.vatAmount)}</td>
                 <td className="p-2 text-right tabular-nums bg-blue-50 font-bold">{formatCurrency(totals.totalAmount)}</td>
@@ -640,20 +694,26 @@ export default function AdjustmentInvoiceManager({
 function invoiceToRow(
   inv: AdjustmentInvoice,
   managerMap?: Map<string, string | null>,
+  categoryMap?: Map<string, string | null>,
 ): RowState {
+  // client 연결된 행은 clients.manager 우선, 수동 행은 DB 의 manager 컬럼 사용
+  const linkedManager = inv.client_id ? managerMap?.get(inv.client_id) ?? null : null
   return {
     rowId: inv.id,
     dbId: inv.id,
     businessNumber: inv.business_number ?? '',
     clientId: inv.client_id,
     clientName: inv.client_name,
-    manager: inv.client_id ? managerMap?.get(inv.client_id) ?? null : null,
+    manager: inv.client_id ? linkedManager : inv.manager ?? null,
+    businessCategoryCode: inv.client_id ? categoryMap?.get(inv.client_id) ?? null : null,
     revenue: inv.revenue ?? 0,
     settlementFee: inv.settlement_fee ?? 0,
     adjustmentFee: inv.adjustment_fee ?? 0,
     taxCreditAdditional: inv.tax_credit_additional ?? 0,
     faithfulReportFee: inv.faithful_report_fee ?? 0,
     discount: inv.discount ?? 0,
+    maemaeDiscount: inv.maemae_discount ?? 0,
+    isMaemaeDiscountManual: inv.is_maemae_discount_manual ?? false,
     supplyAmount: inv.supply_amount ?? 0,
     vatAmount: inv.vat_amount ?? 0,
     totalAmount: inv.total_amount ?? 0,
@@ -676,12 +736,16 @@ function rowToPayload(
     business_type: businessType,
     client_name: row.clientName,
     business_number: row.businessNumber || null,
+    // 수동 행만 manager 저장; 자동 연결 행은 null (clients.manager 사용)
+    manager: row.clientId ? null : row.manager,
     revenue: row.revenue,
     settlement_fee: row.settlementFee,
     adjustment_fee: row.adjustmentFee,
     tax_credit_additional: row.taxCreditAdditional,
     faithful_report_fee: row.faithfulReportFee,
     discount: row.discount,
+    maemae_discount: row.maemaeDiscount,
+    is_maemae_discount_manual: row.isMaemaeDiscountManual,
     supply_amount: row.supplyAmount,
     vat_amount: row.vatAmount,
     total_amount: row.totalAmount,

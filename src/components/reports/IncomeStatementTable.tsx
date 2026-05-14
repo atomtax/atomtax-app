@@ -4,11 +4,13 @@ import { formatAmount } from '@/lib/utils/format'
 interface Props {
   periodLabel: string
   summary: IncomeStatementSummary
+  /** true 면 법인세차감전이익/법인세등 행을 숨기고 당기순이익 번호를 Ⅷ로 재정렬 — 개인사업자(종소세) 보고서용 */
+  hideCorporateTaxRows?: boolean
 }
 
 type NumericKey = Exclude<keyof IncomeStatementSummary, 'details'>
 
-const ROWS: Array<{ label: string; key: NumericKey; bold?: boolean }> = [
+const FULL_ROWS: Array<{ label: string; key: NumericKey; bold?: boolean }> = [
   { label: 'Ⅰ. 매출액', key: 'revenue', bold: true },
   { label: 'Ⅱ. 매출원가', key: 'cogs' },
   { label: 'Ⅲ. 매출총이익', key: 'gross_profit', bold: true },
@@ -21,7 +23,19 @@ const ROWS: Array<{ label: string; key: NumericKey; bold?: boolean }> = [
   { label: 'Ⅹ. 당기순이익', key: 'net_income', bold: true },
 ]
 
-export function IncomeStatementTable({ periodLabel, summary }: Props) {
+const INCOME_TAX_ROWS: Array<{ label: string; key: NumericKey; bold?: boolean }> = [
+  { label: 'Ⅰ. 매출액', key: 'revenue', bold: true },
+  { label: 'Ⅱ. 매출원가', key: 'cogs' },
+  { label: 'Ⅲ. 매출총이익', key: 'gross_profit', bold: true },
+  { label: 'Ⅳ. 판매비와 관리비', key: 'sga' },
+  { label: 'Ⅴ. 영업이익', key: 'operating_income', bold: true },
+  { label: 'Ⅵ. 영업외수익', key: 'non_operating_revenue' },
+  { label: 'Ⅶ. 영업외비용', key: 'non_operating_expense' },
+  { label: 'Ⅷ. 당기순이익', key: 'net_income', bold: true },
+]
+
+export function IncomeStatementTable({ periodLabel, summary, hideCorporateTaxRows }: Props) {
+  const rows = hideCorporateTaxRows ? INCOME_TAX_ROWS : FULL_ROWS
   return (
     <section className="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-200">
@@ -37,7 +51,7 @@ export function IncomeStatementTable({ periodLabel, summary }: Props) {
           </tr>
         </thead>
         <tbody>
-          {ROWS.map((row) => (
+          {rows.map((row) => (
             <tr
               key={row.key}
               className={`border-b border-gray-100 ${row.bold ? 'bg-blue-50/40' : ''}`}

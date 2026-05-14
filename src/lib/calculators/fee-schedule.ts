@@ -49,12 +49,21 @@ export function calculateAdjustmentFee(
   return Math.round(bracket.base + excess * bracket.excessRate)
 }
 
+export const MAEMAE_BIZ_CODES = ['703011', '703012'] as const
+export const MAEMAE_DISCOUNT_RATE = 0.3
+export const MIN_SUPPLY_FLOOR = 300_000
+
+export function isMaemaeBusinessCode(code: string | null | undefined): boolean {
+  return !!code && (MAEMAE_BIZ_CODES as readonly string[]).includes(code)
+}
+
 export function calculateSupplyAmount(input: {
   settlementFee: number
   adjustmentFee: number
   taxCreditAdditional: number
   faithfulReportFee: number
   discount: number
+  maemaeDiscount?: number
 }): number {
   return Math.max(
     0,
@@ -62,8 +71,50 @@ export function calculateSupplyAmount(input: {
       input.adjustmentFee +
       input.taxCreditAdditional +
       input.faithfulReportFee -
-      input.discount
+      input.discount -
+      (input.maemaeDiscount ?? 0),
   )
+}
+
+/**
+ * 매매업 할인 + 최저 공급가액(30만원) 보도 자동 조정.
+ *
+ * 규칙:
+ * 1. 매매업 고객이 아니면 매매업 할인 = 0
+ * 2. 수동(isMaemaeDiscountManual=true)이면 입력값 그대로 사용
+ * 3. 자동이면 (결산보수+세무조정료) × 30% (반올림)
+ * 4. 최종 공급가액 < 30만원이면 매매업 할인 자동 축소 (수동 모드라도)
+ *    축소 후에도 30만원 미만이면 그대로 (할인이 음수가 되지 않도록 0 클램프)
+ */
+export function computeMaemaeDiscountAndSupply(input: {
+  settlementFee: number
+  adjustmentFee: number
+  taxCreditAdditional: number
+  faithfulReportFee: number
+  discount: number
+  isMaemaeClient: boolean
+  isMaemaeDiscountManual: boolean
+  currentMaemaeDiscount: number
+}): { maemaeDiscount: number; supplyAmount: number } {
+  if (!input.isMaemaeClient) {
+    const supply = calculateSupplyAmount({ ...input, maemaeDiscount: 0 })
+    return { maemaeDiscount: 0, supplyAmount: supply }
+  }
+
+  const base = input.settlementFee + input.adjustmentFee
+  let maemaeDiscount = input.isMaemaeDiscountManual
+    ? Math.max(0, input.currentMaemaeDiscount)
+    : Math.round(base * MAEMAE_DISCOUNT_RATE)
+
+  let supply = calculateSupplyAmount({ ...input, maemaeDiscount })
+
+  if (supply < MIN_SUPPLY_FLOOR) {
+    const shortage = MIN_SUPPLY_FLOOR - supply
+    maemaeDiscount = Math.max(0, maemaeDiscount - shortage)
+    supply = calculateSupplyAmount({ ...input, maemaeDiscount })
+  }
+
+  return { maemaeDiscount, supplyAmount: supply }
 }
 
 export function calculateVAT(supplyAmount: number): number {
@@ -89,25 +140,34 @@ export function calculateInvoiceRow(input: {
   taxCreditAdditional: number
   faithfulReportFee: number
   discount: number
+  isMaemaeClient?: boolean
+  isMaemaeDiscountManual?: boolean
+  currentMaemaeDiscount?: number
 }): {
   settlementFee: number
   adjustmentFee: number
+  maemaeDiscount: number
   supplyAmount: number
   vatAmount: number
   totalAmount: number
 } {
   const totalAutoFee = calculateAdjustmentFee(input.revenue, input.businessType)
   const { settlementFee, adjustmentFee } = splitFeeIntoSettlementAndAdjustment(totalAutoFee)
-  const supplyAmount = calculateSupplyAmount({
+
+  const { maemaeDiscount, supplyAmount } = computeMaemaeDiscountAndSupply({
     settlementFee,
     adjustmentFee,
     taxCreditAdditional: input.taxCreditAdditional,
     faithfulReportFee: input.faithfulReportFee,
     discount: input.discount,
+    isMaemaeClient: !!input.isMaemaeClient,
+    isMaemaeDiscountManual: !!input.isMaemaeDiscountManual,
+    currentMaemaeDiscount: input.currentMaemaeDiscount ?? 0,
   })
+
   const vatAmount = calculateVAT(supplyAmount)
   const totalAmount = calculateTotalAmount(supplyAmount, vatAmount)
-  return { settlementFee, adjustmentFee, supplyAmount, vatAmount, totalAmount }
+  return { settlementFee, adjustmentFee, maemaeDiscount, supplyAmount, vatAmount, totalAmount }
 }
 
 export function calculateFinalFee(input: {

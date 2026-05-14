@@ -175,6 +175,9 @@ export interface AdjustmentInvoice {
   tax_credit_additional: number
   faithful_report_fee: number
   discount: number
+  maemae_discount: number
+  is_maemae_discount_manual: boolean
+  manager: string | null
   final_fee: number
   year: number | null
   payment_method: '자동이체' | '직접입금' | '미확인'

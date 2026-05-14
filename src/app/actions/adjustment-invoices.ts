@@ -9,12 +9,15 @@ type UpsertPayload = {
   business_type: 'corporate' | 'individual'
   client_name: string
   business_number: string | null
+  manager: string | null
   revenue: number
   settlement_fee: number
   adjustment_fee: number
   tax_credit_additional: number
   faithful_report_fee: number
   discount: number
+  maemae_discount: number
+  is_maemae_discount_manual: boolean
   supply_amount: number
   vat_amount: number
   total_amount: number
