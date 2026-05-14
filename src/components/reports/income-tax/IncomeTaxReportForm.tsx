@@ -12,6 +12,7 @@ import { TaxCreditsSection } from '@/components/reports/TaxCreditsSection'
 import { TaxReductionsSection } from '@/components/reports/TaxReductionsSection'
 import { IncomeTaxNotesSection } from './IncomeTaxNotesSection'
 import { calculateIncomeTax } from '@/lib/calculators/income-tax'
+import { migrateConclusionToSections } from '@/lib/utils/conclusion-sections'
 import type { IncomeTaxReport, TaxCredit, TaxReduction, IncomeStatementSummary } from '@/types/database'
 import type { ParsedIncomeTaxData } from '@/lib/calculators/income-tax-parser'
 
@@ -76,7 +77,14 @@ function recalculate(d: IncomeTaxReport): IncomeTaxReport {
 export function IncomeTaxReportForm({ client, report, year }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [data, setData] = useState<IncomeTaxReport>(() => recalculate(report))
+  const [data, setData] = useState<IncomeTaxReport>(() => {
+    // conclusion_sections 가 비어있으면 legacy conclusion_notes 로부터 변환
+    const seeded =
+      report.conclusion_sections && report.conclusion_sections.length > 0
+        ? report
+        : { ...report, conclusion_sections: migrateConclusionToSections(report.conclusion_notes) }
+    return recalculate(seeded)
+  })
 
   // 손익계산서
   const [filename, setFilename] = useState(report.income_statement_filename ?? '')
@@ -188,16 +196,18 @@ export function IncomeTaxReportForm({ client, report, year }: Props) {
         onChange={(reductions: TaxReduction[]) => updateField('tax_reductions', reductions)}
       />
 
-      {/* 메모 */}
+      {/* 메모 + 결론 섹션 */}
       <IncomeTaxNotesSection
         data={data}
         summary={summary}
         isSincerefiling={data.is_sincere_filing}
         additionalNotes={data.additional_notes ?? ''}
-        conclusionNotes={data.conclusion_notes ?? ''}
+        conclusionSections={data.conclusion_sections}
         onSincereChange={(v) => updateField('is_sincere_filing', v)}
         onAdditionalChange={(v) => updateField('additional_notes', v)}
-        onConclusionChange={(v) => updateField('conclusion_notes', v)}
+        onConclusionSectionsChange={(sections) =>
+          updateField('conclusion_sections', sections)
+        }
       />
 
       {/* 저장/출력 버튼 */}

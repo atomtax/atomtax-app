@@ -244,6 +244,26 @@ export type TraderPropertyExpenseUpdate = Partial<TraderPropertyExpenseInput>
 // ============================================================
 export type IncomeTaxReportStatus = 'draft' | 'completed'
 
+// 결론 섹션 (v26)
+export type ConclusionSectionKey =
+  | 'business_summary'
+  | 'expense_summary'
+  | 'tax_review'
+  | 'tax_detail'
+  | 'prepaid_tax'
+  | 'final_tax'
+  | 'closing'
+
+export interface ConclusionSection {
+  id: string
+  header: string
+  body: string
+  order: number
+  is_visible: boolean
+  is_user_defined: boolean
+  section_key?: ConclusionSectionKey
+}
+
 export interface IncomeTaxReport {
   id: string
   client_id: string | null
@@ -309,6 +329,8 @@ export interface IncomeTaxReport {
   is_sincere_filing: boolean
   additional_notes: string | null
   conclusion_notes: string | null
+  /** v26: 구조화된 결론 섹션. 빈 배열이면 legacy conclusion_notes 사용 */
+  conclusion_sections: ConclusionSection[]
 
   completed_at: string | null
   created_at: string
