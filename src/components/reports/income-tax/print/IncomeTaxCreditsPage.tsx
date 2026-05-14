@@ -9,9 +9,19 @@ interface Props {
   reportYear: number
   taxCredits: TaxCredit[]
   taxReductions: TaxReduction[]
+  chapterNumber?: string
+  pageNumber?: number
+  totalPages?: number
 }
 
-export function IncomeTaxCreditsPage({ reportYear, taxCredits, taxReductions }: Props) {
+export function IncomeTaxCreditsPage({
+  reportYear,
+  taxCredits,
+  taxReductions,
+  chapterNumber = '04',
+  pageNumber = 4,
+  totalPages = 5,
+}: Props) {
   const creditTotal = taxCredits.reduce((s, c) => s + (c.current_amount ?? 0) + (c.carryover_amount ?? 0), 0)
   const reductionTotal = taxReductions.reduce((s, r) => s + (r.current_amount ?? 0), 0)
   const ruralTax = Math.floor(reductionTotal * 0.2)
@@ -20,7 +30,7 @@ export function IncomeTaxCreditsPage({ reportYear, taxCredits, taxReductions }: 
 
   return (
     <div className="page-container" style={a4PageStyle}>
-      <ChapterHeader number="03" titleKo="세액공제·감면" titleEn="TAX CREDITS & REDUCTIONS" reportYear={reportYear} />
+      <ChapterHeader number={chapterNumber} titleKo="세액공제·감면" titleEn="TAX CREDITS & REDUCTIONS" reportYear={reportYear} />
 
       {/* 안내 박스 */}
       <div style={{
@@ -194,7 +204,7 @@ export function IncomeTaxCreditsPage({ reportYear, taxCredits, taxReductions }: 
         </div>
       )}
 
-      <PageFooter pageNumber={4} totalPages={5} />
+      <PageFooter pageNumber={pageNumber} totalPages={totalPages} />
 
     </div>
   )

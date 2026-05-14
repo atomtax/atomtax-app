@@ -9,6 +9,9 @@ interface Props {
   reportYear: number
   summary: IncomeStatementSummary | null
   periodLabel: string | null
+  chapterNumber?: string
+  pageNumber?: number
+  totalPages?: number
 }
 
 interface RowDef {
@@ -32,13 +35,20 @@ const ROWS: RowDef[] = [
   { sign: '=',  label: '당기순이익',       key: 'net_income',            isResult: true,  isFinal: true  },
 ]
 
-export function IncomeStatementPage({ reportYear, summary, periodLabel }: Props) {
+export function IncomeStatementPage({
+  reportYear,
+  summary,
+  periodLabel,
+  chapterNumber = '03',
+  pageNumber = 3,
+  totalPages = 5,
+}: Props) {
   const operatingMarginRate = safePercentage(summary?.operating_income, summary?.revenue)
   const revenue = summary?.revenue ?? 0
 
   return (
     <div className="page-container" style={a4PageStyle}>
-      <ChapterHeader number="03" titleKo="손익계산서" titleEn="INCOME STATEMENT" reportYear={reportYear} />
+      <ChapterHeader number={chapterNumber} titleKo="손익계산서" titleEn="INCOME STATEMENT" reportYear={reportYear} />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {/* 기간 라벨 */}
@@ -183,7 +193,7 @@ export function IncomeStatementPage({ reportYear, summary, periodLabel }: Props)
         </div>
       </div>
 
-      <PageFooter pageNumber={3} totalPages={5} />
+      <PageFooter pageNumber={pageNumber} totalPages={totalPages} />
     </div>
   )
 }

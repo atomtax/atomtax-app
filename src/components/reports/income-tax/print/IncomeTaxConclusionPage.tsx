@@ -3,15 +3,25 @@ import {
   ChapterHeader, PageFooter,
   formatNumber, toBillionWon,
 } from '@/components/reports/print/CorporateTaxPrintTokens'
+import { highlightAmounts } from '@/lib/utils/highlight-amounts'
 import { parseIncomeTaxConclusion } from '@/lib/utils/income-tax-conclusion-parser'
 import type { IncomeTaxReport } from '@/types/database'
 
 interface Props {
   reportYear: number
   report: IncomeTaxReport
+  chapterNumber?: string
+  pageNumber?: number
+  totalPages?: number
 }
 
-export function IncomeTaxConclusionPage({ reportYear, report }: Props) {
+export function IncomeTaxConclusionPage({
+  reportYear,
+  report,
+  chapterNumber = '05',
+  pageNumber = 5,
+  totalPages = 5,
+}: Props) {
   const finalWithLocal = report.income_final_with_local
   const isRefund = finalWithLocal < 0
   const creditTotal = report.tax_credits.reduce((s, c) => s + (c.current_amount ?? 0) + (c.carryover_amount ?? 0), 0)
@@ -43,7 +53,7 @@ export function IncomeTaxConclusionPage({ reportYear, report }: Props) {
 
   return (
     <div className="page-container" style={a4LastPageStyle}>
-      <ChapterHeader number="05" titleKo="종합 결론" titleEn="CONCLUSION & SUMMARY" reportYear={reportYear} />
+      <ChapterHeader number={chapterNumber} titleKo="종합 결론" titleEn="CONCLUSION & SUMMARY" reportYear={reportYear} />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {/* 핵심 지표 3개 */}
@@ -105,7 +115,7 @@ export function IncomeTaxConclusionPage({ reportYear, report }: Props) {
                 )}
                 {point.body && (
                   <p style={{ fontSize: '13px', color: PRINT_TOKENS.textSecondary, margin: 0, lineHeight: 1.6 }}>
-                    {point.body}
+                    {highlightAmounts(point.body)}
                   </p>
                 )}
               </div>
@@ -145,8 +155,8 @@ export function IncomeTaxConclusionPage({ reportYear, report }: Props) {
             {/* 인사말 (자동 생성 시) */}
             {closing && (
               <>
-                <p style={{ fontSize: '14px', fontWeight: 500, color: 'rgba(255,255,255,0.95)', margin: '0 0 12px', lineHeight: 1.7 }}>
-                  {closing}
+                <p style={{ fontSize: '16px', fontWeight: 600, color: 'white', margin: '0 0 14px', lineHeight: 1.7 }}>
+                  {highlightAmounts(closing, { color: '#fef3c7' })}
                 </p>
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.2)', margin: '0 0 12px' }} />
               </>
@@ -174,7 +184,7 @@ export function IncomeTaxConclusionPage({ reportYear, report }: Props) {
         </div>
       </div>
 
-      <PageFooter pageNumber={5} totalPages={5} />
+      <PageFooter pageNumber={pageNumber} totalPages={totalPages} />
     </div>
   )
 }
