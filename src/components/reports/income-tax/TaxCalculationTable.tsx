@@ -2,6 +2,10 @@
 
 import type { IncomeTaxReport } from '@/types/database'
 import { formatNumber } from '@/lib/utils/format'
+import {
+  formatNumberWithCommas,
+  parseNumberFromCommas,
+} from '@/lib/utils/format-number'
 
 interface Props {
   data: IncomeTaxReport
@@ -135,9 +139,10 @@ function CellInput({ value, readonly, isPercent, isFinal, onChange }: CellInputP
 
   return (
     <input
-      type="number"
-      value={value === 0 ? '' : value}
-      onChange={(e) => onChange(e.target.value === '' ? 0 : Number(e.target.value))}
+      type="text"
+      inputMode="numeric"
+      value={value === 0 ? '' : formatNumberWithCommas(value)}
+      onChange={(e) => onChange(parseNumberFromCommas(e.target.value))}
       placeholder="0"
       className="w-full px-2 py-1 border border-gray-200 rounded text-right tabular-nums text-sm focus:border-blue-500 focus:outline-none"
     />

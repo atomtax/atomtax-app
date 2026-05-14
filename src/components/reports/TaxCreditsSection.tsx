@@ -5,12 +5,25 @@ import { formatAmount } from '@/lib/utils/format'
 import type { TaxCredit } from '@/types/database'
 
 const CREDIT_TYPES = [
-  '연구인력개발비',
-  '고용증가',
-  '통합투자',
-  '중소기업사회보험료',
+  '연구및인력개발비 세액공제',
+  '통합고용증대 세액공제',
+  '통합투자 세액공제',
+  '기장 세액공제',
+  '성실신고 세액공제',
   '직접 입력',
 ]
+
+// 기존 DB 데이터 → 신규 명칭 매핑 (저장값은 변경 안 함, 표시/저장 시 normalize)
+const LEGACY_NAME_MAP: Record<string, string> = {
+  '연구인력개발비': '연구및인력개발비 세액공제',
+  '고용증가': '통합고용증대 세액공제',
+  '통합투자': '통합투자 세액공제',
+  '중소기업사회보험료': '기장 세액공제',
+}
+
+function normalizeCreditType(type: string): string {
+  return LEGACY_NAME_MAP[type] ?? type
+}
 
 interface Props {
   credits: TaxCredit[]
@@ -19,7 +32,10 @@ interface Props {
 
 export function TaxCreditsSection({ credits, onChange }: Props) {
   function addRow() {
-    onChange([...credits, { type: '연구인력개발비', current_amount: 0, carryover_amount: 0 }])
+    onChange([
+      ...credits,
+      { type: CREDIT_TYPES[0], current_amount: 0, carryover_amount: 0 },
+    ])
   }
 
   function updateRow(i: number, patch: Partial<TaxCredit>) {
@@ -63,7 +79,7 @@ export function TaxCreditsSection({ credits, onChange }: Props) {
               <tr key={i} className="border-t border-gray-100">
                 <td className="px-4 py-2">
                   <select
-                    value={credit.type}
+                    value={normalizeCreditType(credit.type)}
                     onChange={(e) =>
                       updateRow(i, { type: e.target.value, custom_name: undefined })
                     }
