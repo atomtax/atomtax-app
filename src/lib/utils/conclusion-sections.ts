@@ -229,11 +229,13 @@ function buildPrepaidBody(report: IncomeTaxReport): string {
 
 function buildFinalTaxBody(report: IncomeTaxReport): string {
   const finalAmount = Number(report.income_final_with_local) || 0
+  const farmSpecial = Number(report.farm_special_tax) || 0
   const isRefund = finalAmount < 0
   const absAmount = Math.abs(finalAmount).toLocaleString('ko-KR')
+  const inclusionLabel = farmSpecial > 0 ? '지방소득세 및 농어촌특별세 포함' : '지방소득세 포함'
   return isRefund
-    ? `최종 환급받으실 세액은 지방소득세 포함 ${absAmount}원입니다.`
-    : `최종 납부하실 세액은 지방소득세 포함 ${absAmount}원입니다.`
+    ? `최종 환급받으실 세액은 ${inclusionLabel} ${absAmount}원입니다.`
+    : `최종 납부하실 세액은 ${inclusionLabel} ${absAmount}원입니다.`
 }
 
 function buildClosingBody(report: IncomeTaxReport): string {

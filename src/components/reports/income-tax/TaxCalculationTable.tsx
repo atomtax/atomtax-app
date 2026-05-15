@@ -46,7 +46,8 @@ const ROWS: RowDef[] = [
   { label: '국세환급금 충당',            incomeKey: 'income_refund_offset',    ruralKey: 'income_refund_offset',   type: 'input', ruralDisabled: true },
   { label: '충당후 납부(환급)할 세액',   incomeKey: 'income_final_payable',    ruralKey: 'rural_final_payable',    type: 'auto', emphasize: true },
   { label: '지방소득세', sublabel: '(충당후 세액 × 10%)', incomeKey: 'income_local_tax', ruralKey: 'income_local_tax', type: 'auto', ruralDisabled: true },
-  { label: '최종 납부할 세액', sublabel: '(지방세 포함)', incomeKey: 'income_final_with_local', ruralKey: 'income_final_with_local', type: 'auto', emphasize: true, highlight: 'green', ruralDisabled: true },
+  { label: '농어촌특별세', sublabel: '(홈택스 입력)', incomeKey: 'farm_special_tax', ruralKey: 'farm_special_tax', type: 'input', ruralDisabled: true },
+  { label: '최종 납부할 세액', sublabel: '(지방세 + 농특세 포함)', incomeKey: 'income_final_with_local', ruralKey: 'income_final_with_local', type: 'auto', emphasize: true, highlight: 'green', ruralDisabled: true },
 ]
 
 export function TaxCalculationTable({ data, onChange }: Props) {
