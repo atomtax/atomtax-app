@@ -130,3 +130,28 @@ export async function addTemporaryClient(
   if (error) throw new Error(`임시 고객 추가 실패: ${error.message}`)
   return client
 }
+
+/**
+ * 기존 등록된 담당자 목록 (distinct, 가나다 순).
+ * 임시 고객 모달의 담당자 드롭다운에 사용. 정식·임시 고객 모두 포함.
+ */
+export async function getManagerList(): Promise<string[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('clients')
+    .select('manager')
+    .not('manager', 'is', null)
+    .neq('manager', '')
+
+  if (error) {
+    console.error('담당자 목록 조회 실패:', error)
+    return []
+  }
+
+  const set = new Set<string>()
+  for (const row of data ?? []) {
+    const m = row.manager?.trim()
+    if (m) set.add(m)
+  }
+  return Array.from(set).sort((a, b) => a.localeCompare(b, 'ko'))
+}
