@@ -1,7 +1,12 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { listCorporateClientsWithReports, listCorporateManagers } from '@/lib/db/corporate-tax-reports'
 import { CorporateTaxFilters } from '@/components/reports/CorporateTaxFilters'
 import { CorporateTaxReportList } from '@/components/reports/CorporateTaxReportList'
+
+export const metadata: Metadata = {
+  title: '법인세 보고서',
+}
 
 interface Props {
   searchParams: Promise<{ year?: string; manager?: string; q?: string }>

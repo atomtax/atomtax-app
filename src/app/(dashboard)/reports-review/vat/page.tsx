@@ -1,4 +1,9 @@
+import type { Metadata } from 'next'
 import Header from '@/components/layout/Header'
+
+export const metadata: Metadata = {
+  title: '결산참고 - 부가가치세',
+}
 
 export default function VatReviewPage() {
   return (

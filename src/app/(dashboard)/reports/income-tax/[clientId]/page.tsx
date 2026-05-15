@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
@@ -9,6 +10,23 @@ import type { IncomeTaxReport } from '@/types/database'
 interface Props {
   params: Promise<{ clientId: string }>
   searchParams: Promise<{ year?: string }>
+}
+
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
+  const { clientId } = await params
+  const sp = await searchParams
+  const year = Number(sp.year) || new Date().getFullYear() - 1
+  const supabase = await createClient()
+  const { data: client } = await supabase
+    .from('clients')
+    .select('company_name')
+    .eq('id', clientId)
+    .single()
+  return {
+    title: client
+      ? `${client.company_name} - ${year}년 종합소득세`
+      : '종합소득세 보고서 작성',
+  }
 }
 
 export default async function IncomeTaxReportEditPage({ params, searchParams }: Props) {

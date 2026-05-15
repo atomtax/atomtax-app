@@ -1,6 +1,11 @@
+import type { Metadata } from 'next'
 import Header from '@/components/layout/Header'
 import { getActiveManagers, getReviewData } from '@/lib/db/income-tax-review'
 import { PersonalReviewClient } from './PersonalReviewClient'
+
+export const metadata: Metadata = {
+  title: '결산참고 - 일반사업자',
+}
 
 interface SearchParams {
   year?: string

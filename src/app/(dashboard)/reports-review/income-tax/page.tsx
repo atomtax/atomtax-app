@@ -1,6 +1,11 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowRight, Building2, Users } from 'lucide-react'
 import Header from '@/components/layout/Header'
+
+export const metadata: Metadata = {
+  title: '결산참고 - 종합소득세',
+}
 
 export default function IncomeTaxReviewBranchPage() {
   return (

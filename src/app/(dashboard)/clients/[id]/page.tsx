@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Pencil } from 'lucide-react'
@@ -11,6 +12,14 @@ import { createClient } from '@/lib/supabase/server'
 
 interface Props {
   params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params
+  const client = await getClientById(id)
+  return {
+    title: client ? `${client.company_name} - 고객 상세` : '고객 상세',
+  }
 }
 
 async function getClientInvoices(clientId: string): Promise<AdjustmentInvoice[]> {

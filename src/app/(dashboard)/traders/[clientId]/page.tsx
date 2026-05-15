@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { getTraderClient, listPropertiesByClient } from '@/lib/db/trader-properties'
@@ -5,6 +6,14 @@ import { PropertyListManager } from '@/components/traders/PropertyListManager'
 
 interface Props {
   params: Promise<{ clientId: string }>
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { clientId } = await params
+  const client = await getTraderClient(clientId)
+  return {
+    title: client ? `${client.company_name} - 매매사업자` : '매매사업자',
+  }
 }
 
 export default async function TraderClientPage({ params }: Props) {

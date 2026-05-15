@@ -1,8 +1,13 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Building2 } from 'lucide-react'
 import { listTraderClientsGroupedByManager } from '@/lib/db/trader-properties'
 import { TraderBulkUpload } from '@/components/traders/TraderBulkUpload'
 import { TraderSearchFilter } from '@/components/traders/TraderSearchFilter'
+
+export const metadata: Metadata = {
+  title: '매매사업자 관리',
+}
 
 export default async function TradersListPage() {
   const groups = await listTraderClientsGroupedByManager()

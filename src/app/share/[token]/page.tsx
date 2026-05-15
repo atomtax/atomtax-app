@@ -10,7 +10,7 @@ import { IncomeTaxDownloadPDFButton } from '@/components/reports/income-tax/prin
 import type { IncomeTaxReport } from '@/types/database'
 
 export const metadata = {
-  title: '아톰세무회계 — 보고서',
+  title: '보고서 공유',
   robots: 'noindex, nofollow',
 }
 

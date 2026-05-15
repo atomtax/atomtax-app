@@ -1,4 +1,9 @@
+import type { Metadata } from 'next'
 import Header from '@/components/layout/Header'
+
+export const metadata: Metadata = {
+  title: '결산보고서',
+}
 
 export default function SettlementPage() {
   return (
