@@ -30,6 +30,7 @@ export async function getChecklistData(): Promise<ChecklistRowData[]> {
     )
     .in('client.business_category_code', [...TRADER_BUSINESS_CODES])
     .eq('client.is_terminated', false)
+    .eq('client.is_temporary', false)
     .order('filing_deadline', { ascending: true, nullsFirst: false })
 
   if (error) throw new Error(error.message)
@@ -67,6 +68,7 @@ export async function getChecklistFilterOptions(): Promise<ChecklistFilterOption
     .select('manager')
     .in('business_category_code', [...TRADER_BUSINESS_CODES])
     .eq('is_terminated', false)
+    .eq('is_temporary', false)
 
   if (error) throw new Error(error.message)
 

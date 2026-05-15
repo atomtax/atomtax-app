@@ -9,6 +9,7 @@ export async function getClients(): Promise<Client[]> {
     .from('clients')
     .select('*')
     .eq('is_terminated', false)
+    .eq('is_temporary', false)
     .order('number', { ascending: true, nullsFirst: false })
 
   if (error) throw new Error(error.message)
@@ -23,6 +24,7 @@ export async function listClients(opts?: {
     .from('clients')
     .select('*')
     .eq('is_terminated', false)
+    .eq('is_temporary', false)
     .order('company_name')
   if (opts?.businessTypeCategory) {
     query = query.eq('business_type_category', opts.businessTypeCategory)
@@ -38,6 +40,7 @@ export async function getTerminatedClients(): Promise<Client[]> {
     .from('clients')
     .select('*')
     .eq('is_terminated', true)
+    .eq('is_temporary', false)
     .order('termination_date', { ascending: false })
 
   if (error) throw new Error(error.message)

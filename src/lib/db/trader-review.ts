@@ -93,6 +93,7 @@ export async function getTraderReviewData(params: {
     .select('id, company_name, manager, business_item, business_category_code')
     .in('business_category_code', TRADER_CATEGORY_CODES)
     .eq('is_terminated', false)
+    .eq('is_temporary', false)
     .order('manager', { ascending: true, nullsFirst: false })
     .order('company_name', { ascending: true })
 
@@ -228,6 +229,7 @@ export async function getTraderManagers(): Promise<string[]> {
     .select('manager')
     .in('business_category_code', TRADER_CATEGORY_CODES)
     .eq('is_terminated', false)
+    .eq('is_temporary', false)
     .not('manager', 'is', null)
 
   if (error) throw new Error(`매매사업자 담당자 조회 실패: ${error.message}`)
