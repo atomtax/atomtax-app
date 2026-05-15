@@ -165,6 +165,7 @@ export default async function IncomeTaxPrintPage({ params, searchParams }: Props
         reportType="income_tax"
         reportId={report.id}
         clientId={client.id}
+        companyName={client.company_name}
       />
     </>
   )

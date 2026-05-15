@@ -4,15 +4,19 @@ import { useEffect, useState } from 'react'
 import { Copy, Link as LinkIcon } from 'lucide-react'
 import { createShareLinkAction } from '@/app/actions/share-links'
 
-const CUSTOMER_MESSAGE = `⚛️ 안녕하세요. 아톰세무회계 김경태 세무사 입니다
+function buildMessage(companyName?: string): string {
+  const greeting = companyName?.trim() ? ` ${companyName.trim()} 대표님.` : ''
+  return `⚛️ 안녕하세요${greeting} 아톰세무회계 김경태 세무사 입니다
 💻종합소득세 계산이 완료되어 종합소득세 보고서 보내드립니다
 ✅보고서 확인 완료 시 신고서, 납부서 전달드리겠습니다
 고생 많으셨습니다. 앞으로도 잘 부탁드립니다😊`
+}
 
 interface Props {
   reportType: 'income_tax'
   reportId: string
   clientId: string
+  companyName?: string
 }
 
 export function ShareLinkTopButton({ reportType, reportId, clientId }: Props) {
@@ -66,6 +70,7 @@ export function ShareCustomerMessageBox({
   reportType,
   reportId,
   clientId,
+  companyName,
 }: Props) {
   const [url, setUrl] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
@@ -86,7 +91,8 @@ export function ShareCustomerMessageBox({
     }
   }, [reportType, reportId, clientId])
 
-  const fullText = url ? `${url}\n\n${CUSTOMER_MESSAGE}` : CUSTOMER_MESSAGE
+  const message = buildMessage(companyName)
+  const fullText = url ? `${url}\n\n${message}` : message
 
   async function handleCopyAll() {
     try {
@@ -155,7 +161,7 @@ export function ShareCustomerMessageBox({
         ) : (
           <p style={{ color: '#94a3b8', margin: 0 }}>링크 생성 중...</p>
         )}
-        <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{CUSTOMER_MESSAGE}</p>
+        <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{message}</p>
       </div>
     </div>
   )
