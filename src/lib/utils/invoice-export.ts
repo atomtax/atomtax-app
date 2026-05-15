@@ -27,14 +27,23 @@ export async function downloadInvoice(
 
         if (format === 'png') {
           const html2canvas = (await import('html2canvas')).default
-          const canvas = await html2canvas(pages[0], {
-            scale: 2,
-            backgroundColor: '#ffffff',
-            useCORS: true,
-            logging: false,
-          })
-          const dataUrl = canvas.toDataURL('image/png')
-          triggerDownload(dataUrl, `${filename}.png`)
+          const total = pages.length
+          for (let i = 0; i < total; i++) {
+            const canvas = await html2canvas(pages[i], {
+              scale: 2,
+              backgroundColor: '#ffffff',
+              useCORS: true,
+              logging: false,
+            })
+            const dataUrl = canvas.toDataURL('image/png')
+            // 여러 페이지면 페이지 번호 suffix, 1페이지면 생략
+            const suffix = total > 1 ? String(i + 1) : ''
+            triggerDownload(dataUrl, `${filename}${suffix}.png`)
+            // 연속 다운로드 차단 회피 — 페이지 간 300ms 간격
+            if (i < total - 1) {
+              await new Promise((r) => setTimeout(r, 300))
+            }
+          }
         } else {
           const { exportPagesToPdf } = await import('./pdf-export')
           await exportPagesToPdf(Array.from(pages), { filename: `${filename}.pdf` })
