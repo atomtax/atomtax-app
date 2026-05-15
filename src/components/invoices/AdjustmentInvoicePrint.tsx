@@ -184,6 +184,14 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
               </td>
             </tr>
           )}
+          <tr style={{ borderTop: '1px solid #94a3b8', borderBottom: '1px solid #cbd5e1' }}>
+            <td colSpan={2} style={{ padding: '11px 16px', textAlign: 'right', fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
+              최종수수료
+            </td>
+            <td style={{ padding: '11px 16px', textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+              {formatCurrency(supplyAmount)}
+            </td>
+          </tr>
           <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
             <td colSpan={2} style={{ padding: '11px 16px', textAlign: 'right', fontSize: '13px', color: '#4b5563' }}>
               부가가치세 (10%)
