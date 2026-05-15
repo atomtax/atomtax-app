@@ -94,6 +94,7 @@ export default async function IncomeTaxReportEditPage({ params, searchParams }: 
           company_name: client.company_name,
           business_number: client.business_number,
           representative: client.representative,
+          is_temporary: client.is_temporary,
         }}
         report={report}
         year={year}

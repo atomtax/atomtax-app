@@ -155,3 +155,41 @@ export async function getManagerList(): Promise<string[]> {
   }
   return Array.from(set).sort((a, b) => a.localeCompare(b, 'ko'))
 }
+
+/**
+ * 임시 고객 삭제.
+ * - is_temporary = true 인 경우만 삭제 가능 (이중 안전장치)
+ * - 연결된 보고서·공유링크도 함께 정리 (FK CASCADE 의존 X)
+ * - 정식 고객은 어떤 경우에도 이 함수로 삭제 불가
+ */
+export async function deleteTemporaryClient(clientId: string): Promise<void> {
+  const supabase = await createClient()
+
+  // 1. 안전장치 — 임시 고객인지 확인
+  const { data: client, error: fetchError } = await supabase
+    .from('clients')
+    .select('id, is_temporary')
+    .eq('id', clientId)
+    .maybeSingle()
+
+  if (fetchError) throw new Error(`고객 조회 실패: ${fetchError.message}`)
+  if (!client) throw new Error('해당 고객을 찾을 수 없습니다.')
+  if (!client.is_temporary) {
+    throw new Error('정식 고객은 이 기능으로 삭제할 수 없습니다.')
+  }
+
+  // 2. 연결된 보고서 삭제 (향후 corporate_tax_reports, vat_reports 등 추가 시 함께 정리)
+  await supabase.from('income_tax_reports').delete().eq('client_id', clientId)
+
+  // 3. 공유 링크 삭제 (PR #62 — report_share_links)
+  await supabase.from('report_share_links').delete().eq('client_id', clientId)
+
+  // 4. 클라이언트 삭제 (이중 안전장치: is_temporary = true 조건)
+  const { error: deleteError } = await supabase
+    .from('clients')
+    .delete()
+    .eq('id', clientId)
+    .eq('is_temporary', true)
+
+  if (deleteError) throw new Error(`삭제 실패: ${deleteError.message}`)
+}
