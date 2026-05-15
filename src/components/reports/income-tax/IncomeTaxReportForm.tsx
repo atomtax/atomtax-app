@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, Save, Printer } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Save, Printer, Trash2 } from 'lucide-react'
 import { saveIncomeTaxReportFull } from '@/app/actions/income-tax-reports'
+import { deleteTemporaryClient } from '@/lib/db/clients'
 import { IncomeStatementUpload } from '@/components/reports/IncomeStatementUpload'
 import { IncomeStatementTable } from '@/components/reports/IncomeStatementTable'
 import { HometaxPasteImport } from './HometaxPasteImport'
@@ -22,6 +23,7 @@ interface Props {
     company_name: string
     business_number: string | null
     representative: string | null
+    is_temporary: boolean
   }
   report: IncomeTaxReport
   year: number
@@ -79,6 +81,7 @@ function recalculate(d: IncomeTaxReport): IncomeTaxReport {
 export function IncomeTaxReportForm({ client, report, year }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [deleting, setDeleting] = useState(false)
   const [data, setData] = useState<IncomeTaxReport>(() => {
     // conclusion_sections 가 비어있으면 legacy conclusion_notes 로부터 변환
     const seeded =
@@ -144,6 +147,23 @@ export function IncomeTaxReportForm({ client, report, year }: Props) {
         alert(`저장 실패: ${e instanceof Error ? e.message : String(e)}`)
       }
     })
+  }
+
+  async function handleDeleteTempClient() {
+    const msg =
+      `정말 이 임시 고객 "${client.company_name}"을(를) 삭제하시겠습니까?\n\n` +
+      `※ 이 임시 고객과 연결된 모든 보고서·공유링크가 함께 삭제됩니다.\n` +
+      `※ 삭제된 데이터는 복구할 수 없습니다.`
+    if (!confirm(msg)) return
+    setDeleting(true)
+    try {
+      await deleteTemporaryClient(client.id)
+      alert('임시 고객이 삭제되었습니다.')
+      router.push(`/reports/income-tax?year=${year}`)
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '삭제 실패')
+      setDeleting(false)
+    }
   }
 
   function handlePdfOutput() {
@@ -270,6 +290,34 @@ export function IncomeTaxReportForm({ client, report, year }: Props) {
           {isPending ? '저장 중...' : '저장하기'}
         </button>
       </div>
+
+      {/* 임시 고객 삭제 영역 — is_temporary 인 경우만 표시 */}
+      {client.is_temporary && (
+        <div className="no-print mt-8 pt-6 border-t border-gray-300">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-bold text-red-900 mb-1">
+                  ⚠️ 임시 고객 관리
+                </h3>
+                <p className="text-sm text-red-700">
+                  이 고객은 일회성 임시 고객입니다.
+                  삭제 시 연결된 모든 보고서·공유링크가 함께 삭제됩니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleDeleteTempClient}
+                disabled={deleting}
+                className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 text-sm font-medium whitespace-nowrap"
+              >
+                <Trash2 size={15} />
+                {deleting ? '삭제 중...' : '임시 고객 삭제'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

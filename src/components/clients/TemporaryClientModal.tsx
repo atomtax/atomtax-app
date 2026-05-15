@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { addTemporaryClient } from '@/lib/db/clients'
+import { addTemporaryClient, getManagerList } from '@/lib/db/clients'
 
 interface Props {
   onClose: () => void
@@ -16,7 +16,29 @@ export function TemporaryClientModal({ onClose, buildRedirectUrl }: Props) {
   const [businessNumber, setBusinessNumber] = useState('')
   const [businessType, setBusinessType] = useState<'개인' | '법인'>('개인')
   const [manager, setManager] = useState('')
+  const [managerList, setManagerList] = useState<string[]>([])
+  const [managerMode, setManagerMode] = useState<'select' | 'direct'>('select')
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    getManagerList().then((list) => {
+      if (alive) setManagerList(list)
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  function handleManagerSelect(value: string) {
+    if (value === '__direct__') {
+      setManagerMode('direct')
+      setManager('')
+    } else {
+      setManagerMode('select')
+      setManager(value)
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -95,12 +117,42 @@ export function TemporaryClientModal({ onClose, buildRedirectUrl }: Props) {
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">담당자</label>
-            <input
-              type="text"
-              value={manager}
-              onChange={(e) => setManager(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-500"
-            />
+            {managerMode === 'select' ? (
+              <select
+                value={manager}
+                onChange={(e) => handleManagerSelect(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-500"
+              >
+                <option value="">담당자 선택</option>
+                {managerList.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+                <option value="__direct__">+ 직접 입력...</option>
+              </select>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={manager}
+                  onChange={(e) => setManager(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-indigo-500"
+                  placeholder="담당자명 입력"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManagerMode('select')
+                    setManager('')
+                  }}
+                  className="px-3 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50 whitespace-nowrap"
+                >
+                  ← 목록 선택
+                </button>
+              </div>
+            )}
           </div>
           <div className="flex justify-end gap-2 mt-6">
             <button
