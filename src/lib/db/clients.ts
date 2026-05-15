@@ -93,3 +93,37 @@ export async function terminateClient(id: string, terminationDate: string): Prom
     termination_date: terminationDate,
   })
 }
+
+export interface TemporaryClientData {
+  company_name: string
+  business_number?: string
+  business_type_category?: '개인' | '법인'
+  manager?: string
+}
+
+/**
+ * 임시(일회성) 고객 추가.
+ * - is_temporary = true 강제 설정 (호출자가 변경 불가)
+ * - is_terminated = false (활성 상태)
+ * - 정식 고객 목록에서 숨김. 종합소득세 보고서 등 보고서 작성용으로 사용.
+ */
+export async function addTemporaryClient(
+  data: TemporaryClientData,
+): Promise<{ id: string; company_name: string }> {
+  const supabase = await createClient()
+  const { data: client, error } = await supabase
+    .from('clients')
+    .insert({
+      company_name: data.company_name,
+      business_number: data.business_number ?? null,
+      business_type_category: data.business_type_category ?? '개인',
+      manager: data.manager ?? null,
+      is_temporary: true,
+      is_terminated: false,
+    })
+    .select('id, company_name')
+    .single()
+
+  if (error) throw new Error(`임시 고객 추가 실패: ${error.message}`)
+  return client
+}
