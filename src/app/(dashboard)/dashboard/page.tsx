@@ -11,8 +11,8 @@ async function getDashboardStats() {
   const supabase = await createClient()
 
   const [clientsResult, terminatedResult, tradersResult, invoicesResult] = await Promise.all([
-    supabase.from('clients').select('id', { count: 'exact' }).eq('is_terminated', false),
-    supabase.from('clients').select('id', { count: 'exact' }).eq('is_terminated', true),
+    supabase.from('clients').select('id', { count: 'exact' }).eq('is_terminated', false).eq('is_temporary', false),
+    supabase.from('clients').select('id', { count: 'exact' }).eq('is_terminated', true).eq('is_temporary', false),
     supabase.from('trader_inventory').select('id', { count: 'exact' }).neq('status', '완료'),
     supabase.from('adjustment_invoices').select('id', { count: 'exact' }),
   ])

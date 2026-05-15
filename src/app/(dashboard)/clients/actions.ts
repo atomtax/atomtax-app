@@ -41,6 +41,7 @@ export async function getNextClientNumberAction(): Promise<string> {
     .from('clients')
     .select('number')
     .eq('is_terminated', false)
+    .eq('is_temporary', false)
     .not('number', 'is', null)
   const max = (data ?? []).reduce((acc, r) => {
     const n = parseInt(r.number ?? '0')
@@ -120,6 +121,7 @@ export async function restoreClientAction(id: string): Promise<{ number: string 
       .select('id')
       .eq('number', newNumber)
       .eq('is_terminated', false)
+      .eq('is_temporary', false)
       .maybeSingle()
     if (collision) newNumber = await getNextClientNumberAction()
   } else {

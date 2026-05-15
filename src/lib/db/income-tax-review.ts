@@ -79,6 +79,7 @@ export async function getReviewData(params: {
     .select('id, company_name, manager, business_item')
     .eq('business_type_category', '개인')
     .eq('is_terminated', false)
+    .eq('is_temporary', false)
     .order('manager', { ascending: true, nullsFirst: false })
     .order('company_name', { ascending: true })
 
@@ -182,6 +183,7 @@ export async function getActiveManagers(): Promise<string[]> {
     .select('manager')
     .eq('business_type_category', '개인')
     .eq('is_terminated', false)
+    .eq('is_temporary', false)
     .not('manager', 'is', null)
 
   if (error) throw new Error(`담당자 조회 실패: ${error.message}`)

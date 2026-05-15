@@ -2,7 +2,8 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { Plus, RefreshCw } from 'lucide-react'
+import { TemporaryClientModal } from '@/components/clients/TemporaryClientModal'
 
 interface Props {
   currentYear: number
@@ -15,6 +16,7 @@ export function IncomeTaxFilters({ currentYear, currentManager, currentQuery, ma
   const router = useRouter()
   const searchParams = useSearchParams()
   const [query, setQuery] = useState(currentQuery)
+  const [showTempModal, setShowTempModal] = useState(false)
 
   const thisYear = new Date().getFullYear()
   const yearOptions = Array.from({ length: 6 }, (_, i) => thisYear - i)
@@ -71,13 +73,30 @@ export function IncomeTaxFilters({ currentYear, currentManager, currentQuery, ma
         </button>
       </form>
 
-      <button
-        onClick={() => router.refresh()}
-        className="ml-auto flex items-center gap-1.5 px-3 py-2 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-      >
-        <RefreshCw size={15} />
-        고객사 새로고침
-      </button>
+      <div className="ml-auto flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setShowTempModal(true)}
+          className="flex items-center gap-1.5 px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700"
+        >
+          <Plus size={15} />
+          일회성 고객 추가
+        </button>
+        <button
+          onClick={() => router.refresh()}
+          className="flex items-center gap-1.5 px-3 py-2 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+        >
+          <RefreshCw size={15} />
+          고객사 새로고침
+        </button>
+      </div>
+
+      {showTempModal && (
+        <TemporaryClientModal
+          onClose={() => setShowTempModal(false)}
+          buildRedirectUrl={(c) => `/reports/income-tax/${c.id}?year=${currentYear}`}
+        />
+      )}
     </div>
   )
 }

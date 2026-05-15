@@ -59,11 +59,14 @@ export interface Client {
   initial_billing_month: string | null
   hometax_id: string | null
   hometax_password: string | null
+  is_temporary: boolean
   created_at: string
   updated_at: string
 }
 
-export type ClientInsert = Omit<Client, 'id' | 'created_at' | 'updated_at'>
+export type ClientInsert = Omit<Client, 'id' | 'created_at' | 'updated_at' | 'is_temporary'> & {
+  is_temporary?: boolean
+}
 export type ClientUpdate = Partial<ClientInsert>
 
 // ============================================================
@@ -347,6 +350,7 @@ export interface IncomeClientWithReport {
     representative: string | null
     business_number: string | null
     manager: string | null
+    is_temporary: boolean
   }
   report: Pick<IncomeTaxReport, 'id' | 'status' | 'completed_at' | 'updated_at'> | null
 }

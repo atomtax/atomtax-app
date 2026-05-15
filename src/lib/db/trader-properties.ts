@@ -29,6 +29,7 @@ export async function listTraderClientsGroupedByManager(): Promise<TraderClientM
     .select('id, company_name, business_number, representative, manager, trader_drive_folder_url, business_category_code')
     .in('business_category_code', [...TRADER_BUSINESS_CODES])
     .eq('is_terminated', false)
+    .eq('is_temporary', false)
     .order('manager', { ascending: true })
     .order('company_name', { ascending: true })
 

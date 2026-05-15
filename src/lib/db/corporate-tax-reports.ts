@@ -13,6 +13,7 @@ export async function listCorporateClientsWithReports(
     .select('id, company_name, representative, business_number, manager')
     .eq('business_type_category', '법인')
     .eq('is_terminated', false)
+    .eq('is_temporary', false)
     .order('company_name')
 
   if (e1) throw new Error(`법인 고객 조회 실패: ${e1.message}`)
@@ -46,6 +47,7 @@ export async function listCorporateManagers(): Promise<string[]> {
     .select('manager')
     .eq('business_type_category', '법인')
     .eq('is_terminated', false)
+    .eq('is_temporary', false)
     .not('manager', 'is', null)
 
   if (error) throw new Error(`담당자 조회 실패: ${error.message}`)

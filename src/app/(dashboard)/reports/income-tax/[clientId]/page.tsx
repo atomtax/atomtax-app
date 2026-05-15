@@ -38,7 +38,7 @@ export default async function IncomeTaxReportEditPage({ params, searchParams }: 
 
   const { data: client } = await supabase
     .from('clients')
-    .select('id, company_name, business_number, representative, business_type_category')
+    .select('id, company_name, business_number, representative, business_type_category, is_temporary')
     .eq('id', clientId)
     .single()
 
@@ -78,7 +78,14 @@ export default async function IncomeTaxReportEditPage({ params, searchParams }: 
         <ArrowLeft size={16} /> 목록으로
       </Link>
 
-      <h1 className="text-2xl font-bold mb-6">종합소득세 보고서 작성</h1>
+      <div className="flex items-center gap-2 mb-6">
+        <h1 className="text-2xl font-bold">종합소득세 보고서 작성</h1>
+        {client.is_temporary && (
+          <span className="px-2 py-0.5 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded">
+            임시 고객
+          </span>
+        )}
+      </div>
 
       <IncomeTaxReportForm
         key={reportId}

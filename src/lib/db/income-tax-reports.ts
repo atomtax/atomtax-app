@@ -10,7 +10,7 @@ export async function listIncomeClientsWithReports(
 
   const { data: clients, error: e1 } = await supabase
     .from('clients')
-    .select('id, company_name, representative, business_number, manager')
+    .select('id, company_name, representative, business_number, manager, is_temporary')
     .eq('business_type_category', '개인')
     .eq('is_terminated', false)
     .order('company_name')

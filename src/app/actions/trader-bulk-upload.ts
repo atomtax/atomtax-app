@@ -79,6 +79,7 @@ export async function bulkUploadTraderProperties(
     .select(
       'id, company_name, business_number, business_category_code, is_terminated',
     )
+    .eq('is_temporary', false)
 
   if (clientsError) {
     result.ok = false
