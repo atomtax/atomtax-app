@@ -369,7 +369,7 @@ export default function AdjustmentInvoiceManager({
       return
     }
     try {
-      await downloadInvoice(row.dbId, `조정료청구서_${row.clientName}_${initialYear}`, 'pdf')
+      await downloadInvoice(row.dbId, `${row.clientName}_조정료청구서_${initialYear}`, 'pdf')
     } catch (err) {
       alert(`PDF 다운로드 실패: ${err instanceof Error ? err.message : String(err)}`)
     }
@@ -382,7 +382,7 @@ export default function AdjustmentInvoiceManager({
       return
     }
     try {
-      await downloadInvoice(row.dbId, `조정료청구서_${row.clientName}_${initialYear}`, 'png')
+      await downloadInvoice(row.dbId, `${row.clientName}_조정료청구서`, 'png')
     } catch (err) {
       alert(`PNG 다운로드 실패: ${err instanceof Error ? err.message : String(err)}`)
     }
@@ -409,7 +409,12 @@ export default function AdjustmentInvoiceManager({
       const result = await downloadInvoicesBatch(
         selected.map((r) => ({
           id: r.dbId!,
-          filename: `조정료청구서_${r.clientName}_${initialYear}`,
+          // PNG 는 페이지 번호가 suffix 로 붙어 1.png / 2.png 가 되므로 연도 생략.
+          // PDF 는 한 파일이라 연도 포함 식별 좋음.
+          filename:
+            format === 'png'
+              ? `${r.clientName}_조정료청구서`
+              : `${r.clientName}_조정료청구서_${initialYear}`,
         })),
         format,
         (current, total) => setBatchProgress({ current, total })
