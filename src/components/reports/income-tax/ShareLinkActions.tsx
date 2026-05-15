@@ -4,7 +4,10 @@ import { useEffect, useState } from 'react'
 import { Copy, Link as LinkIcon } from 'lucide-react'
 import { createShareLinkAction } from '@/app/actions/share-links'
 
-const CUSTOMER_MESSAGE = `안녕하세요. 아톰세무회계 김경태 세무사 입니다. 종합소득세 계산이 완료되어 종합소득세 보고서 보내드립니다. 보고서 확인해주시면 신고서 및 납부서 전달드릴 예정입니다. 신고기한까지는 언제든 수정이 가능하니 확인 후 말씀해주시면 됩니다. 감사합니다😊`
+const CUSTOMER_MESSAGE = `⚛️ 안녕하세요. 아톰세무회계 김경태 세무사 입니다
+💻종합소득세 계산이 완료되어 종합소득세 보고서 보내드립니다
+✅보고서 확인 완료 시 신고서, 납부서 전달드리겠습니다
+고생 많으셨습니다. 앞으로도 잘 부탁드립니다😊`
 
 interface Props {
   reportType: 'income_tax'
