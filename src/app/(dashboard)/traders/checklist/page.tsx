@@ -1,6 +1,11 @@
+import type { Metadata } from 'next'
 import { ClipboardList } from 'lucide-react'
 import { getChecklistData, getChecklistFilterOptions } from '@/lib/db/checklist'
 import { ChecklistClient } from './ChecklistClient'
+
+export const metadata: Metadata = {
+  title: '매매사업자 체크리스트',
+}
 
 export default async function ChecklistPage() {
   const [rows, options] = await Promise.all([

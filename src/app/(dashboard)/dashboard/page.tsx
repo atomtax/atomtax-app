@@ -1,6 +1,11 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { Users, FileText, Building2, TrendingUp } from 'lucide-react'
 import Header from '@/components/layout/Header'
+
+export const metadata: Metadata = {
+  title: '대시보드',
+}
 
 async function getDashboardStats() {
   const supabase = await createClient()

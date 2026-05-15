@@ -1,4 +1,9 @@
+import type { Metadata } from 'next'
 import { VatCalculatorClient } from './VatCalculatorClient'
+
+export const metadata: Metadata = {
+  title: '부가가치세 계산',
+}
 
 export default function VatCalculatorCalcPage() {
   return (

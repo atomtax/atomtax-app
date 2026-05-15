@@ -1,6 +1,11 @@
+import type { Metadata } from 'next'
 import Header from '@/components/layout/Header'
 import { getTraderManagers, getTraderReviewData } from '@/lib/db/trader-review'
 import { TraderReviewClient } from './TraderReviewClient'
+
+export const metadata: Metadata = {
+  title: '결산참고 - 매매사업자',
+}
 
 interface SearchParams {
   year?: string

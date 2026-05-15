@@ -1,5 +1,10 @@
+import type { Metadata } from 'next'
 import { Building2 } from 'lucide-react'
 import { OpenCalculatorButton } from './OpenCalculatorButton'
+
+export const metadata: Metadata = {
+  title: '부가가치세 계산기',
+}
 
 const FEATURES: { label: string; description: string; available: boolean }[] = [
   {

@@ -1,6 +1,11 @@
+import type { Metadata } from 'next'
 import { listClients } from '@/lib/db/clients'
 import { listAdjustmentInvoices } from '@/lib/db/adjustment-invoices'
 import AdjustmentInvoiceManager from '@/components/invoices/AdjustmentInvoiceManager'
+
+export const metadata: Metadata = {
+  title: '조정료 청구서',
+}
 
 export default async function AdjustmentInvoicePage({
   searchParams,

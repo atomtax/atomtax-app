@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getAdjustmentInvoiceById } from '@/lib/db/adjustment-invoices'
 import AdjustmentInvoicePrint from '@/components/invoices/AdjustmentInvoicePrint'
@@ -6,6 +7,16 @@ import PrintButton from '@/components/print/PrintButton'
 
 interface Props {
   params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params
+  const invoice = await getAdjustmentInvoiceById(id)
+  return {
+    title: invoice?.client_name
+      ? `${invoice.client_name}${invoice.year ? ` - ${invoice.year}년` : ''} 조정료 청구서`
+      : '조정료 청구서',
+  }
 }
 
 export default async function AdjustmentInvoicePrintPage({ params }: Props) {
