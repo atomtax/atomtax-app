@@ -28,6 +28,11 @@ export function IncomeTaxReportCard({ item, year }: Props) {
       <div className="flex items-center justify-center gap-1">
         {isCompleted && <CheckCircle2 size={14} className="text-green-600 flex-shrink-0" />}
         <span className="truncate">{client.company_name}</span>
+        {client.is_temporary && (
+          <span className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold bg-yellow-100 text-yellow-800 rounded flex-shrink-0">
+            임시
+          </span>
+        )}
       </div>
     </Link>
   )
