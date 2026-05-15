@@ -15,6 +15,7 @@ export type ParsedIncomeTaxData = Partial<Pick<IncomeTaxReport,
   | 'rural_prepaid_tax' | 'rural_payable'
   | 'rural_stock_deduct' | 'rural_stock_add' | 'rural_installment'
   | 'rural_within_deadline' | 'rural_final_payable'
+  | 'farm_special_tax'
 >>
 
 /**
@@ -101,6 +102,18 @@ export function parseIncomeTaxTable(text: string): ParsedIncomeTaxData {
     throw new IncomeTaxParseError(
       '인식 가능한 항목이 없습니다. 홈택스 "세액의 계산" 표를 정확히 복사해주세요.'
     )
+  }
+
+  // v28 농특세 단일 필드 — "충당후 납부할 세액" 행의 농특세 컬럼을 우선 사용.
+  // 표에 따라 행 누락 가능성 있어 가장 final 한 값부터 폴백.
+  const farmCandidate =
+    result.rural_final_payable ??
+    result.rural_within_deadline ??
+    result.rural_payable ??
+    result.rural_total_tax ??
+    result.rural_determined_total
+  if (farmCandidate != null && farmCandidate > 0) {
+    result.farm_special_tax = farmCandidate
   }
 
   return result
