@@ -40,7 +40,9 @@ function recalculate(d: IncomeTaxReport): IncomeTaxReport {
   const within_deadline = payable - d.income_stock_deduct + d.income_stock_add - d.income_installment
   const final_payable = within_deadline - d.income_refund_offset
   const local_tax = Math.floor(final_payable * 0.1)
-  const final_with_local = final_payable + local_tax
+  // 농어촌특별세: 사용자가 직접 입력. final_with_local 에 더해 단일 합계 표시
+  const farm_special = Number(d.farm_special_tax) || 0
+  const final_with_local = final_payable + local_tax + farm_special
 
   // 농어촌특별세
   const rural_tax_base = Math.max(0, d.rural_total - d.rural_deduction)
@@ -115,20 +117,53 @@ export function IncomeTaxReportForm({ client, report, year }: Props) {
     router.push(`/reports/income-tax/${client.id}?year=${year + delta}`)
   }
 
+  async function performSave(): Promise<void> {
+    const {
+      id: _id,
+      client_id: _cid,
+      created_at: _ca,
+      updated_at: _ua,
+      completed_at: _comp,
+      ...saveData
+    } = data
+    await saveIncomeTaxReportFull(report.id, {
+      ...saveData,
+      income_statement_filename: filename || null,
+      income_statement_period_label: periodLabel || null,
+      income_statement_summary: summary,
+    })
+  }
+
   function handleSave() {
     startTransition(async () => {
       try {
-        const { id: _id, client_id: _cid, created_at: _ca, updated_at: _ua, completed_at: _comp, ...saveData } = data
-        await saveIncomeTaxReportFull(report.id, {
-          ...saveData,
-          income_statement_filename: filename || null,
-          income_statement_period_label: periodLabel || null,
-          income_statement_summary: summary,
-        })
+        await performSave()
         alert('저장되었습니다.')
         router.refresh()
       } catch (e) {
         alert(`저장 실패: ${e instanceof Error ? e.message : String(e)}`)
+      }
+    })
+  }
+
+  function handlePdfOutput() {
+    // 팝업 차단 회피: 사용자 클릭 컨텍스트 안에서 새 탭 먼저 열고, 저장 후 URL 설정
+    const newWindow = window.open('about:blank', '_blank')
+    if (!newWindow) {
+      alert(
+        '새 탭이 차단되었습니다. 브라우저 팝업 차단을 해제하고 다시 시도해 주세요.',
+      )
+      return
+    }
+    startTransition(async () => {
+      try {
+        await performSave()
+        newWindow.location.href = `/reports/income-tax/${client.id}/print?year=${year}`
+      } catch (e) {
+        newWindow.close()
+        alert(
+          `저장 실패: ${e instanceof Error ? e.message : String(e)}\nPDF 출력을 위해 먼저 데이터가 저장되어야 합니다.`,
+        )
       }
     })
   }
@@ -219,11 +254,12 @@ export function IncomeTaxReportForm({ client, report, year }: Props) {
           돌아가기
         </button>
         <button
-          onClick={() => router.push(`/reports/income-tax/${client.id}/print?year=${year}`)}
-          className="flex items-center gap-1.5 px-4 py-2 border border-gray-300 bg-white rounded hover:bg-gray-50 text-sm"
+          onClick={handlePdfOutput}
+          disabled={isPending}
+          className="flex items-center gap-1.5 px-4 py-2 border border-gray-300 bg-white rounded hover:bg-gray-50 text-sm disabled:opacity-50"
         >
           <Printer size={16} />
-          PDF 출력
+          {isPending ? '저장 중...' : 'PDF 출력'}
         </button>
         <button
           onClick={handleSave}

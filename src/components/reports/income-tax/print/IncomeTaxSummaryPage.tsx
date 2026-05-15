@@ -31,7 +31,8 @@ const ROWS: RowDef[] = [
   { sign: '−',  label: '기납부세액',                      incomeKey: 'income_prepaid_tax',       ruralKey: 'rural_prepaid_tax',       isResult: false, isFinal: false },
   { sign: '=',  label: '납부(환급)할 총세액',             incomeKey: 'income_payable',           ruralKey: 'rural_payable',           isResult: true,  isFinal: false },
   { sign: '+',  label: '지방소득세', sublabel: '(총세액 × 10%)', incomeKey: 'income_local_tax', ruralKey: null,                       isResult: false, isFinal: false },
-  { sign: '=',  label: '최종 납부할 세액', sublabel: '(지방세 포함)', incomeKey: 'income_final_with_local', ruralKey: null,           isResult: true,  isFinal: true  },
+  { sign: '+',  label: '농어촌특별세', sublabel: '(홈택스 입력)', incomeKey: 'farm_special_tax', ruralKey: null,                      isResult: false, isFinal: false },
+  { sign: '=',  label: '최종 납부할 세액', sublabel: '(지방세 + 농특세 포함)', incomeKey: 'income_final_with_local', ruralKey: null,   isResult: true,  isFinal: true  },
 ]
 
 interface Props {
@@ -94,7 +95,9 @@ export function IncomeTaxSummaryPage({
           <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', margin: '14px 0 0', position: 'relative' }}>
             {isRefund
               ? '기납부세액이 결정세액보다 많아 환급 대상입니다 (지방소득세 포함)'
-              : '종합소득세 + 지방소득세 (납부할 총세액 × 10%)'}
+              : `종합소득세 + 지방소득세 (납부할 총세액 × 10%)${
+                  Number(report.farm_special_tax) > 0 ? ' + 농어촌특별세' : ''
+                }`}
           </p>
         </div>
 
@@ -121,7 +124,13 @@ export function IncomeTaxSummaryPage({
             <span style={{ textAlign: 'right' }}>농어촌특별세 (원)</span>
           </div>
 
-          {ROWS.map((row, idx) => {
+          {ROWS.filter((row) => {
+            // 농특세 0 인 보고서는 행 숨김 (조건부)
+            if (row.incomeKey === 'farm_special_tax') {
+              return Number(report.farm_special_tax) > 0
+            }
+            return true
+          }).map((row, idx) => {
             const incomeVal = Number(report[row.incomeKey] ?? 0)
             const ruralVal = row.ruralKey !== null ? Number(report[row.ruralKey] ?? 0) : null
 

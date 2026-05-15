@@ -294,6 +294,8 @@ export interface IncomeTaxReport {
   income_final_payable: number
   income_local_tax: number
   income_final_with_local: number
+  /** v28: 농어촌특별세 (사용자 직접 입력, 기본 0). final_with_local 합계에 더해짐 */
+  farm_special_tax: number
 
   // 농어촌특별세
   rural_total: number
