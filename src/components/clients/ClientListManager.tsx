@@ -2,13 +2,14 @@
 
 import { useState, useMemo, useTransition } from 'react'
 import * as XLSX from 'xlsx'
-import { Plus, Upload, Download, FileSpreadsheet, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Upload, Download, FileSpreadsheet, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, CalendarPlus } from 'lucide-react'
 import type { Client, ClientInsert } from '@/types/database'
 import { deleteClientAction } from '@/app/(dashboard)/clients/actions'
 import ClientRow from './ClientRow'
 import ClientDetailModal from './ClientDetailModal'
 import ClientFormModal from './ClientFormModal'
 import ClientExcelImportModal from './ClientExcelImportModal'
+import { BulkOpeningDateUpload } from './BulkOpeningDateUpload'
 
 type SortKey = 'number' | 'company_name' | 'manager'
 type SortDir = 'asc' | 'desc'
@@ -45,6 +46,7 @@ export default function ClientListManager({ initialClients, isTerminated = false
   const [editClient, setEditClient] = useState<Client | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [showExcelUpload, setShowExcelUpload] = useState(false)
+  const [showOpeningDateUpload, setShowOpeningDateUpload] = useState(false)
 
   const managers = useMemo(
     () => [...new Set(clients.map((c) => c.manager).filter((m): m is string => !!m))].sort(),
@@ -274,6 +276,13 @@ export default function ClientListManager({ initialClients, isTerminated = false
                 <Upload size={14} />
                 엑셀 업로드
               </button>
+              <button
+                onClick={() => setShowOpeningDateUpload(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-sky-600 text-white rounded-md hover:bg-sky-700"
+              >
+                <CalendarPlus size={14} />
+                개업일 일괄 업로드
+              </button>
             </>
           )}
           <button
@@ -394,6 +403,14 @@ export default function ClientListManager({ initialClients, isTerminated = false
             // 페이지 새로고침으로 최신 데이터 반영
             window.location.reload()
           }}
+        />
+      )}
+
+      {/* 개업일 일괄 업로드 */}
+      {showOpeningDateUpload && (
+        <BulkOpeningDateUpload
+          onClose={() => setShowOpeningDateUpload(false)}
+          onDone={() => window.location.reload()}
         />
       )}
     </div>
