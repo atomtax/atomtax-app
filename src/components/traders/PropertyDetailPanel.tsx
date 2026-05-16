@@ -9,14 +9,18 @@ import {
   FileSearch,
   FileText,
   FolderOpen,
+  RotateCcw,
   Save,
   Trash2,
 } from 'lucide-react'
 import {
+  calculatePriorAmounts,
   calculatePropertyTax,
   deleteProperty,
   getExpenses,
   saveExpensesAndProperty,
+  updatePriorTransferIncomeOverride,
+  type PriorAmounts,
 } from '@/app/actions/trader-properties'
 import { EXPENSE_NAMES } from '@/lib/constants/property-expense'
 import { PROGRESS_OPTIONS, PROGRESS_STYLES } from '@/lib/constants/property-progress'
@@ -63,6 +67,8 @@ export function PropertyDetailPanel({
   const [loading, setLoading] = useState(true)
   const [showReference, setShowReference] = useState(false)
   const [showReport, setShowReport] = useState(false)
+  const [prior, setPrior] = useState<PriorAmounts | null>(null)
+  const [priorInput, setPriorInput] = useState<string>('')
 
   // 펼침 시 필요경비 로드
   useEffect(() => {
@@ -90,6 +96,23 @@ export function PropertyDetailPanel({
   useEffect(() => {
     setPropertyName(property.property_name)
   }, [property.property_name])
+
+  // 종전 양도차익/기납부 자동계산 — propertyId, 양도일, override 변경 시 재계산
+  useEffect(() => {
+    let cancelled = false
+    calculatePriorAmounts(property.id)
+      .then((data) => {
+        if (cancelled) return
+        setPrior(data)
+        setPriorInput(formatNumberWithCommas(data.effectivePriorTransferIncome))
+      })
+      .catch(() => {
+        if (!cancelled) setPrior(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [property.id, property.transfer_date, property.prior_transfer_income_override])
 
   function updateExpense(index: number, updates: Partial<TraderPropertyExpense>) {
     setExpenses((prev) => prev.map((r, i) => (i === index ? { ...r, ...updates } : r)))
@@ -170,8 +193,33 @@ export function PropertyDetailPanel({
         prepaid_income_tax: result.income_tax,
         prepaid_local_tax: result.local_tax,
       })
+      setPrior(result.prior)
+      setPriorInput(formatNumberWithCommas(result.prior.effectivePriorTransferIncome))
     } catch (e) {
       alert(`세금 계산 실패: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  async function handlePriorSave() {
+    if (!prior) return
+    const numeric = parseNumberFromCommas(priorInput)
+    // 자동값과 같으면 override 해제(null), 다르면 override 저장
+    const newValue = numeric === prior.priorTransferIncome ? null : numeric
+    try {
+      await updatePriorTransferIncomeOverride(property.id, newValue)
+      // property prop의 prior_transfer_income_override 갱신은 router.refresh로 처리
+      router.refresh()
+    } catch (e) {
+      alert(`종전 양도차익 저장 실패: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  async function handlePriorReset() {
+    try {
+      await updatePriorTransferIncomeOverride(property.id, null)
+      router.refresh()
+    } catch (e) {
+      alert(`자동값 복귀 실패: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
 
@@ -304,6 +352,56 @@ export function PropertyDetailPanel({
             <option value="N">N</option>
             <option value="Y">Y</option>
           </select>
+        </div>
+
+        {/* 종전 양도차익 (수동 수정 가능, 🔄 자동값 복귀) */}
+        <div className="col-span-2">
+          <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+            <span>종전 양도차익 (동일년도)</span>
+            {prior?.isOverridden && (
+              <button
+                type="button"
+                onClick={handlePriorReset}
+                title="자동계산값으로 복귀"
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] bg-orange-100 text-orange-700 rounded hover:bg-orange-200"
+              >
+                <RotateCcw size={9} />
+                자동
+              </button>
+            )}
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={priorInput}
+            onChange={(e) =>
+              setPriorInput(formatNumberWithCommas(parseNumberFromCommas(e.target.value)))
+            }
+            onBlur={handlePriorSave}
+            placeholder="0"
+            className={`w-full px-2 py-1 text-right border rounded text-sm tabular-nums focus:border-indigo-500 focus:outline-none ${
+              prior?.isOverridden
+                ? 'bg-yellow-50 border-yellow-300'
+                : 'border-gray-200'
+            }`}
+          />
+          {prior && prior.priorPropertiesCount > 0 && (
+            <p className="text-[10px] text-gray-500 mt-0.5 truncate" title={prior.priorPropertyNames.join(', ')}>
+              합산 {prior.priorPropertiesCount}건: {prior.priorPropertyNames.join(', ')}
+            </p>
+          )}
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">종전 기납부 종소세</label>
+          <div className="w-full px-2 py-1 border border-gray-200 bg-gray-50 rounded text-sm text-right tabular-nums text-gray-700">
+            {formatNumberWithCommas(prior?.priorPrepaidIncomeTax ?? 0) || '0'}
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">종전 기납부 지방소득세</label>
+          <div className="w-full px-2 py-1 border border-gray-200 bg-gray-50 rounded text-sm text-right tabular-nums text-gray-700">
+            {formatNumberWithCommas(prior?.priorPrepaidLocalTax ?? 0) || '0'}
+          </div>
         </div>
       </div>
 
