@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import type { Client, ClientInsert, ClientUpdate, BusinessTypeCategory } from '@/types/database'
 import { createClientAction, updateClientAction } from '@/app/(dashboard)/clients/actions'
+import { autoFormatDate } from '@/lib/utils/format-date'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Select from '@/components/ui/Select'
@@ -187,9 +188,16 @@ export default function ClientForm({ client, onSuccess, onCancel }: ClientFormPr
         />
         <Input
           label="개업일"
-          type="date"
+          type="text"
           value={form.opening_date ?? ''}
           onChange={(e) => set('opening_date', e.target.value || null)}
+          onBlur={(e) => {
+            const formatted = autoFormatDate(e.target.value)
+            if (formatted !== e.target.value) {
+              set('opening_date', formatted)
+            }
+          }}
+          placeholder="20250525"
         />
       </div>
 
