@@ -48,6 +48,7 @@ export default async function ClientDetailPage({ params }: Props) {
     { label: '구분', value: client.business_type_category },
     { label: '사업자번호', value: formatBusinessNumber(client.business_number) },
     { label: '법인번호', value: client.corporate_number },
+    { label: '개업일', value: formatDate(client.opening_date) },
     { label: '대표자', value: client.representative },
     { label: '담당자', value: client.manager },
     { label: '전화번호', value: client.phone },
