@@ -193,3 +193,39 @@ export async function deleteTemporaryClient(clientId: string): Promise<void> {
 
   if (deleteError) throw new Error(`삭제 실패: ${deleteError.message}`)
 }
+
+/**
+ * 사업자번호 → 개업일 일괄 업데이트.
+ * 엑셀 사업자번호는 하이픈 유무 혼재 가능 — 하이픈 제거 + 원본 두 형식 모두 매칭.
+ * 임시 고객은 제외.
+ */
+export async function bulkUpdateOpeningDates(
+  updates: Array<{ business_number: string; opening_date: string }>,
+): Promise<{ updated: number; notFound: string[] }> {
+  const supabase = await createClient()
+  const notFound: string[] = []
+  let updated = 0
+
+  for (const { business_number, opening_date } of updates) {
+    const original = business_number.trim()
+    const digitsOnly = original.replace(/\D/g, '')
+
+    const { data, error } = await supabase
+      .from('clients')
+      .update({ opening_date, updated_at: new Date().toISOString() })
+      .or(`business_number.eq.${original},business_number.eq.${digitsOnly}`)
+      .eq('is_temporary', false)
+      .select('id')
+
+    if (error) {
+      console.error(`[bulkUpdateOpeningDates] ${original} 업데이트 실패:`, error.message)
+      notFound.push(original)
+    } else if (!data || data.length === 0) {
+      notFound.push(original)
+    } else {
+      updated += data.length
+    }
+  }
+
+  return { updated, notFound }
+}

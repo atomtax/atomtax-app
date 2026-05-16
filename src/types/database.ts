@@ -60,12 +60,14 @@ export interface Client {
   hometax_id: string | null
   hometax_password: string | null
   is_temporary: boolean
+  opening_date: string | null
   created_at: string
   updated_at: string
 }
 
-export type ClientInsert = Omit<Client, 'id' | 'created_at' | 'updated_at' | 'is_temporary'> & {
+export type ClientInsert = Omit<Client, 'id' | 'created_at' | 'updated_at' | 'is_temporary' | 'opening_date'> & {
   is_temporary?: boolean
+  opening_date?: string | null
 }
 export type ClientUpdate = Partial<ClientInsert>
 

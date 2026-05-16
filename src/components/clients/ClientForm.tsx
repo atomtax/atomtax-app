@@ -49,6 +49,7 @@ export default function ClientForm({ client, onSuccess, onCancel }: ClientFormPr
     initial_billing_month: client?.initial_billing_month ?? null,
     hometax_id: client?.hometax_id ?? null,
     hometax_password: client?.hometax_password ?? null,
+    opening_date: client?.opening_date ?? null,
   })
 
   const set = (key: keyof ClientInsert, value: string | number | boolean | null) => {
@@ -183,6 +184,12 @@ export default function ClientForm({ client, onSuccess, onCancel }: ClientFormPr
           value={form.tax_amount?.toString() ?? ''}
           onChange={(e) => set('tax_amount', e.target.value ? Number(e.target.value) : null)}
           placeholder="0"
+        />
+        <Input
+          label="개업일"
+          type="date"
+          value={form.opening_date ?? ''}
+          onChange={(e) => set('opening_date', e.target.value || null)}
         />
       </div>
 
