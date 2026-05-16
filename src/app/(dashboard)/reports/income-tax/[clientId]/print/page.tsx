@@ -166,6 +166,7 @@ export default async function IncomeTaxPrintPage({ params, searchParams }: Props
         reportId={report.id}
         clientId={client.id}
         companyName={client.company_name}
+        finalTaxAmount={report.income_final_with_local}
       />
     </>
   )

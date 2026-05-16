@@ -4,12 +4,20 @@ import { useEffect, useState } from 'react'
 import { Copy, Link as LinkIcon } from 'lucide-react'
 import { createShareLinkAction } from '@/app/actions/share-links'
 
-function buildMessage(companyName?: string): string {
+function buildMessage(companyName?: string, finalTaxAmount?: number): string {
   const greeting = companyName?.trim() ? ` ${companyName.trim()} 대표님.` : ''
-  return `⚛️ 안녕하세요${greeting} 아톰세무회계 김경태 세무사 입니다
-💻종합소득세 계산이 완료되어 종합소득세 보고서 보내드립니다
-✅보고서 확인 완료 시 신고서, 납부서 전달드리겠습니다
-고생 많으셨습니다. 앞으로도 잘 부탁드립니다😊`
+  const lines: string[] = [
+    `⚛️ 안녕하세요${greeting} 아톰세무회계 김경태 세무사 입니다`,
+    `💻종합소득세 계산이 완료되어 종합소득세 보고서 보내드립니다`,
+  ]
+  if (typeof finalTaxAmount === 'number' && finalTaxAmount !== 0) {
+    const label = finalTaxAmount < 0 ? '환급' : '납부'
+    const absAmount = Math.abs(finalTaxAmount)
+    lines.push(`🪙최종 ${label} 세액은 ${absAmount.toLocaleString()}원 입니다`)
+  }
+  lines.push(`✅보고서 확인 완료 시 신고서, 납부서 전달드리겠습니다`)
+  lines.push(`고생 많으셨습니다. 앞으로도 잘 부탁드립니다😊`)
+  return lines.join('\n')
 }
 
 interface Props {
@@ -17,6 +25,7 @@ interface Props {
   reportId: string
   clientId: string
   companyName?: string
+  finalTaxAmount?: number
 }
 
 export function ShareLinkTopButton({ reportType, reportId, clientId }: Props) {
@@ -71,6 +80,7 @@ export function ShareCustomerMessageBox({
   reportId,
   clientId,
   companyName,
+  finalTaxAmount,
 }: Props) {
   const [url, setUrl] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
@@ -91,7 +101,7 @@ export function ShareCustomerMessageBox({
     }
   }, [reportType, reportId, clientId])
 
-  const message = buildMessage(companyName)
+  const message = buildMessage(companyName, finalTaxAmount)
   const fullText = url ? `${url}\n\n${message}` : message
 
   async function handleCopyAll() {
