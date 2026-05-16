@@ -110,9 +110,10 @@ export async function listPropertiesByClient(clientId: string): Promise<TraderPr
     const acquisition_amount = sums?.acquisition_amount ?? 0
     const other_expenses = sums?.other_expenses ?? 0
     const transferAmount = Number(p.transfer_amount) || 0
+    const vatAmount = Number(p.vat_amount) || 0
     const transfer_income =
       transferAmount > 0
-        ? transferAmount - acquisition_amount - other_expenses
+        ? transferAmount - vatAmount - acquisition_amount - other_expenses
         : 0
     return {
       ...p,

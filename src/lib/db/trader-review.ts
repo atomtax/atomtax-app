@@ -9,6 +9,7 @@ export interface TraderReviewProperty {
   property_name: string
   acquisition_date: string | null
   transfer_date: string | null
+  /** 차감 후 양도가액 (= trader_properties.transfer_amount - vat_amount). v33 이후 부가세 차감 반영. */
   transfer_amount: number
   acquisition_cost: number
   prepaid_income_tax: number
@@ -57,6 +58,7 @@ interface PropertyRow {
   acquisition_date: string | null
   transfer_date: string | null
   transfer_amount: number | string | null
+  vat_amount: number | string | null
   prepaid_income_tax: number | string | null
   prepaid_local_tax: number | string | null
   trader_property_expenses: ExpenseRow[] | null
@@ -72,7 +74,7 @@ interface NoteRow {
  * 매매사업자 결산참고 데이터 조회.
  *
  * 집계 정책:
- * - 매출액 = 선택 연도에 양도된 물건의 transfer_amount 합계
+ * - 매출액 = 선택 연도에 양도된 물건의 차감 후 양도가액(transfer_amount - vat_amount) 합계
  * - 매출원가 = 선택 연도 양도 물건의 취득가액(필요경비 중 category='취득가액',
  *   predeclaration_allowed=true) 합계
  * - 기말재고 = 취득일 ≤ 연말 + (양도일 없음 또는 ≥ 차년도) 물건의 취득가액 합계
@@ -113,7 +115,7 @@ export async function getTraderReviewData(params: {
     .from('trader_properties')
     .select(
       `id, client_id, property_name, acquisition_date, transfer_date,
-       transfer_amount, prepaid_income_tax, prepaid_local_tax,
+       transfer_amount, vat_amount, prepaid_income_tax, prepaid_local_tax,
        trader_property_expenses(amount, category, predeclaration_allowed)`,
     )
     .in('client_id', clientIds)
@@ -166,7 +168,9 @@ export async function getTraderReviewData(params: {
 
       const transferDate = p.transfer_date
       const acquisitionDate = p.acquisition_date
-      const transferAmount = Number(p.transfer_amount ?? 0)
+      const grossTransferAmount = Number(p.transfer_amount ?? 0)
+      const vatAmount = Number(p.vat_amount ?? 0)
+      const netTransferAmount = Math.max(0, grossTransferAmount - vatAmount)
       const prepaidIncomeTax = Number(p.prepaid_income_tax ?? 0)
       const prepaidLocalTax = Number(p.prepaid_local_tax ?? 0)
 
@@ -181,7 +185,7 @@ export async function getTraderReviewData(params: {
         (transferDate === null || transferDate >= nextYearStart)
 
       if (isTransferredInYear) {
-        total_revenue += transferAmount
+        total_revenue += netTransferAmount
         total_cogs += acquisitionCost
         total_income_tax += prepaidIncomeTax
         total_local_tax += prepaidLocalTax
@@ -195,7 +199,7 @@ export async function getTraderReviewData(params: {
         property_name: p.property_name,
         acquisition_date: acquisitionDate,
         transfer_date: transferDate,
-        transfer_amount: transferAmount,
+        transfer_amount: netTransferAmount,
         acquisition_cost: acquisitionCost,
         prepaid_income_tax: prepaidIncomeTax,
         prepaid_local_tax: prepaidLocalTax,

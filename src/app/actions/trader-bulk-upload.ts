@@ -153,12 +153,11 @@ export async function bulkUploadTraderProperties(
       continue
     }
 
-    // 5-1. trader_properties INSERT
-    // 주소는 location 필드에 매핑. 물건종류 컬럼이 없어 property_name 끝에 메모로 추가하지 않음
-    // (사용자가 다시 편집 시 혼선 방지). 필요 시 후속 작업에서 컬럼 추가.
+    // 5-1. trader_properties INSERT — v33 이후 property_type 컬럼에 매핑
     const propertyRow = {
       client_id: client.id,
       property_name: property.property_name,
+      property_type: property.property_type || null,
       location: property.location || null,
       acquisition_date: property.acquisition_date,
       transfer_date: property.transfer_date,

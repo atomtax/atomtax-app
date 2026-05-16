@@ -47,10 +47,16 @@ function PropertyRowImpl({
     () =>
       calculateTransferIncome(
         Number(property.transfer_amount) || 0,
+        Number(property.vat_amount) || 0,
         Number(property.acquisition_amount) || 0,
         Number(property.other_expenses) || 0,
       ),
-    [property.transfer_amount, property.acquisition_amount, property.other_expenses],
+    [
+      property.transfer_amount,
+      property.vat_amount,
+      property.acquisition_amount,
+      property.other_expenses,
+    ],
   )
 
   const filingDeadline = useMemo(
