@@ -61,19 +61,22 @@ export function PropertyListManager({
   function handleSaveAll() {
     startTransition(async () => {
       try {
-        for (const p of properties) {
-          await updateProperty(p.id, {
-            transfer_amount: Number(p.transfer_amount) || 0,
-            acquisition_date: p.acquisition_date,
-            transfer_date: p.transfer_date,
-            location: p.location,
-            prepaid_income_tax: Number(p.prepaid_income_tax) || 0,
-            prepaid_local_tax: Number(p.prepaid_local_tax) || 0,
-            is_85_over: p.is_85_over,
-            comparison_taxation: p.comparison_taxation,
-            progress_status: p.progress_status,
-          })
-        }
+        // 직렬 await → 병렬 Promise.all (11개 물건이면 round-trip 11번 → 1번 분량)
+        await Promise.all(
+          properties.map((p) =>
+            updateProperty(p.id, {
+              transfer_amount: Number(p.transfer_amount) || 0,
+              acquisition_date: p.acquisition_date,
+              transfer_date: p.transfer_date,
+              location: p.location,
+              prepaid_income_tax: Number(p.prepaid_income_tax) || 0,
+              prepaid_local_tax: Number(p.prepaid_local_tax) || 0,
+              is_85_over: p.is_85_over,
+              comparison_taxation: p.comparison_taxation,
+              progress_status: p.progress_status,
+            }),
+          ),
+        )
         alert('저장되었습니다.')
         router.refresh()
       } catch (e) {
