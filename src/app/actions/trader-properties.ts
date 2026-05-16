@@ -311,16 +311,143 @@ export async function deleteProperty(propertyId: string): Promise<void> {
   if (clientId) revalidatePath(`/traders/${clientId}`)
 }
 
-export interface CalculatePropertyTaxResult {
-  income_tax: number
-  local_tax: number
+export interface PriorAmounts {
+  priorTransferIncome: number
+  priorPrepaidIncomeTax: number
+  priorPrepaidLocalTax: number
+  priorPropertiesCount: number
+  priorPropertyNames: string[]
+  /** override가 적용된 최종값. UI 표시용. */
+  effectivePriorTransferIncome: number
+  isOverridden: boolean
 }
 
 /**
- * 세금계산: 최소 쿼리 + 빠른 동기 적용
- * - select 최소 (transfer_income만)
- * - revalidatePath 제거 (클라이언트가 onChange로 즉시 state 업데이트)
- * - 반환값 최소화 (alert 없이 바로 input 칸에 반영)
+ * 종전 양도차익 / 기납부세액 자동계산
+ * - 같은 거래처(client_id)
+ * - 같은 양도년도(YEAR(transfer_date))
+ * - 양도일이 이번 물건보다 빠른 물건만
+ * - 이번 물건은 제외
+ *
+ * 🛡️ 단방향 원칙: 읽기 전용 SELECT만. 다른 물건의 DB 행을 절대 수정하지 않음.
+ */
+export async function calculatePriorAmounts(
+  propertyId: string,
+): Promise<PriorAmounts> {
+  const supabase = await createClient()
+
+  const { data: current, error: fetchError } = await supabase
+    .from('trader_properties')
+    .select('client_id, transfer_date, prior_transfer_income_override')
+    .eq('id', propertyId)
+    .maybeSingle()
+
+  if (fetchError) throw new Error(fetchError.message)
+  if (!current) return emptyPriorAmounts()
+
+  const override =
+    current.prior_transfer_income_override !== null &&
+    current.prior_transfer_income_override !== undefined
+      ? Number(current.prior_transfer_income_override)
+      : null
+  const isOverridden = override !== null
+
+  if (!current.transfer_date) {
+    return {
+      ...emptyPriorAmounts(),
+      effectivePriorTransferIncome: override ?? 0,
+      isOverridden,
+    }
+  }
+
+  const transferYear = new Date(current.transfer_date).getFullYear()
+  const yearStart = `${transferYear}-01-01`
+  const yearEnd = `${transferYear}-12-31`
+
+  const { data: priorProperties, error: priorError } = await supabase
+    .from('trader_properties')
+    .select('id, property_name, transfer_income, prepaid_income_tax, prepaid_local_tax')
+    .eq('client_id', current.client_id)
+    .neq('id', propertyId)
+    .gte('transfer_date', yearStart)
+    .lte('transfer_date', yearEnd)
+    .lt('transfer_date', current.transfer_date)
+    .order('transfer_date', { ascending: true })
+
+  if (priorError) throw new Error(priorError.message)
+  const list = priorProperties ?? []
+
+  let priorTransferIncome = 0
+  let priorPrepaidIncomeTax = 0
+  let priorPrepaidLocalTax = 0
+  const names: string[] = []
+
+  for (const p of list) {
+    priorTransferIncome += Number(p.transfer_income ?? 0)
+    priorPrepaidIncomeTax += Number(p.prepaid_income_tax ?? 0)
+    priorPrepaidLocalTax += Number(p.prepaid_local_tax ?? 0)
+    names.push(p.property_name)
+  }
+
+  return {
+    priorTransferIncome,
+    priorPrepaidIncomeTax,
+    priorPrepaidLocalTax,
+    priorPropertiesCount: list.length,
+    priorPropertyNames: names,
+    effectivePriorTransferIncome: override ?? priorTransferIncome,
+    isOverridden,
+  }
+}
+
+function emptyPriorAmounts(): PriorAmounts {
+  return {
+    priorTransferIncome: 0,
+    priorPrepaidIncomeTax: 0,
+    priorPrepaidLocalTax: 0,
+    priorPropertiesCount: 0,
+    priorPropertyNames: [],
+    effectivePriorTransferIncome: 0,
+    isOverridden: false,
+  }
+}
+
+/** 종전 양도차익 수동 수정값 저장. NULL이면 자동값 복귀. */
+export async function updatePriorTransferIncomeOverride(
+  propertyId: string,
+  value: number | null,
+): Promise<void> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('trader_properties')
+    .update({ prior_transfer_income_override: value })
+    .eq('id', propertyId)
+    .select('client_id')
+    .single()
+
+  if (error) throw new Error(`종전 양도차익 저장 실패: ${error.message}`)
+  if (data?.client_id) revalidatePath(`/traders/${data.client_id}`)
+}
+
+export interface CalculatePropertyTaxResult {
+  income_tax: number
+  local_tax: number
+  prior: PriorAmounts
+  combined_transfer_income: number
+  applied_rate_percent: number
+  total_tax: number
+}
+
+/**
+ * 세금계산 — 동일 년도 종전 양도차익 합산 반영.
+ *
+ * 산식:
+ *   합산 양도차익 = 이번 양도차익 + 종전 양도차익(override 우선)
+ *   산출세액 = bracket(합산 양도차익)
+ *   이번 물건 종소세 = 산출세액 - 종전 기납부 종소세
+ *   이번 물건 지방세 = 이번 물건 종소세 × 10%
+ *
+ * 🛡️ 단방향: 이 함수가 수정하는 행은 propertyId 한 행뿐. 종전 물건은 읽기만.
  */
 export async function calculatePropertyTax(
   propertyId: string,
@@ -335,23 +462,36 @@ export async function calculatePropertyTax(
 
   if (error || !data) throw new Error('물건을 찾을 수 없습니다.')
 
+  const prior = await calculatePriorAmounts(propertyId)
   const transferIncome = Number(data.transfer_income) || 0
+  const combinedIncome = transferIncome + prior.effectivePriorTransferIncome
 
-  let incomeTax = 0
-  if (transferIncome > 0) {
-    incomeTax = calculateIncomeTax(transferIncome).tax
+  let totalTax = 0
+  let appliedRate = 0
+  if (combinedIncome > 0) {
+    const bracket = calculateIncomeTax(combinedIncome)
+    totalTax = bracket.tax
+    appliedRate = bracket.rate
   }
-  const localTax = Math.floor(incomeTax * 0.1)
+  const thisIncomeTax = Math.max(0, totalTax - prior.priorPrepaidIncomeTax)
+  const thisLocalTax = Math.floor(thisIncomeTax * 0.1)
 
   const { error: updateError } = await supabase
     .from('trader_properties')
     .update({
-      prepaid_income_tax: incomeTax,
-      prepaid_local_tax: localTax,
+      prepaid_income_tax: thisIncomeTax,
+      prepaid_local_tax: thisLocalTax,
     })
     .eq('id', propertyId)
 
   if (updateError) throw new Error(updateError.message)
 
-  return { income_tax: incomeTax, local_tax: localTax }
+  return {
+    income_tax: thisIncomeTax,
+    local_tax: thisLocalTax,
+    prior,
+    combined_transfer_income: combinedIncome,
+    applied_rate_percent: appliedRate,
+    total_tax: totalTax,
+  }
 }
