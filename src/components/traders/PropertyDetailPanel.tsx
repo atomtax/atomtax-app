@@ -24,6 +24,7 @@ import {
   updatePriorTransferIncomeOverride,
   type PriorAmounts,
 } from '@/app/actions/trader-properties'
+import Toast, { type ToastType } from '@/components/ui/Toast'
 import { EXPENSE_NAMES } from '@/lib/constants/property-expense'
 import { PROGRESS_OPTIONS, PROGRESS_STYLES } from '@/lib/constants/property-progress'
 import {
@@ -74,6 +75,7 @@ export function PropertyDetailPanel({
   const [priorInput, setPriorInput] = useState<string>('')
   const [priorPrepaidIncomeInput, setPriorPrepaidIncomeInput] = useState<string>('')
   const [priorPrepaidLocalInput, setPriorPrepaidLocalInput] = useState<string>('')
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
 
   // 펼침 시 필요경비 로드
   useEffect(() => {
@@ -266,8 +268,16 @@ export function PropertyDetailPanel({
 
       // 4) 서버 사이드 데이터(property prop)도 새 값으로 동기화 — 새로고침 시 stale 방지
       router.refresh()
+
+      setToast({
+        message: `세금계산 완료 — 산출세액 ${formatNumberWithCommas(result.total_tax)}원`,
+        type: 'success',
+      })
     } catch (e) {
-      alert(`세금 계산 실패: ${e instanceof Error ? e.message : String(e)}`)
+      setToast({
+        message: `세금 계산 실패: ${e instanceof Error ? e.message : String(e)}`,
+        type: 'error',
+      })
     }
   }
 
@@ -927,6 +937,13 @@ export function PropertyDetailPanel({
           property={property}
           clientName={clientName}
           onClose={() => setShowReport(false)}
+        />
+      )}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
         />
       )}
     </div>
