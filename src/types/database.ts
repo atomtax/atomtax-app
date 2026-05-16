@@ -218,6 +218,7 @@ export interface TraderProperty {
   progress_status: TraderProgressStatus
   land_area: number
   building_area: number
+  prior_transfer_income_override: number | null
   created_at: string
   updated_at: string
 }
