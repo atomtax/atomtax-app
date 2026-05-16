@@ -19,9 +19,9 @@ const ROMAN_TO_KEY: Record<string, keyof IncomeStatementSummary> = {
 
 // 세부 행이 의미 있는 카테고리만 details 에 수집
 // (gross_profit / operating_income / pretax_income / corporate_tax / net_income 은 계산 합계 — 하위 행 없음)
+// 매출원가(cogs)는 합계 행 값만 사용 — 세부 항목(부동산매출원가/기초·당기·기말 재고)은 회계 수식 항목이라 details 제외
 const DETAIL_KEYS: ReadonlyArray<keyof IncomeStatementDetails> = [
   'revenue',
-  'cogs',
   'sga',
   'non_operating_revenue',
   'non_operating_expense',
