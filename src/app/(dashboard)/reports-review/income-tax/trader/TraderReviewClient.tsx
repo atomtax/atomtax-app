@@ -407,8 +407,8 @@ function TraderExpandedDetail({
               <th className="px-2 py-1.5 text-center whitespace-nowrap">
                 양도일
               </th>
-              <th className="px-2 py-1.5 text-right whitespace-nowrap">
-                양도가액
+              <th className="px-2 py-1.5 text-right whitespace-nowrap" title="양도가액에서 부가세를 차감한 금액">
+                양도가액 (차감 후)
               </th>
               <th className="px-2 py-1.5 text-right whitespace-nowrap">
                 취득가액
