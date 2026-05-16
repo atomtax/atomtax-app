@@ -17,7 +17,9 @@ import type {
 
 export interface UpdatePropertyInput {
   property_name?: string
+  property_type?: string | null
   transfer_amount?: number
+  vat_amount?: number
   acquisition_date?: string | null
   transfer_date?: string | null
   location?: string | null
@@ -79,6 +81,7 @@ export async function updateProperty(
 
   const transfer_income = calculateTransferIncome(
     Number(merged.transfer_amount) || 0,
+    Number(merged.vat_amount) || 0,
     Number(merged.acquisition_amount) || 0,
     Number(merged.other_expenses) || 0,
   )
@@ -165,15 +168,17 @@ export async function saveExpenses(
 
   const { data: propertyRow, error: fetchError } = await supabase
     .from('trader_properties')
-    .select('transfer_amount, client_id')
+    .select('transfer_amount, vat_amount, client_id')
     .eq('id', propertyId)
     .single()
 
   if (fetchError || !propertyRow) throw new Error('물건을 찾을 수 없습니다.')
 
   const transferAmount = Number(propertyRow.transfer_amount) || 0
+  const vatAmount = Number(propertyRow.vat_amount) || 0
   const transferIncome = calculateTransferIncome(
     transferAmount,
+    vatAmount,
     acquisition_amount,
     other_expenses,
   )
@@ -197,6 +202,7 @@ export async function saveExpenses(
 
 export interface SavePropertyMeta {
   property_name?: string
+  property_type?: string | null
   location?: string | null
   prepaid_income_tax?: number
   prepaid_local_tax?: number
@@ -204,6 +210,7 @@ export interface SavePropertyMeta {
   comparison_taxation?: boolean
   progress_status?: TraderProperty['progress_status']
   transfer_amount?: number
+  vat_amount?: number
   acquisition_date?: string | null
   transfer_date?: string | null
   land_area?: number
@@ -260,8 +267,10 @@ export async function saveExpensesAndProperty(
     })),
   )
   const transferAmount = Number(meta.transfer_amount) || 0
+  const vatAmount = Number(meta.vat_amount) || 0
   const transfer_income = calculateTransferIncome(
     transferAmount,
+    vatAmount,
     acquisition_amount,
     other_expenses,
   )
