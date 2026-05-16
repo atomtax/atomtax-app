@@ -9,6 +9,7 @@ import {
   FileSearch,
   FileText,
   FolderOpen,
+  Receipt,
   RotateCcw,
   Save,
   Trash2,
@@ -510,49 +511,70 @@ export function PropertyDetailPanel({
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={handleOpenFolder}
-              disabled={!clientFolder}
-              title={
-                clientFolder
-                  ? '부동산 폴더 새 탭으로 열기'
-                  : '고객 정보에 부동산 폴더 URL을 먼저 등록하세요'
-              }
-              className="px-3 py-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 text-xs rounded flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <FolderOpen size={11} /> 부동산 폴더
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowReference(true)}
-              className="px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs rounded flex items-center gap-1"
-            >
-              <FileSearch size={11} /> 입력참고용
-            </button>
-            <button
-              type="button"
-              onClick={handleCalculateTax}
-              className="px-3 py-1 bg-purple-100 text-purple-700 hover:bg-purple-200 text-xs rounded flex items-center gap-1"
-            >
-              <Calculator size={11} /> 세금계산
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowReport(true)}
-              className="px-3 py-1 bg-green-100 text-green-700 hover:bg-green-200 text-xs rounded flex items-center gap-1"
-            >
-              <FileText size={11} /> 보고서
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={isPending}
-              className="px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 text-xs rounded flex items-center gap-1 disabled:opacity-50"
-            >
-              <Trash2 size={11} /> 삭제
-            </button>
+          <div className="flex flex-col gap-1 items-end">
+            {/* 1행 */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleOpenFolder}
+                disabled={!clientFolder}
+                title={
+                  clientFolder
+                    ? '부동산 폴더 새 탭으로 열기'
+                    : '고객 정보에 부동산 폴더 URL을 먼저 등록하세요'
+                }
+                className="px-3 py-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 text-xs rounded flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FolderOpen size={11} /> 부동산 폴더
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowReference(true)}
+                className="px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs rounded flex items-center gap-1"
+              >
+                <FileSearch size={11} /> 입력참고용
+              </button>
+            </div>
+
+            {/* 2행 */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleCalculateTax}
+                className="px-3 py-1 bg-purple-100 text-purple-700 hover:bg-purple-200 text-xs rounded flex items-center gap-1"
+              >
+                <Calculator size={11} /> 세금계산
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  window.open('/calculator/vat/calc', '_blank', 'noopener,noreferrer')
+                }
+                title="부가세 계산기를 새 탭에서 열기"
+                className="px-3 py-1 bg-fuchsia-600 text-white hover:bg-fuchsia-700 text-xs rounded flex items-center gap-1"
+              >
+                <Receipt size={11} /> 부가세 계산기
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowReport(true)}
+                className="px-3 py-1 bg-green-100 text-green-700 hover:bg-green-200 text-xs rounded flex items-center gap-1"
+              >
+                <FileText size={11} /> 보고서
+              </button>
+            </div>
+
+            {/* 3행 */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isPending}
+                className="px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 text-xs rounded flex items-center gap-1 disabled:opacity-50"
+              >
+                <Trash2 size={11} /> 삭제
+              </button>
+            </div>
           </div>
         </div>
       </div>
