@@ -100,6 +100,7 @@ export default function ClientDetailModal({ client, onClose, onEdit }: Props) {
               />
               <Field label="주민등록번호" value={client.resident_number} />
               <Field label="법인등록번호" value={client.corporate_number} />
+              <Field label="개업일" value={client.opening_date} />
               <Field label="업태" value={client.business_type} />
               <Field label="종목" value={client.business_item} />
               <Field label="업종코드" value={client.business_category_code} />
