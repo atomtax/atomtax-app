@@ -24,17 +24,33 @@ const BATCH_SIZE = 200
 /**
  * 업종코드 마스터 일괄 upsert (PK: industry_code).
  * 대량 데이터(1,788건)이므로 200건씩 배치 처리.
+ *
+ * 같은 배치 내에 동일 industry_code가 두 번 이상 나오면
+ * Postgres가 "ON CONFLICT DO UPDATE command cannot affect row a second time"
+ * 에러로 배치 전체를 거부한다. 엑셀 원본(창감.xlsx)에 같은 업종코드가
+ * 여러 번 등장하므로, upsert 전에 industry_code 기준으로 중복 제거.
+ * (Map.set의 last-wins 동작 — 뒤에 나온 행이 앞 행을 덮어씀.)
  */
 export async function bulkUpsertIndustryCodes(
   rows: IndustryCodeRow[],
-): Promise<{ processed: number; failed: number; errors: string[] }> {
+): Promise<{ processed: number; duplicates: number; failed: number; errors: string[] }> {
   const supabase = await createClient()
+
+  // 업종코드 기준 중복 제거 (last-wins)
+  const uniqueMap = new Map<string, IndustryCodeRow>()
+  for (const row of rows) {
+    if (!row.industry_code) continue
+    uniqueMap.set(row.industry_code, row)
+  }
+  const dedupedRows = Array.from(uniqueMap.values())
+  const duplicates = rows.length - dedupedRows.length
+
   let processed = 0
   let failed = 0
   const errors: string[] = []
 
-  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const batch = rows.slice(i, i + BATCH_SIZE)
+  for (let i = 0; i < dedupedRows.length; i += BATCH_SIZE) {
+    const batch = dedupedRows.slice(i, i + BATCH_SIZE)
     const { data, error } = await supabase
       .from('industry_codes_master')
       .upsert(batch, { onConflict: 'industry_code' })
@@ -49,7 +65,7 @@ export async function bulkUpsertIndustryCodes(
     }
   }
 
-  return { processed, failed, errors }
+  return { processed, duplicates, failed, errors }
 }
 
 /** 업종코드 1건 조회 */
