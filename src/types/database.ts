@@ -221,6 +221,8 @@ export interface TraderProperty {
   land_area: number
   building_area: number
   prior_transfer_income_override: number | null
+  prior_prepaid_income_tax_override: number | null
+  prior_prepaid_local_tax_override: number | null
   created_at: string
   updated_at: string
 }
