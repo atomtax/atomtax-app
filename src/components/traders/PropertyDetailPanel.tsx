@@ -213,8 +213,40 @@ export function PropertyDetailPanel({
 
   async function handleCalculateTax() {
     try {
+      // 1) 현재 클라이언트 state(부가세, 필요경비 등)를 먼저 DB에 반영.
+      //    저장하지 않으면 calculatePropertyTax가 stale한 transfer_income을 읽어
+      //    부가세 차감이 산출세액에 반영되지 않는다.
+      await saveExpensesAndProperty(
+        property.id,
+        {
+          property_name: propertyName,
+          property_type: property.property_type ?? null,
+          location: property.location,
+          prepaid_income_tax: Number(property.prepaid_income_tax) || 0,
+          prepaid_local_tax: Number(property.prepaid_local_tax) || 0,
+          is_85_over: property.is_85_over,
+          comparison_taxation: property.comparison_taxation,
+          progress_status: property.progress_status,
+          transfer_amount: Number(property.transfer_amount) || 0,
+          vat_amount: Number(property.vat_amount) || 0,
+          acquisition_date: property.acquisition_date,
+          transfer_date: property.transfer_date,
+          land_area: Number(property.land_area) || 0,
+          building_area: Number(property.building_area) || 0,
+        },
+        expenses.map((r) => ({
+          row_no: r.row_no,
+          expense_name: r.expense_name,
+          category: r.category,
+          amount: Number(r.amount) || 0,
+          predeclaration_allowed: r.predeclaration_allowed,
+          income_tax_allowed: r.income_tax_allowed,
+          memo: r.memo,
+        })),
+      )
+
+      // 2) 갱신된 transfer_income 기준으로 산출세액 계산
       const result = await calculatePropertyTax(property.id)
-      // 즉시 클라이언트 state 업데이트 (alert 없이 조용히 적용)
       onChange({
         prepaid_income_tax: result.income_tax,
         prepaid_local_tax: result.local_tax,
