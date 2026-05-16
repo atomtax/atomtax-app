@@ -214,16 +214,16 @@ export function PropertyDetailPanel({
   async function handleCalculateTax() {
     try {
       // 1) 현재 클라이언트 state(부가세, 필요경비 등)를 먼저 DB에 반영.
-      //    저장하지 않으면 calculatePropertyTax가 stale한 transfer_income을 읽어
-      //    부가세 차감이 산출세액에 반영되지 않는다.
+      //    saveExpensesAndProperty가 transfer_income을 재계산해 DB에 저장하므로,
+      //    이후 calculatePropertyTax는 갱신된 transfer_income을 읽는다.
+      //    prepaid는 여기서 전달하지 않음 — calculatePropertyTax가 산출세액으로
+      //    덮어쓸 컬럼이므로 옛 수동값을 거쳐 가는 것을 피한다.
       await saveExpensesAndProperty(
         property.id,
         {
           property_name: propertyName,
           property_type: property.property_type ?? null,
           location: property.location,
-          prepaid_income_tax: Number(property.prepaid_income_tax) || 0,
-          prepaid_local_tax: Number(property.prepaid_local_tax) || 0,
           is_85_over: property.is_85_over,
           comparison_taxation: property.comparison_taxation,
           progress_status: property.progress_status,
@@ -245,8 +245,12 @@ export function PropertyDetailPanel({
         })),
       )
 
-      // 2) 갱신된 transfer_income 기준으로 산출세액 계산
+      // 2) 갱신된 transfer_income 기준으로 산출세액 계산.
+      //    calculatePropertyTax 내부에서 이번 물건의 prepaid_income_tax /
+      //    prepaid_local_tax 컬럼을 산출세액·지방세로 UPDATE 한다. (단방향)
       const result = await calculatePropertyTax(property.id)
+
+      // 3) 클라이언트 state 즉시 갱신 (보고서 모달 등에 새 값 전달)
       onChange({
         prepaid_income_tax: result.income_tax,
         prepaid_local_tax: result.local_tax,
@@ -259,6 +263,9 @@ export function PropertyDetailPanel({
       setPriorPrepaidLocalInput(
         formatNumberWithCommas(result.prior.effectivePriorPrepaidLocalTax),
       )
+
+      // 4) 서버 사이드 데이터(property prop)도 새 값으로 동기화 — 새로고침 시 stale 방지
+      router.refresh()
     } catch (e) {
       alert(`세금 계산 실패: ${e instanceof Error ? e.message : String(e)}`)
     }
