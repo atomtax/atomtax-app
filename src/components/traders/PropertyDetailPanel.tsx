@@ -350,9 +350,9 @@ export function PropertyDetailPanel({
 
   return (
     <div className="px-4 py-4 border-l-4 border-indigo-400">
-      {/* 헤더: 물건명 + 종류 + 접기 */}
+      {/* 헤더: 물건명 + 종류 + 진행단계 + 접기 */}
       <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
-        <div className="flex items-center gap-3 flex-1">
+        <div className="flex items-center gap-3 flex-1 flex-wrap">
           <label className="text-sm font-bold text-gray-700">물건명</label>
           <input
             type="text"
@@ -369,6 +369,22 @@ export function PropertyDetailPanel({
           >
             <option value="">선택</option>
             {PROPERTY_TYPE_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+          <label className="text-xs font-medium text-gray-600">진행단계</label>
+          <select
+            value={property.progress_status}
+            onChange={(e) =>
+              onChange({
+                progress_status: e.target.value as TraderProperty['progress_status'],
+              })
+            }
+            className={`px-3 py-1.5 border rounded text-sm focus:border-indigo-500 focus:outline-none ${progressStyle.bg} ${progressStyle.text} ${progressStyle.border}`}
+          >
+            {PROGRESS_OPTIONS.map((opt) => (
               <option key={opt} value={opt}>
                 {opt}
               </option>
@@ -553,31 +569,10 @@ export function PropertyDetailPanel({
         </div>
       </div>
 
-      {/* 진행단계 + 토지/건물면적 + 액션 버튼 */}
+      {/* 토지/건물면적 + 부가세 + 차감 후 양도가액 + 액션 버튼 */}
       <div className="mb-4 pb-3 border-b border-gray-200">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-gray-600 whitespace-nowrap">
-                진행단계
-              </label>
-              <select
-                value={property.progress_status}
-                onChange={(e) =>
-                  onChange({
-                    progress_status: e.target.value as TraderProperty['progress_status'],
-                  })
-                }
-                className={`px-3 py-1 border rounded text-sm focus:border-indigo-500 focus:outline-none ${progressStyle.bg} ${progressStyle.text} ${progressStyle.border}`}
-              >
-                {PROGRESS_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-gray-600 whitespace-nowrap">
                 토지면적
@@ -643,7 +638,7 @@ export function PropertyDetailPanel({
           </div>
 
           <div className="flex flex-col gap-1 items-end">
-            {/* 1행 */}
+            {/* 1행: 부동산 폴더 | 입력참고용 | 세금계산 */}
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -665,10 +660,6 @@ export function PropertyDetailPanel({
               >
                 <FileSearch size={11} /> 입력참고용
               </button>
-            </div>
-
-            {/* 2행 */}
-            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={handleCalculateTax}
@@ -676,6 +667,10 @@ export function PropertyDetailPanel({
               >
                 <Calculator size={11} /> 세금계산
               </button>
+            </div>
+
+            {/* 2행: 부가세 계산기 | 고객 보고서 | 삭제 */}
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() =>
@@ -691,12 +686,8 @@ export function PropertyDetailPanel({
                 onClick={() => setShowReport(true)}
                 className="px-3 py-1 bg-green-100 text-green-700 hover:bg-green-200 text-xs rounded flex items-center gap-1"
               >
-                <FileText size={11} /> 보고서
+                <FileText size={11} /> 고객 보고서
               </button>
-            </div>
-
-            {/* 3행 */}
-            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={handleDelete}
