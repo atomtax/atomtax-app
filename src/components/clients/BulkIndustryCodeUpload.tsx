@@ -11,6 +11,7 @@ interface Props {
 
 interface UploadResult {
   processed: number
+  duplicates: number
   failed: number
   errors: string[]
 }
@@ -176,6 +177,11 @@ export function BulkIndustryCodeUpload({ onClose, onDone }: Props) {
           <div className="mb-4 p-3 bg-white border border-gray-200 rounded">
             <p className="text-green-700 font-semibold">
               ✅ {result.processed.toLocaleString('ko-KR')}건 처리 완료
+              {result.duplicates > 0 && (
+                <span className="ml-2 text-sm font-normal text-gray-600">
+                  (엑셀 중복 {result.duplicates.toLocaleString('ko-KR')}건 제거)
+                </span>
+              )}
             </p>
             {result.failed > 0 && (
               <p className="text-red-600 mt-1">❌ {result.failed.toLocaleString('ko-KR')}건 실패</p>
