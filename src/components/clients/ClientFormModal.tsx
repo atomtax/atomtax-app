@@ -16,6 +16,7 @@ import {
   formatCorporateNumber,
 } from '@/lib/utils/format-phone'
 import { normalizeBillingMonth } from '@/lib/utils/format'
+import { autoFormatDate } from '@/lib/utils/format-date'
 
 type FormData = {
   number: string
@@ -277,9 +278,16 @@ export default function ClientFormModal({ client, onClose, onSaved }: Props) {
             <div>
               <Label text="개업일" />
               <input
-                type="date"
+                type="text"
                 value={form.opening_date}
                 onChange={(e) => set('opening_date', e.target.value)}
+                onBlur={(e) => {
+                  const formatted = autoFormatDate(e.target.value)
+                  if (formatted !== e.target.value) {
+                    set('opening_date', formatted ?? '')
+                  }
+                }}
+                placeholder="20250525"
                 className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-indigo-500"
               />
             </div>
