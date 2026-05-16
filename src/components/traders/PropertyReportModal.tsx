@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Download, X } from 'lucide-react'
 import html2canvas from 'html2canvas'
-import { getExpenses } from '@/app/actions/trader-properties'
+import {
+  calculatePriorAmounts,
+  getExpenses,
+  type PriorAmounts,
+} from '@/app/actions/trader-properties'
 import { calculateIncomeTax } from '@/lib/calculators/income-tax'
 import { formatNumberWithCommas } from '@/lib/utils/format-number'
 import type { TraderProperty, TraderPropertyExpense } from '@/types/database'
@@ -20,15 +24,16 @@ export function PropertyReportModal({ property, clientName, onClose }: Props) {
   const [downloading, setDownloading] = useState(false)
   const [expenses, setExpenses] = useState<TraderPropertyExpense[]>([])
   const [loadingExpenses, setLoadingExpenses] = useState(true)
+  const [prior, setPrior] = useState<PriorAmounts | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    getExpenses(property.id)
-      .then((data) => {
-        if (!cancelled) {
-          setExpenses(data.filter((e) => Number(e.amount) > 0))
-          setLoadingExpenses(false)
-        }
+    Promise.all([getExpenses(property.id), calculatePriorAmounts(property.id)])
+      .then(([expensesData, priorData]) => {
+        if (cancelled) return
+        setExpenses(expensesData.filter((e) => Number(e.amount) > 0))
+        setPrior(priorData)
+        setLoadingExpenses(false)
       })
       .catch(() => {
         if (!cancelled) setLoadingExpenses(false)
@@ -45,10 +50,12 @@ export function PropertyReportModal({ property, clientName, onClose }: Props) {
   const prepaidIncomeTax = Number(property.prepaid_income_tax) || 0
   const prepaidLocalTax = Number(property.prepaid_local_tax) || 0
 
-  let appliedRate = 0
-  if (transferIncome > 0) {
-    appliedRate = calculateIncomeTax(transferIncome).rate
-  }
+  const priorIncome = prior?.effectivePriorTransferIncome ?? 0
+  const priorPrepaidIncome = prior?.priorPrepaidIncomeTax ?? 0
+  const combinedIncome = transferIncome + priorIncome
+  const appliedRate = combinedIncome > 0 ? calculateIncomeTax(combinedIncome).rate : 0
+  const totalAssessedTax = combinedIncome > 0 ? calculateIncomeTax(combinedIncome).tax : 0
+  const payableTotal = Math.max(0, totalAssessedTax - priorPrepaidIncome)
   const totalTax = prepaidIncomeTax + prepaidLocalTax
 
   const expensesTotal = expenses.reduce((s, e) => s + (Number(e.amount) || 0), 0)
@@ -211,27 +218,73 @@ export function PropertyReportModal({ property, clientName, onClose }: Props) {
                   {transferIncome.toLocaleString('ko-KR')}원
                 </td>
               </tr>
+              <tr className="border-b border-gray-200 bg-gray-50">
+                <td className="px-4 py-2.5">
+                  기신고된 매매차익 합계액
+                  {prior && prior.priorPropertiesCount > 0 && (
+                    <span className="ml-1 text-xs text-gray-500">
+                      (동일년도 {prior.priorPropertiesCount}건)
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-2.5 text-right tabular-nums">
+                  {formatNumberWithCommas(priorIncome) || '0'}원
+                </td>
+              </tr>
+              <tr
+                className="border-b-2"
+                style={{ background: '#eff6ff', borderColor: '#3b82f6' }}
+              >
+                <td className="px-4 py-2.5 font-bold text-blue-900">
+                  토지등 매매차익 합계액
+                </td>
+                <td className="px-4 py-2.5 text-right tabular-nums font-bold text-blue-900">
+                  {combinedIncome.toLocaleString('ko-KR')}원
+                </td>
+              </tr>
               <tr className="border-b border-gray-200 bg-blue-50">
-                <td className="px-4 py-2.5 text-blue-900">세율</td>
+                <td className="px-4 py-2.5 text-blue-900">세율 (합산 기준)</td>
                 <td className="px-4 py-2.5 text-right text-blue-900 font-medium">
                   {appliedRate}%
                 </td>
               </tr>
               <tr className="border-b border-gray-200 bg-blue-50">
-                <td className="px-4 py-2.5 text-blue-900">종합소득세</td>
+                <td className="px-4 py-2.5 text-blue-900">산출세액 (합산)</td>
                 <td className="px-4 py-2.5 text-right tabular-nums text-blue-900 font-medium">
-                  {formatNumberWithCommas(prepaidIncomeTax) || '0'}원
+                  {formatNumberWithCommas(totalAssessedTax) || '0'}원
                 </td>
               </tr>
-              <tr className="border-b border-gray-200 bg-blue-50">
-                <td className="px-4 py-2.5 text-blue-900">지방소득세</td>
-                <td className="px-4 py-2.5 text-right tabular-nums text-blue-900 font-medium">
-                  {formatNumberWithCommas(prepaidLocalTax) || '0'}원
+              <tr className="border-b border-gray-200 bg-gray-50">
+                <td className="px-4 py-2.5">기납부 총세액 (종전 산출세액 합)</td>
+                <td className="px-4 py-2.5 text-right tabular-nums">
+                  {formatNumberWithCommas(priorPrepaidIncome) || '0'}원
                 </td>
               </tr>
               <tr style={{ background: '#fff7ed' }}>
-                <td className="px-4 py-3 font-bold text-orange-900">💰 총 세금</td>
+                <td className="px-4 py-3 font-bold text-orange-900">
+                  납부할 총세액 (산출 − 기납부)
+                </td>
                 <td className="px-4 py-3 text-right tabular-nums font-bold text-orange-900 text-lg">
+                  {formatNumberWithCommas(payableTotal) || '0'}원
+                </td>
+              </tr>
+              <tr className="border-t border-gray-300 bg-blue-50">
+                <td className="px-4 py-2.5 text-blue-900 text-xs">└ 본 물건 종합소득세</td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-blue-900 text-xs">
+                  {formatNumberWithCommas(prepaidIncomeTax) || '0'}원
+                </td>
+              </tr>
+              <tr className="bg-blue-50">
+                <td className="px-4 py-2.5 text-blue-900 text-xs">└ 본 물건 지방소득세</td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-blue-900 text-xs">
+                  {formatNumberWithCommas(prepaidLocalTax) || '0'}원
+                </td>
+              </tr>
+              <tr style={{ background: '#fef3c7' }}>
+                <td className="px-4 py-2.5 font-bold text-amber-900 text-xs">
+                  💰 본 물건 부담세액 (종소세 + 지방세)
+                </td>
+                <td className="px-4 py-2.5 text-right tabular-nums font-bold text-amber-900">
                   {formatNumberWithCommas(totalTax) || '0'}원
                 </td>
               </tr>
