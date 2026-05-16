@@ -17,9 +17,11 @@ import {
 import {
   calculatePriorAmounts,
   calculatePropertyTax,
+  clearPriorPrepaidOverride,
   deleteProperty,
   getExpenses,
   saveExpensesAndProperty,
+  updatePriorPrepaidOverride,
   updatePriorTransferIncomeOverride,
   type PriorAmounts,
 } from '@/app/actions/trader-properties'
@@ -71,6 +73,8 @@ export function PropertyDetailPanel({
   const [showReport, setShowReport] = useState(false)
   const [prior, setPrior] = useState<PriorAmounts | null>(null)
   const [priorInput, setPriorInput] = useState<string>('')
+  const [priorPrepaidIncomeInput, setPriorPrepaidIncomeInput] = useState<string>('')
+  const [priorPrepaidLocalInput, setPriorPrepaidLocalInput] = useState<string>('')
 
   // 펼침 시 필요경비 로드
   useEffect(() => {
@@ -107,6 +111,8 @@ export function PropertyDetailPanel({
         if (cancelled) return
         setPrior(data)
         setPriorInput(formatNumberWithCommas(data.effectivePriorTransferIncome))
+        setPriorPrepaidIncomeInput(formatNumberWithCommas(data.effectivePriorPrepaidIncomeTax))
+        setPriorPrepaidLocalInput(formatNumberWithCommas(data.effectivePriorPrepaidLocalTax))
       })
       .catch(() => {
         if (!cancelled) setPrior(null)
@@ -114,7 +120,13 @@ export function PropertyDetailPanel({
     return () => {
       cancelled = true
     }
-  }, [property.id, property.transfer_date, property.prior_transfer_income_override])
+  }, [
+    property.id,
+    property.transfer_date,
+    property.prior_transfer_income_override,
+    property.prior_prepaid_income_tax_override,
+    property.prior_prepaid_local_tax_override,
+  ])
 
   function updateExpense(index: number, updates: Partial<TraderPropertyExpense>) {
     setExpenses((prev) => prev.map((r, i) => (i === index ? { ...r, ...updates } : r)))
@@ -199,6 +211,12 @@ export function PropertyDetailPanel({
       })
       setPrior(result.prior)
       setPriorInput(formatNumberWithCommas(result.prior.effectivePriorTransferIncome))
+      setPriorPrepaidIncomeInput(
+        formatNumberWithCommas(result.prior.effectivePriorPrepaidIncomeTax),
+      )
+      setPriorPrepaidLocalInput(
+        formatNumberWithCommas(result.prior.effectivePriorPrepaidLocalTax),
+      )
     } catch (e) {
       alert(`세금 계산 실패: ${e instanceof Error ? e.message : String(e)}`)
     }
@@ -221,6 +239,48 @@ export function PropertyDetailPanel({
   async function handlePriorReset() {
     try {
       await updatePriorTransferIncomeOverride(property.id, null)
+      router.refresh()
+    } catch (e) {
+      alert(`자동값 복귀 실패: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  async function handlePriorPrepaidIncomeSave() {
+    if (!prior) return
+    const numeric = parseNumberFromCommas(priorPrepaidIncomeInput)
+    const newValue = numeric === prior.priorPrepaidIncomeTax ? null : numeric
+    try {
+      await updatePriorPrepaidOverride(property.id, 'income_tax', newValue)
+      router.refresh()
+    } catch (e) {
+      alert(`종전 기납부 종소세 저장 실패: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  async function handlePriorPrepaidIncomeReset() {
+    try {
+      await clearPriorPrepaidOverride(property.id, 'income_tax')
+      router.refresh()
+    } catch (e) {
+      alert(`자동값 복귀 실패: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  async function handlePriorPrepaidLocalSave() {
+    if (!prior) return
+    const numeric = parseNumberFromCommas(priorPrepaidLocalInput)
+    const newValue = numeric === prior.priorPrepaidLocalTax ? null : numeric
+    try {
+      await updatePriorPrepaidOverride(property.id, 'local_tax', newValue)
+      router.refresh()
+    } catch (e) {
+      alert(`종전 기납부 지방소득세 저장 실패: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  async function handlePriorPrepaidLocalReset() {
+    try {
+      await clearPriorPrepaidOverride(property.id, 'local_tax')
       router.refresh()
     } catch (e) {
       alert(`자동값 복귀 실패: ${e instanceof Error ? e.message : String(e)}`)
@@ -409,16 +469,70 @@ export function PropertyDetailPanel({
           )}
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">종전 기납부 종소세</label>
-          <div className="w-full px-2 py-1 border border-gray-200 bg-gray-50 rounded text-sm text-right tabular-nums text-gray-700">
-            {formatNumberWithCommas(prior?.priorPrepaidIncomeTax ?? 0) || '0'}
-          </div>
+          <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+            <span>종전 기납부 종소세</span>
+            {prior?.isPrepaidIncomeOverridden && (
+              <button
+                type="button"
+                onClick={handlePriorPrepaidIncomeReset}
+                title="자동계산값으로 복귀"
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] bg-orange-100 text-orange-700 rounded hover:bg-orange-200"
+              >
+                <RotateCcw size={9} />
+                자동
+              </button>
+            )}
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={priorPrepaidIncomeInput}
+            onChange={(e) =>
+              setPriorPrepaidIncomeInput(
+                formatNumberWithCommas(parseNumberFromCommas(e.target.value)),
+              )
+            }
+            onBlur={handlePriorPrepaidIncomeSave}
+            placeholder="0"
+            className={`w-full px-2 py-1 text-right border rounded text-sm tabular-nums focus:border-indigo-500 focus:outline-none ${
+              prior?.isPrepaidIncomeOverridden
+                ? 'bg-yellow-50 border-yellow-300'
+                : 'border-gray-200'
+            }`}
+          />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">종전 기납부 지방소득세</label>
-          <div className="w-full px-2 py-1 border border-gray-200 bg-gray-50 rounded text-sm text-right tabular-nums text-gray-700">
-            {formatNumberWithCommas(prior?.priorPrepaidLocalTax ?? 0) || '0'}
-          </div>
+          <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+            <span>종전 기납부 지방소득세</span>
+            {prior?.isPrepaidLocalOverridden && (
+              <button
+                type="button"
+                onClick={handlePriorPrepaidLocalReset}
+                title="자동계산값으로 복귀"
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] bg-orange-100 text-orange-700 rounded hover:bg-orange-200"
+              >
+                <RotateCcw size={9} />
+                자동
+              </button>
+            )}
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={priorPrepaidLocalInput}
+            onChange={(e) =>
+              setPriorPrepaidLocalInput(
+                formatNumberWithCommas(parseNumberFromCommas(e.target.value)),
+              )
+            }
+            onBlur={handlePriorPrepaidLocalSave}
+            placeholder="0"
+            className={`w-full px-2 py-1 text-right border rounded text-sm tabular-nums focus:border-indigo-500 focus:outline-none ${
+              prior?.isPrepaidLocalOverridden
+                ? 'bg-yellow-50 border-yellow-300'
+                : 'border-gray-200'
+            }`}
+          />
         </div>
       </div>
 
