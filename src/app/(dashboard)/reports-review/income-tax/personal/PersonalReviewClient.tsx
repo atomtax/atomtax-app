@@ -3,6 +3,7 @@
 import { memo, useCallback, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
+  ArrowRightLeft,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -246,14 +247,29 @@ export function PersonalReviewClient({
             <span className="text-xs text-gray-500">로딩 중...</span>
           )}
         </div>
-        <button
-          onClick={handleSave}
-          disabled={changedRows.length === 0 || saving}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 inline-flex items-center gap-2 text-sm"
-        >
-          <Save size={14} />
-          {saving ? '저장 중...' : `저장${changedRows.length > 0 ? ` (${changedRows.length})` : ''}`}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              startTransition(() =>
+                router.push('/reports-review/income-tax/trader'),
+              )
+            }
+            className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 border border-blue-200 inline-flex items-center gap-1.5 text-sm"
+            title="매매사업자 결산참고로 이동"
+          >
+            <ArrowRightLeft size={13} />
+            매매사업자 참고
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={changedRows.length === 0 || saving}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 inline-flex items-center gap-2 text-sm"
+          >
+            <Save size={14} />
+            {saving ? '저장 중...' : `저장${changedRows.length > 0 ? ` (${changedRows.length})` : ''}`}
+          </button>
+        </div>
       </div>
 
       {/* 담당자별 섹션 */}
