@@ -29,6 +29,7 @@ import {
   parseNumberFromCommas,
 } from '@/lib/utils/format-number'
 import {
+  PROPERTY_TYPE_OPTIONS,
   TRADER_EXPENSE_CATEGORY_OPTIONS,
   type TraderExpenseCategory,
   type TraderProperty,
@@ -143,6 +144,7 @@ export function PropertyDetailPanel({
           property.id,
           {
             property_name: propertyName,
+            property_type: property.property_type ?? null,
             location: property.location,
             prepaid_income_tax: Number(property.prepaid_income_tax) || 0,
             prepaid_local_tax: Number(property.prepaid_local_tax) || 0,
@@ -150,6 +152,7 @@ export function PropertyDetailPanel({
             comparison_taxation: property.comparison_taxation,
             progress_status: property.progress_status,
             transfer_amount: Number(property.transfer_amount) || 0,
+            vat_amount: Number(property.vat_amount) || 0,
             acquisition_date: property.acquisition_date,
             transfer_date: property.transfer_date,
             land_area: Number(property.land_area) || 0,
@@ -269,7 +272,7 @@ export function PropertyDetailPanel({
 
   return (
     <div className="px-4 py-4 border-l-4 border-indigo-400">
-      {/* 헤더: 물건명 수정 + 접기 */}
+      {/* 헤더: 물건명 + 종류 + 접기 */}
       <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
         <div className="flex items-center gap-3 flex-1">
           <label className="text-sm font-bold text-gray-700">물건명</label>
@@ -278,8 +281,21 @@ export function PropertyDetailPanel({
             value={propertyName}
             onChange={(e) => setPropertyName(e.target.value)}
             placeholder="물건명 입력"
-            className="flex-1 max-w-sm px-3 py-1.5 border border-gray-300 rounded text-sm focus:border-indigo-500 focus:outline-none"
+            className="flex-1 max-w-xs px-3 py-1.5 border border-gray-300 rounded text-sm focus:border-indigo-500 focus:outline-none"
           />
+          <label className="text-xs font-medium text-gray-600">종류</label>
+          <select
+            value={property.property_type ?? ''}
+            onChange={(e) => onChange({ property_type: e.target.value || null })}
+            className="px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-indigo-500 focus:outline-none"
+          >
+            <option value="">선택</option>
+            {PROPERTY_TYPE_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
         </div>
         <button
           type="button"
@@ -462,6 +478,35 @@ export function PropertyDetailPanel({
                 className="w-24 px-2 py-1 border border-gray-200 rounded text-sm text-right tabular-nums focus:border-indigo-500 focus:outline-none"
               />
               <span className="text-xs text-gray-500">m²</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-600 whitespace-nowrap">
+                부가세
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={formatNumberWithCommas(property.vat_amount)}
+                onChange={(e) =>
+                  onChange({ vat_amount: parseNumberFromCommas(e.target.value) })
+                }
+                placeholder="0"
+                className="w-28 px-2 py-1 border border-gray-200 rounded text-sm text-right tabular-nums focus:border-indigo-500 focus:outline-none"
+              />
+              <span className="text-xs text-gray-500">원</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-600 whitespace-nowrap">
+                차감 후 양도가액
+              </label>
+              <div className="w-32 px-2 py-1 border border-gray-200 bg-blue-50 text-blue-900 rounded text-sm text-right tabular-nums">
+                {formatNumberWithCommas(
+                  Math.max(0, (Number(property.transfer_amount) || 0) - (Number(property.vat_amount) || 0)),
+                ) || '0'}
+              </div>
+              <span className="text-xs text-gray-500">원</span>
             </div>
           </div>
 
