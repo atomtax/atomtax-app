@@ -3,6 +3,7 @@
 import { memo, useCallback, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
+  ArrowRightLeft,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -12,6 +13,8 @@ import {
 import { saveReviewNotes } from '@/app/actions/income-tax-review'
 import type { ReviewRow } from '@/lib/db/income-tax-review'
 import type { TaxCredit, TaxReduction } from '@/types/database'
+import { getRegionZoneName } from '@/lib/data/regional-zones'
+import { calculateStartupReductionRate } from '@/lib/utils/startup-tax-reduction'
 
 interface Props {
   initialRows: ReviewRow[]
@@ -29,6 +32,87 @@ type EditableState = Record<string, EditableEntry>
 function fmt(n: number | null): string {
   if (n == null) return '-'
   return n.toLocaleString('ko-KR')
+}
+
+interface StartupBadge {
+  label: string
+  tooltip: string
+  className: string
+}
+
+function startupBadgeOf(row: ReviewRow, reportYear: number): StartupBadge {
+  // 1. 업종코드 마스터에 없음
+  if (!row.industry_info) {
+    return {
+      label: '-',
+      tooltip: '업종코드 마스터에 없음',
+      className: 'bg-gray-100 text-gray-400',
+    }
+  }
+  // 2. 창감 대상 업종 아님
+  if (row.industry_info.startup_eligible !== 'O') {
+    return {
+      label: 'X',
+      tooltip: '창업감면 대상 업종 아님',
+      className: 'bg-gray-100 text-gray-500',
+    }
+  }
+  // 3. 권역 × 청년 × 개업연도로 감면율 결정
+  const openingYear = row.opening_year ?? reportYear
+  const result = calculateStartupReductionRate({
+    zone: row.region_zone,
+    isYoung: row.is_young,
+    openingYear,
+  })
+  const className =
+    result.rate === 100
+      ? 'bg-green-100 text-green-800'
+      : result.rate === 75
+        ? 'bg-emerald-100 text-emerald-700'
+        : result.rate === 50
+          ? 'bg-yellow-100 text-yellow-800'
+          : result.rate === 25
+            ? 'bg-amber-100 text-amber-700'
+            : 'bg-gray-100 text-gray-500'
+  const tooltip = `${result.appliedRule} · ${getRegionZoneName(row.region_zone)}${row.is_young ? ' · 청년' : ''}`
+  return { label: result.rateLabel, tooltip, className }
+}
+
+interface MidSpecialBadge {
+  label: string
+  tooltip: string
+  className: string
+}
+
+function midSpecialBadgeOf(row: ReviewRow): MidSpecialBadge {
+  if (!row.industry_info) {
+    return {
+      label: '-',
+      tooltip: '업종코드 마스터에 없음',
+      className: 'bg-gray-100 text-gray-400',
+    }
+  }
+  if (row.industry_info.mid_special_eligible !== 'O') {
+    return {
+      label: 'X',
+      tooltip: '중특감면 대상 업종 아님',
+      className: 'bg-gray-100 text-gray-500',
+    }
+  }
+  const rate = row.industry_info.small_biz_reduction_rate
+  if (rate == null) {
+    return {
+      label: 'O',
+      tooltip: '중특감면 대상 (감면율 미정)',
+      className: 'bg-blue-50 text-blue-700',
+    }
+  }
+  const pct = Math.round(rate * 100)
+  return {
+    label: `${pct}%`,
+    tooltip: `중특감면 ${pct}%`,
+    className: 'bg-blue-100 text-blue-800',
+  }
 }
 
 export function PersonalReviewClient({
@@ -163,14 +247,29 @@ export function PersonalReviewClient({
             <span className="text-xs text-gray-500">로딩 중...</span>
           )}
         </div>
-        <button
-          onClick={handleSave}
-          disabled={changedRows.length === 0 || saving}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 inline-flex items-center gap-2 text-sm"
-        >
-          <Save size={14} />
-          {saving ? '저장 중...' : `저장${changedRows.length > 0 ? ` (${changedRows.length})` : ''}`}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() =>
+              startTransition(() =>
+                router.push('/reports-review/income-tax/trader'),
+              )
+            }
+            className="px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 border border-blue-200 inline-flex items-center gap-1.5 text-sm"
+            title="매매사업자 결산참고로 이동"
+          >
+            <ArrowRightLeft size={13} />
+            매매사업자 참고
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={changedRows.length === 0 || saving}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 inline-flex items-center gap-2 text-sm"
+          >
+            <Save size={14} />
+            {saving ? '저장 중...' : `저장${changedRows.length > 0 ? ` (${changedRows.length})` : ''}`}
+          </button>
+        </div>
       </div>
 
       {/* 담당자별 섹션 */}
@@ -185,6 +284,7 @@ export function PersonalReviewClient({
               key={mgr}
               manager={mgr}
               rows={rows}
+              year={year}
               expanded={expanded}
               onToggle={toggleExpand}
               editable={editable}
@@ -200,6 +300,7 @@ export function PersonalReviewClient({
 interface ManagerSectionProps {
   manager: string
   rows: ReviewRow[]
+  year: number
   expanded: string | null
   onToggle: (clientId: string) => void
   editable: EditableState
@@ -209,6 +310,7 @@ interface ManagerSectionProps {
 const ManagerSection = memo(function ManagerSection({
   manager,
   rows,
+  year,
   expanded,
   onToggle,
   editable,
@@ -233,6 +335,8 @@ const ManagerSection = memo(function ManagerSection({
                 고객사명
               </th>
               <th className="px-2 py-2 text-left whitespace-nowrap">종목</th>
+              <th className="px-2 py-2 text-center whitespace-nowrap">창감</th>
+              <th className="px-2 py-2 text-center whitespace-nowrap">중특</th>
               <th className="px-2 py-2 text-right whitespace-nowrap">매출액</th>
               <th className="px-2 py-2 text-right whitespace-nowrap">
                 영업이익
@@ -272,6 +376,7 @@ const ManagerSection = memo(function ManagerSection({
               <ReviewRowItem
                 key={row.client_id}
                 row={row}
+                year={year}
                 isExpanded={expanded === row.client_id}
                 onToggle={onToggle}
                 editable={editable[row.client_id]}
@@ -287,6 +392,7 @@ const ManagerSection = memo(function ManagerSection({
 
 interface ReviewRowItemProps {
   row: ReviewRow
+  year: number
   isExpanded: boolean
   onToggle: (clientId: string) => void
   editable: EditableEntry | undefined
@@ -295,12 +401,15 @@ interface ReviewRowItemProps {
 
 const ReviewRowItem = memo(function ReviewRowItem({
   row,
+  year,
   isExpanded,
   onToggle,
   editable,
   onEditChange,
 }: ReviewRowItemProps) {
   const rowMuted = !row.has_report ? 'text-gray-400' : ''
+  const startup = startupBadgeOf(row, year)
+  const mid = midSpecialBadgeOf(row)
   return (
     <>
       <tr
@@ -319,6 +428,28 @@ const ReviewRowItem = memo(function ReviewRowItem({
           </span>
         </td>
         <td className="px-2 py-2 whitespace-nowrap">{row.business_item}</td>
+        <td
+          className="px-2 py-2 text-center whitespace-nowrap"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span
+            className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${startup.className}`}
+            title={startup.tooltip}
+          >
+            {startup.label}
+          </span>
+        </td>
+        <td
+          className="px-2 py-2 text-center whitespace-nowrap"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span
+            className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${mid.className}`}
+            title={mid.tooltip}
+          >
+            {mid.label}
+          </span>
+        </td>
         <td className="px-2 py-2 text-right tabular-nums">
           {fmt(row.revenue)}
         </td>
@@ -379,7 +510,7 @@ const ReviewRowItem = memo(function ReviewRowItem({
       </tr>
       {isExpanded && (
         <tr className="bg-blue-50/50">
-          <td colSpan={15} className="px-4 py-3 border-t border-blue-100">
+          <td colSpan={17} className="px-4 py-3 border-t border-blue-100">
             <ExpandedDetail row={row} />
           </td>
         </tr>
@@ -389,17 +520,63 @@ const ReviewRowItem = memo(function ReviewRowItem({
 })
 
 function ExpandedDetail({ row }: { row: ReviewRow }) {
-  if (!row.has_report) {
-    return (
-      <div className="text-sm text-gray-500">
-        종합소득세 보고서가 작성되지 않았습니다.
-      </div>
-    )
-  }
   return (
-    <div className="grid grid-cols-2 gap-6">
-      <CreditsTable credits={row.tax_credits} />
-      <ReductionsTable reductions={row.tax_reductions} />
+    <div className="space-y-4">
+      <ReductionMetaPanel row={row} />
+      {row.has_report ? (
+        <div className="grid grid-cols-2 gap-6">
+          <CreditsTable credits={row.tax_credits} />
+          <ReductionsTable reductions={row.tax_reductions} />
+        </div>
+      ) : (
+        <div className="text-sm text-gray-500">
+          종합소득세 보고서가 작성되지 않았습니다.
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ReductionMetaPanel({ row }: { row: ReviewRow }) {
+  const info = row.industry_info
+  return (
+    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs bg-white border border-gray-200 rounded px-3 py-2">
+      <div>
+        <span className="text-gray-500">업종코드</span>{' '}
+        <span className="font-medium">{row.business_category_code ?? '-'}</span>
+        {info?.business_description && (
+          <span className="text-gray-500 ml-2">{info.business_description}</span>
+        )}
+      </div>
+      <div>
+        <span className="text-gray-500">권역</span>{' '}
+        <span className="font-medium">{getRegionZoneName(row.region_zone)}</span>
+        <span className="text-gray-400 ml-2">{row.address ?? '주소 없음'}</span>
+      </div>
+      <div>
+        <span className="text-gray-500">창감 가능</span>{' '}
+        <span className="font-medium">{info?.startup_eligible ?? '-'}</span>
+        {info?.startup_note && (
+          <span className="text-gray-400 ml-2">{info.startup_note}</span>
+        )}
+      </div>
+      <div>
+        <span className="text-gray-500">중특 가능</span>{' '}
+        <span className="font-medium">{info?.mid_special_eligible ?? '-'}</span>
+        {info?.small_biz_reduction_rate != null && (
+          <span className="text-gray-400 ml-2">
+            감면율 {Math.round(info.small_biz_reduction_rate * 100)}%
+          </span>
+        )}
+      </div>
+      <div>
+        <span className="text-gray-500">청년 여부</span>{' '}
+        <span className="font-medium">{row.is_young ? '만 35세 미만 (청년)' : '일반'}</span>
+      </div>
+      <div>
+        <span className="text-gray-500">개업연도</span>{' '}
+        <span className="font-medium">{row.opening_year ?? '-'}</span>
+      </div>
     </div>
   )
 }
