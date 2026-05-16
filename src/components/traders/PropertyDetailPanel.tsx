@@ -15,11 +15,12 @@ import {
   Trash2,
 } from 'lucide-react'
 import {
-  calculatePriorAmounts,
   calculatePropertyTax,
+  clearPriorPrepaidOverride,
   deleteProperty,
   getExpenses,
   saveExpensesAndProperty,
+  updatePriorPrepaidOverride,
   updatePriorTransferIncomeOverride,
   type PriorAmounts,
 } from '@/app/actions/trader-properties'
@@ -71,6 +72,8 @@ export function PropertyDetailPanel({
   const [showReport, setShowReport] = useState(false)
   const [prior, setPrior] = useState<PriorAmounts | null>(null)
   const [priorInput, setPriorInput] = useState<string>('')
+  const [priorPrepaidIncomeInput, setPriorPrepaidIncomeInput] = useState<string>('')
+  const [priorPrepaidLocalInput, setPriorPrepaidLocalInput] = useState<string>('')
 
   // 펼침 시 필요경비 로드
   useEffect(() => {
@@ -99,22 +102,41 @@ export function PropertyDetailPanel({
     setPropertyName(property.property_name)
   }, [property.property_name])
 
-  // 종전 양도차익/기납부 자동계산 — propertyId, 양도일, override 변경 시 재계산
+  // 페이지 진입 시 server 호출 없이 override 값만으로 stub 구성.
+  // 자동계산은 [세금계산] 버튼 클릭 시에만 명시적으로 수행.
   useEffect(() => {
-    let cancelled = false
-    calculatePriorAmounts(property.id)
-      .then((data) => {
-        if (cancelled) return
-        setPrior(data)
-        setPriorInput(formatNumberWithCommas(data.effectivePriorTransferIncome))
-      })
-      .catch(() => {
-        if (!cancelled) setPrior(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [property.id, property.transfer_date, property.prior_transfer_income_override])
+    const incomeOverride = property.prior_transfer_income_override
+    const prepaidIncomeOverride = property.prior_prepaid_income_tax_override
+    const prepaidLocalOverride = property.prior_prepaid_local_tax_override
+
+    setPrior({
+      priorTransferIncome: 0,
+      priorPrepaidIncomeTax: 0,
+      priorPrepaidLocalTax: 0,
+      priorPropertiesCount: 0,
+      priorPropertyNames: [],
+      effectivePriorTransferIncome: incomeOverride ?? 0,
+      effectivePriorPrepaidIncomeTax: prepaidIncomeOverride ?? 0,
+      effectivePriorPrepaidLocalTax: prepaidLocalOverride ?? 0,
+      isOverridden: incomeOverride !== null,
+      isPrepaidIncomeOverridden: prepaidIncomeOverride !== null,
+      isPrepaidLocalOverridden: prepaidLocalOverride !== null,
+    })
+    setPriorInput(
+      incomeOverride !== null ? formatNumberWithCommas(incomeOverride) : '',
+    )
+    setPriorPrepaidIncomeInput(
+      prepaidIncomeOverride !== null ? formatNumberWithCommas(prepaidIncomeOverride) : '',
+    )
+    setPriorPrepaidLocalInput(
+      prepaidLocalOverride !== null ? formatNumberWithCommas(prepaidLocalOverride) : '',
+    )
+  }, [
+    property.id,
+    property.prior_transfer_income_override,
+    property.prior_prepaid_income_tax_override,
+    property.prior_prepaid_local_tax_override,
+  ])
 
   function updateExpense(index: number, updates: Partial<TraderPropertyExpense>) {
     setExpenses((prev) => prev.map((r, i) => (i === index ? { ...r, ...updates } : r)))
@@ -191,24 +213,65 @@ export function PropertyDetailPanel({
 
   async function handleCalculateTax() {
     try {
+      // 1) 현재 클라이언트 state(부가세, 필요경비 등)를 먼저 DB에 반영.
+      //    저장하지 않으면 calculatePropertyTax가 stale한 transfer_income을 읽어
+      //    부가세 차감이 산출세액에 반영되지 않는다.
+      await saveExpensesAndProperty(
+        property.id,
+        {
+          property_name: propertyName,
+          property_type: property.property_type ?? null,
+          location: property.location,
+          prepaid_income_tax: Number(property.prepaid_income_tax) || 0,
+          prepaid_local_tax: Number(property.prepaid_local_tax) || 0,
+          is_85_over: property.is_85_over,
+          comparison_taxation: property.comparison_taxation,
+          progress_status: property.progress_status,
+          transfer_amount: Number(property.transfer_amount) || 0,
+          vat_amount: Number(property.vat_amount) || 0,
+          acquisition_date: property.acquisition_date,
+          transfer_date: property.transfer_date,
+          land_area: Number(property.land_area) || 0,
+          building_area: Number(property.building_area) || 0,
+        },
+        expenses.map((r) => ({
+          row_no: r.row_no,
+          expense_name: r.expense_name,
+          category: r.category,
+          amount: Number(r.amount) || 0,
+          predeclaration_allowed: r.predeclaration_allowed,
+          income_tax_allowed: r.income_tax_allowed,
+          memo: r.memo,
+        })),
+      )
+
+      // 2) 갱신된 transfer_income 기준으로 산출세액 계산
       const result = await calculatePropertyTax(property.id)
-      // 즉시 클라이언트 state 업데이트 (alert 없이 조용히 적용)
       onChange({
         prepaid_income_tax: result.income_tax,
         prepaid_local_tax: result.local_tax,
       })
       setPrior(result.prior)
       setPriorInput(formatNumberWithCommas(result.prior.effectivePriorTransferIncome))
+      setPriorPrepaidIncomeInput(
+        formatNumberWithCommas(result.prior.effectivePriorPrepaidIncomeTax),
+      )
+      setPriorPrepaidLocalInput(
+        formatNumberWithCommas(result.prior.effectivePriorPrepaidLocalTax),
+      )
     } catch (e) {
       alert(`세금 계산 실패: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
 
   async function handlePriorSave() {
-    if (!prior) return
     const numeric = parseNumberFromCommas(priorInput)
-    // 자동값과 같으면 override 해제(null), 다르면 override 저장
-    const newValue = numeric === prior.priorTransferIncome ? null : numeric
+    // 자동값과 같으면 override 해제(null), 다르면 override 저장.
+    // 자동값이 아직 로드되지 않았다면(=0) 입력값을 그대로 override로 저장.
+    const newValue =
+      prior && prior.priorTransferIncome > 0 && numeric === prior.priorTransferIncome
+        ? null
+        : numeric
     try {
       await updatePriorTransferIncomeOverride(property.id, newValue)
       // property prop의 prior_transfer_income_override 갱신은 router.refresh로 처리
@@ -221,6 +284,52 @@ export function PropertyDetailPanel({
   async function handlePriorReset() {
     try {
       await updatePriorTransferIncomeOverride(property.id, null)
+      router.refresh()
+    } catch (e) {
+      alert(`자동값 복귀 실패: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  async function handlePriorPrepaidIncomeSave() {
+    const numeric = parseNumberFromCommas(priorPrepaidIncomeInput)
+    const newValue =
+      prior && prior.priorPrepaidIncomeTax > 0 && numeric === prior.priorPrepaidIncomeTax
+        ? null
+        : numeric
+    try {
+      await updatePriorPrepaidOverride(property.id, 'income_tax', newValue)
+      router.refresh()
+    } catch (e) {
+      alert(`종전 기납부 종소세 저장 실패: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  async function handlePriorPrepaidIncomeReset() {
+    try {
+      await clearPriorPrepaidOverride(property.id, 'income_tax')
+      router.refresh()
+    } catch (e) {
+      alert(`자동값 복귀 실패: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  async function handlePriorPrepaidLocalSave() {
+    const numeric = parseNumberFromCommas(priorPrepaidLocalInput)
+    const newValue =
+      prior && prior.priorPrepaidLocalTax > 0 && numeric === prior.priorPrepaidLocalTax
+        ? null
+        : numeric
+    try {
+      await updatePriorPrepaidOverride(property.id, 'local_tax', newValue)
+      router.refresh()
+    } catch (e) {
+      alert(`종전 기납부 지방소득세 저장 실패: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
+  async function handlePriorPrepaidLocalReset() {
+    try {
+      await clearPriorPrepaidOverride(property.id, 'local_tax')
       router.refresh()
     } catch (e) {
       alert(`자동값 복귀 실패: ${e instanceof Error ? e.message : String(e)}`)
@@ -273,9 +382,9 @@ export function PropertyDetailPanel({
 
   return (
     <div className="px-4 py-4 border-l-4 border-indigo-400">
-      {/* 헤더: 물건명 + 종류 + 접기 */}
+      {/* 헤더: 물건명 + 종류 + 진행단계 + 접기 */}
       <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
-        <div className="flex items-center gap-3 flex-1">
+        <div className="flex items-center gap-3 flex-1 flex-wrap">
           <label className="text-sm font-bold text-gray-700">물건명</label>
           <input
             type="text"
@@ -292,6 +401,22 @@ export function PropertyDetailPanel({
           >
             <option value="">선택</option>
             {PROPERTY_TYPE_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
+          <label className="text-xs font-medium text-gray-600">진행단계</label>
+          <select
+            value={property.progress_status}
+            onChange={(e) =>
+              onChange({
+                progress_status: e.target.value as TraderProperty['progress_status'],
+              })
+            }
+            className={`px-3 py-1.5 border rounded text-sm focus:border-indigo-500 focus:outline-none ${progressStyle.bg} ${progressStyle.text} ${progressStyle.border}`}
+          >
+            {PROGRESS_OPTIONS.map((opt) => (
               <option key={opt} value={opt}>
                 {opt}
               </option>
@@ -409,44 +534,77 @@ export function PropertyDetailPanel({
           )}
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">종전 기납부 종소세</label>
-          <div className="w-full px-2 py-1 border border-gray-200 bg-gray-50 rounded text-sm text-right tabular-nums text-gray-700">
-            {formatNumberWithCommas(prior?.priorPrepaidIncomeTax ?? 0) || '0'}
-          </div>
+          <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+            <span>종전 기납부 종소세</span>
+            {prior?.isPrepaidIncomeOverridden && (
+              <button
+                type="button"
+                onClick={handlePriorPrepaidIncomeReset}
+                title="자동계산값으로 복귀"
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] bg-orange-100 text-orange-700 rounded hover:bg-orange-200"
+              >
+                <RotateCcw size={9} />
+                자동
+              </button>
+            )}
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={priorPrepaidIncomeInput}
+            onChange={(e) =>
+              setPriorPrepaidIncomeInput(
+                formatNumberWithCommas(parseNumberFromCommas(e.target.value)),
+              )
+            }
+            onBlur={handlePriorPrepaidIncomeSave}
+            placeholder="0"
+            className={`w-full px-2 py-1 text-right border rounded text-sm tabular-nums focus:border-indigo-500 focus:outline-none ${
+              prior?.isPrepaidIncomeOverridden
+                ? 'bg-yellow-50 border-yellow-300'
+                : 'border-gray-200'
+            }`}
+          />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">종전 기납부 지방소득세</label>
-          <div className="w-full px-2 py-1 border border-gray-200 bg-gray-50 rounded text-sm text-right tabular-nums text-gray-700">
-            {formatNumberWithCommas(prior?.priorPrepaidLocalTax ?? 0) || '0'}
-          </div>
+          <label className="block text-xs font-medium text-gray-600 mb-1 flex items-center gap-1.5">
+            <span>종전 기납부 지방소득세</span>
+            {prior?.isPrepaidLocalOverridden && (
+              <button
+                type="button"
+                onClick={handlePriorPrepaidLocalReset}
+                title="자동계산값으로 복귀"
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] bg-orange-100 text-orange-700 rounded hover:bg-orange-200"
+              >
+                <RotateCcw size={9} />
+                자동
+              </button>
+            )}
+          </label>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={priorPrepaidLocalInput}
+            onChange={(e) =>
+              setPriorPrepaidLocalInput(
+                formatNumberWithCommas(parseNumberFromCommas(e.target.value)),
+              )
+            }
+            onBlur={handlePriorPrepaidLocalSave}
+            placeholder="0"
+            className={`w-full px-2 py-1 text-right border rounded text-sm tabular-nums focus:border-indigo-500 focus:outline-none ${
+              prior?.isPrepaidLocalOverridden
+                ? 'bg-yellow-50 border-yellow-300'
+                : 'border-gray-200'
+            }`}
+          />
         </div>
       </div>
 
-      {/* 진행단계 + 토지/건물면적 + 액션 버튼 */}
+      {/* 토지/건물면적 + 부가세 + 차감 후 양도가액 + 액션 버튼 */}
       <div className="mb-4 pb-3 border-b border-gray-200">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-gray-600 whitespace-nowrap">
-                진행단계
-              </label>
-              <select
-                value={property.progress_status}
-                onChange={(e) =>
-                  onChange({
-                    progress_status: e.target.value as TraderProperty['progress_status'],
-                  })
-                }
-                className={`px-3 py-1 border rounded text-sm focus:border-indigo-500 focus:outline-none ${progressStyle.bg} ${progressStyle.text} ${progressStyle.border}`}
-              >
-                {PROGRESS_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-            </div>
-
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-gray-600 whitespace-nowrap">
                 토지면적
@@ -512,7 +670,7 @@ export function PropertyDetailPanel({
           </div>
 
           <div className="flex flex-col gap-1 items-end">
-            {/* 1행 */}
+            {/* 1행: 부동산 폴더 | 입력참고용 | 세금계산 */}
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -534,38 +692,34 @@ export function PropertyDetailPanel({
               >
                 <FileSearch size={11} /> 입력참고용
               </button>
-            </div>
-
-            {/* 2행 */}
-            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={handleCalculateTax}
-                className="px-3 py-1 bg-purple-100 text-purple-700 hover:bg-purple-200 text-xs rounded flex items-center gap-1"
+                className="px-3 py-1 bg-purple-600 text-white hover:bg-purple-700 text-xs rounded flex items-center gap-1"
               >
                 <Calculator size={11} /> 세금계산
               </button>
+            </div>
+
+            {/* 2행: 부가세 계산기 | 고객 보고서 | 삭제 */}
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() =>
                   window.open('/calculator/vat/calc', '_blank', 'noopener,noreferrer')
                 }
                 title="부가세 계산기를 새 탭에서 열기"
-                className="px-3 py-1 bg-fuchsia-600 text-white hover:bg-fuchsia-700 text-xs rounded flex items-center gap-1"
+                className="px-3 py-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-300 text-xs rounded flex items-center gap-1"
               >
                 <Receipt size={11} /> 부가세 계산기
               </button>
               <button
                 type="button"
                 onClick={() => setShowReport(true)}
-                className="px-3 py-1 bg-green-100 text-green-700 hover:bg-green-200 text-xs rounded flex items-center gap-1"
+                className="px-3 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300 text-xs rounded flex items-center gap-1"
               >
-                <FileText size={11} /> 보고서
+                <FileText size={11} /> 고객 보고서
               </button>
-            </div>
-
-            {/* 3행 */}
-            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={handleDelete}

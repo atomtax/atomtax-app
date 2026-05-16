@@ -326,9 +326,15 @@ export interface PriorAmounts {
   priorPrepaidLocalTax: number
   priorPropertiesCount: number
   priorPropertyNames: string[]
-  /** override가 적용된 최종값. UI 표시용. */
+  /** override가 적용된 최종 양도차익. UI 표시용. */
   effectivePriorTransferIncome: number
+  /** override가 적용된 최종 기납부 종소세. UI 표시용. */
+  effectivePriorPrepaidIncomeTax: number
+  /** override가 적용된 최종 기납부 지방세. UI 표시용. */
+  effectivePriorPrepaidLocalTax: number
   isOverridden: boolean
+  isPrepaidIncomeOverridden: boolean
+  isPrepaidLocalOverridden: boolean
 }
 
 /**
@@ -347,7 +353,9 @@ export async function calculatePriorAmounts(
 
   const { data: current, error: fetchError } = await supabase
     .from('trader_properties')
-    .select('client_id, transfer_date, prior_transfer_income_override')
+    .select(
+      'client_id, transfer_date, prior_transfer_income_override, prior_prepaid_income_tax_override, prior_prepaid_local_tax_override',
+    )
     .eq('id', propertyId)
     .maybeSingle()
 
@@ -361,11 +369,29 @@ export async function calculatePriorAmounts(
       : null
   const isOverridden = override !== null
 
+  const prepaidIncomeOverride =
+    current.prior_prepaid_income_tax_override !== null &&
+    current.prior_prepaid_income_tax_override !== undefined
+      ? Number(current.prior_prepaid_income_tax_override)
+      : null
+  const isPrepaidIncomeOverridden = prepaidIncomeOverride !== null
+
+  const prepaidLocalOverride =
+    current.prior_prepaid_local_tax_override !== null &&
+    current.prior_prepaid_local_tax_override !== undefined
+      ? Number(current.prior_prepaid_local_tax_override)
+      : null
+  const isPrepaidLocalOverridden = prepaidLocalOverride !== null
+
   if (!current.transfer_date) {
     return {
       ...emptyPriorAmounts(),
       effectivePriorTransferIncome: override ?? 0,
+      effectivePriorPrepaidIncomeTax: prepaidIncomeOverride ?? 0,
+      effectivePriorPrepaidLocalTax: prepaidLocalOverride ?? 0,
       isOverridden,
+      isPrepaidIncomeOverridden,
+      isPrepaidLocalOverridden,
     }
   }
 
@@ -405,7 +431,11 @@ export async function calculatePriorAmounts(
     priorPropertiesCount: list.length,
     priorPropertyNames: names,
     effectivePriorTransferIncome: override ?? priorTransferIncome,
+    effectivePriorPrepaidIncomeTax: prepaidIncomeOverride ?? priorPrepaidIncomeTax,
+    effectivePriorPrepaidLocalTax: prepaidLocalOverride ?? priorPrepaidLocalTax,
     isOverridden,
+    isPrepaidIncomeOverridden,
+    isPrepaidLocalOverridden,
   }
 }
 
@@ -417,7 +447,11 @@ function emptyPriorAmounts(): PriorAmounts {
     priorPropertiesCount: 0,
     priorPropertyNames: [],
     effectivePriorTransferIncome: 0,
+    effectivePriorPrepaidIncomeTax: 0,
+    effectivePriorPrepaidLocalTax: 0,
     isOverridden: false,
+    isPrepaidIncomeOverridden: false,
+    isPrepaidLocalOverridden: false,
   }
 }
 
@@ -436,6 +470,41 @@ export async function updatePriorTransferIncomeOverride(
 
   if (error) throw new Error(`종전 양도차익 저장 실패: ${error.message}`)
   if (data?.client_id) revalidatePath(`/traders/${data.client_id}`)
+}
+
+/**
+ * 종전 기납부세액 수동 수정값 저장. NULL이면 자동값 복귀.
+ * field='income_tax' → prior_prepaid_income_tax_override
+ * field='local_tax'  → prior_prepaid_local_tax_override
+ */
+export async function updatePriorPrepaidOverride(
+  propertyId: string,
+  field: 'income_tax' | 'local_tax',
+  value: number | null,
+): Promise<void> {
+  const supabase = await createClient()
+  const column =
+    field === 'income_tax'
+      ? 'prior_prepaid_income_tax_override'
+      : 'prior_prepaid_local_tax_override'
+
+  const { data, error } = await supabase
+    .from('trader_properties')
+    .update({ [column]: value })
+    .eq('id', propertyId)
+    .select('client_id')
+    .single()
+
+  if (error) throw new Error(`종전 기납부 ${field} 저장 실패: ${error.message}`)
+  if (data?.client_id) revalidatePath(`/traders/${data.client_id}`)
+}
+
+/** 종전 기납부세액 수동 수정값을 NULL로 되돌림 (자동값 복귀). */
+export async function clearPriorPrepaidOverride(
+  propertyId: string,
+  field: 'income_tax' | 'local_tax',
+): Promise<void> {
+  await updatePriorPrepaidOverride(propertyId, field, null)
 }
 
 export interface CalculatePropertyTaxResult {
@@ -482,7 +551,7 @@ export async function calculatePropertyTax(
     totalTax = bracket.tax
     appliedRate = bracket.rate
   }
-  const thisIncomeTax = Math.max(0, totalTax - prior.priorPrepaidIncomeTax)
+  const thisIncomeTax = Math.max(0, totalTax - prior.effectivePriorPrepaidIncomeTax)
   const thisLocalTax = Math.floor(thisIncomeTax * 0.1)
 
   const { error: updateError } = await supabase
