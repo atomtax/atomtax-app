@@ -43,7 +43,9 @@ export function PropertyReportModal({ property, clientName, onClose }: Props) {
     }
   }, [property.id])
 
-  const transferAmount = Number(property.transfer_amount) || 0
+  const grossTransferAmount = Number(property.transfer_amount) || 0
+  const vatAmount = Number(property.vat_amount) || 0
+  const netTransferAmount = Math.max(0, grossTransferAmount - vatAmount)
   const acquisitionAmount = Number(property.acquisition_amount) || 0
   const otherExpenses = Number(property.other_expenses) || 0
   const transferIncome = Number(property.transfer_income) || 0
@@ -186,9 +188,21 @@ export function PropertyReportModal({ property, clientName, onClose }: Props) {
             </thead>
             <tbody>
               <tr className="border-b border-gray-200">
-                <td className="px-4 py-2.5">양도가액</td>
+                <td className="px-4 py-2.5">양도가액 (총액)</td>
                 <td className="px-4 py-2.5 text-right tabular-nums">
-                  {formatNumberWithCommas(transferAmount) || '0'}원
+                  {formatNumberWithCommas(grossTransferAmount) || '0'}원
+                </td>
+              </tr>
+              <tr className="border-b border-gray-200">
+                <td className="px-4 py-2.5 pl-8 text-gray-600 text-xs">(−) 부가세</td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-gray-600 text-xs">
+                  {formatNumberWithCommas(vatAmount) || '0'}원
+                </td>
+              </tr>
+              <tr className="border-b-2 border-blue-300 bg-blue-50">
+                <td className="px-4 py-2.5 font-medium text-blue-900">차감 후 양도가액</td>
+                <td className="px-4 py-2.5 text-right tabular-nums font-medium text-blue-900">
+                  {formatNumberWithCommas(netTransferAmount) || '0'}원
                 </td>
               </tr>
               <tr className="border-b border-gray-200 bg-gray-50">
