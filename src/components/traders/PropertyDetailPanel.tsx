@@ -15,7 +15,6 @@ import {
   Trash2,
 } from 'lucide-react'
 import {
-  calculatePriorAmounts,
   calculatePropertyTax,
   clearPriorPrepaidOverride,
   deleteProperty,
@@ -103,26 +102,37 @@ export function PropertyDetailPanel({
     setPropertyName(property.property_name)
   }, [property.property_name])
 
-  // 종전 양도차익/기납부 자동계산 — propertyId, 양도일, override 변경 시 재계산
+  // 페이지 진입 시 server 호출 없이 override 값만으로 stub 구성.
+  // 자동계산은 [세금계산] 버튼 클릭 시에만 명시적으로 수행.
   useEffect(() => {
-    let cancelled = false
-    calculatePriorAmounts(property.id)
-      .then((data) => {
-        if (cancelled) return
-        setPrior(data)
-        setPriorInput(formatNumberWithCommas(data.effectivePriorTransferIncome))
-        setPriorPrepaidIncomeInput(formatNumberWithCommas(data.effectivePriorPrepaidIncomeTax))
-        setPriorPrepaidLocalInput(formatNumberWithCommas(data.effectivePriorPrepaidLocalTax))
-      })
-      .catch(() => {
-        if (!cancelled) setPrior(null)
-      })
-    return () => {
-      cancelled = true
-    }
+    const incomeOverride = property.prior_transfer_income_override
+    const prepaidIncomeOverride = property.prior_prepaid_income_tax_override
+    const prepaidLocalOverride = property.prior_prepaid_local_tax_override
+
+    setPrior({
+      priorTransferIncome: 0,
+      priorPrepaidIncomeTax: 0,
+      priorPrepaidLocalTax: 0,
+      priorPropertiesCount: 0,
+      priorPropertyNames: [],
+      effectivePriorTransferIncome: incomeOverride ?? 0,
+      effectivePriorPrepaidIncomeTax: prepaidIncomeOverride ?? 0,
+      effectivePriorPrepaidLocalTax: prepaidLocalOverride ?? 0,
+      isOverridden: incomeOverride !== null,
+      isPrepaidIncomeOverridden: prepaidIncomeOverride !== null,
+      isPrepaidLocalOverridden: prepaidLocalOverride !== null,
+    })
+    setPriorInput(
+      incomeOverride !== null ? formatNumberWithCommas(incomeOverride) : '',
+    )
+    setPriorPrepaidIncomeInput(
+      prepaidIncomeOverride !== null ? formatNumberWithCommas(prepaidIncomeOverride) : '',
+    )
+    setPriorPrepaidLocalInput(
+      prepaidLocalOverride !== null ? formatNumberWithCommas(prepaidLocalOverride) : '',
+    )
   }, [
     property.id,
-    property.transfer_date,
     property.prior_transfer_income_override,
     property.prior_prepaid_income_tax_override,
     property.prior_prepaid_local_tax_override,
@@ -223,10 +233,13 @@ export function PropertyDetailPanel({
   }
 
   async function handlePriorSave() {
-    if (!prior) return
     const numeric = parseNumberFromCommas(priorInput)
-    // 자동값과 같으면 override 해제(null), 다르면 override 저장
-    const newValue = numeric === prior.priorTransferIncome ? null : numeric
+    // 자동값과 같으면 override 해제(null), 다르면 override 저장.
+    // 자동값이 아직 로드되지 않았다면(=0) 입력값을 그대로 override로 저장.
+    const newValue =
+      prior && prior.priorTransferIncome > 0 && numeric === prior.priorTransferIncome
+        ? null
+        : numeric
     try {
       await updatePriorTransferIncomeOverride(property.id, newValue)
       // property prop의 prior_transfer_income_override 갱신은 router.refresh로 처리
@@ -246,9 +259,11 @@ export function PropertyDetailPanel({
   }
 
   async function handlePriorPrepaidIncomeSave() {
-    if (!prior) return
     const numeric = parseNumberFromCommas(priorPrepaidIncomeInput)
-    const newValue = numeric === prior.priorPrepaidIncomeTax ? null : numeric
+    const newValue =
+      prior && prior.priorPrepaidIncomeTax > 0 && numeric === prior.priorPrepaidIncomeTax
+        ? null
+        : numeric
     try {
       await updatePriorPrepaidOverride(property.id, 'income_tax', newValue)
       router.refresh()
@@ -267,9 +282,11 @@ export function PropertyDetailPanel({
   }
 
   async function handlePriorPrepaidLocalSave() {
-    if (!prior) return
     const numeric = parseNumberFromCommas(priorPrepaidLocalInput)
-    const newValue = numeric === prior.priorPrepaidLocalTax ? null : numeric
+    const newValue =
+      prior && prior.priorPrepaidLocalTax > 0 && numeric === prior.priorPrepaidLocalTax
+        ? null
+        : numeric
     try {
       await updatePriorPrepaidOverride(property.id, 'local_tax', newValue)
       router.refresh()
