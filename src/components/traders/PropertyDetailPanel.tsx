@@ -266,8 +266,10 @@ export function PropertyDetailPanel({
         formatNumberWithCommas(result.prior.effectivePriorPrepaidLocalTax),
       )
 
-      // 4) 서버 사이드 데이터(property prop)도 새 값으로 동기화 — 새로고침 시 stale 방지
-      router.refresh()
+      // onChange + setPrior로 클라이언트 state는 이미 새 값으로 갱신됨.
+      // router.refresh()를 호출하면 listPropertiesByClient가 다시 실행되어 페이지
+      // 전체 데이터를 re-fetch 하므로 비용이 크다 — 제거하여 응답속도 개선.
+      // (DB에 저장된 값은 다음 페이지 진입/새로고침에 자동으로 반영됨)
 
       setToast({
         message: `세금계산 완료 — 산출세액 ${formatNumberWithCommas(result.total_tax)}원`,
@@ -291,19 +293,25 @@ export function PropertyDetailPanel({
         : numeric
     try {
       await updatePriorTransferIncomeOverride(property.id, newValue)
-      // property prop의 prior_transfer_income_override 갱신은 router.refresh로 처리
-      router.refresh()
+      // 클라이언트 state로 즉시 갱신 — router.refresh 호출하지 않음 (페이지 전체 re-fetch 회피)
+      onChange({ prior_transfer_income_override: newValue })
     } catch (e) {
-      alert(`종전 양도차익 저장 실패: ${e instanceof Error ? e.message : String(e)}`)
+      setToast({
+        message: `종전 양도차익 저장 실패: ${e instanceof Error ? e.message : String(e)}`,
+        type: 'error',
+      })
     }
   }
 
   async function handlePriorReset() {
     try {
       await updatePriorTransferIncomeOverride(property.id, null)
-      router.refresh()
+      onChange({ prior_transfer_income_override: null })
     } catch (e) {
-      alert(`자동값 복귀 실패: ${e instanceof Error ? e.message : String(e)}`)
+      setToast({
+        message: `자동값 복귀 실패: ${e instanceof Error ? e.message : String(e)}`,
+        type: 'error',
+      })
     }
   }
 
@@ -315,18 +323,24 @@ export function PropertyDetailPanel({
         : numeric
     try {
       await updatePriorPrepaidOverride(property.id, 'income_tax', newValue)
-      router.refresh()
+      onChange({ prior_prepaid_income_tax_override: newValue })
     } catch (e) {
-      alert(`종전 기납부 종소세 저장 실패: ${e instanceof Error ? e.message : String(e)}`)
+      setToast({
+        message: `종전 기납부 종소세 저장 실패: ${e instanceof Error ? e.message : String(e)}`,
+        type: 'error',
+      })
     }
   }
 
   async function handlePriorPrepaidIncomeReset() {
     try {
       await clearPriorPrepaidOverride(property.id, 'income_tax')
-      router.refresh()
+      onChange({ prior_prepaid_income_tax_override: null })
     } catch (e) {
-      alert(`자동값 복귀 실패: ${e instanceof Error ? e.message : String(e)}`)
+      setToast({
+        message: `자동값 복귀 실패: ${e instanceof Error ? e.message : String(e)}`,
+        type: 'error',
+      })
     }
   }
 
@@ -338,18 +352,24 @@ export function PropertyDetailPanel({
         : numeric
     try {
       await updatePriorPrepaidOverride(property.id, 'local_tax', newValue)
-      router.refresh()
+      onChange({ prior_prepaid_local_tax_override: newValue })
     } catch (e) {
-      alert(`종전 기납부 지방소득세 저장 실패: ${e instanceof Error ? e.message : String(e)}`)
+      setToast({
+        message: `종전 기납부 지방소득세 저장 실패: ${e instanceof Error ? e.message : String(e)}`,
+        type: 'error',
+      })
     }
   }
 
   async function handlePriorPrepaidLocalReset() {
     try {
       await clearPriorPrepaidOverride(property.id, 'local_tax')
-      router.refresh()
+      onChange({ prior_prepaid_local_tax_override: null })
     } catch (e) {
-      alert(`자동값 복귀 실패: ${e instanceof Error ? e.message : String(e)}`)
+      setToast({
+        message: `자동값 복귀 실패: ${e instanceof Error ? e.message : String(e)}`,
+        type: 'error',
+      })
     }
   }
 
