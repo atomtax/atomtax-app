@@ -1,6 +1,12 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
+import {
+  calculatePriorAmounts,
+  type PriorAmounts,
+} from '@/app/actions/trader-properties'
+import { calculateIncomeTax } from '@/lib/calculators/income-tax'
 import { formatNumberWithCommas } from '@/lib/utils/format-number'
 import type { TraderProperty } from '@/types/database'
 
@@ -15,10 +21,36 @@ export function PropertyReferenceModal({ property, onClose }: Props) {
   const otherExpenses = Number(property.other_expenses) || 0
   const necessaryExpensesTotal = acquisitionAmount + otherExpenses
   const transferIncome = Number(property.transfer_income) || 0
+  const prepaidIncomeTax = Number(property.prepaid_income_tax) || 0
+  const prepaidLocalTax = Number(property.prepaid_local_tax) || 0
 
   const landArea = Number(property.land_area) || 0
   const buildingArea = Number(property.building_area) || 0
   const totalArea = landArea + buildingArea
+
+  const [prior, setPrior] = useState<PriorAmounts | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    calculatePriorAmounts(property.id)
+      .then((d) => {
+        if (!cancelled) setPrior(d)
+      })
+      .catch(() => {
+        if (!cancelled) setPrior(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [property.id])
+
+  const priorIncome = prior?.effectivePriorTransferIncome ?? 0
+  const priorPrepaidIncome = prior?.priorPrepaidIncomeTax ?? 0
+  const combinedIncome = transferIncome + priorIncome
+  const appliedRate = combinedIncome > 0 ? calculateIncomeTax(combinedIncome).rate : 0
+  const totalAssessedTax = combinedIncome > 0 ? calculateIncomeTax(combinedIncome).tax : 0
+  // 시나리오 B 기준: 14 기납부 총세액 = 종전 기납부 종소세, 15 납부할 = 12 - 14
+  const additionalTax = 0 // 가산세 (현재 미지원)
+  const payableTotal = Math.max(0, totalAssessedTax + additionalTax - priorPrepaidIncome)
 
   return (
     <div
@@ -170,6 +202,61 @@ export function PropertyReferenceModal({ property, onClose }: Props) {
                     }`}
                   >
                     {transferIncome.toLocaleString('ko-KR')} 원
+                  </td>
+                </tr>
+                <tr className="border-b border-gray-200">
+                  <td className="px-3 py-2 bg-gray-50 text-center">20</td>
+                  <td className="px-3 py-2 bg-gray-50">
+                    기신고(결정)된 매매차익 합계액
+                    {prior && prior.priorPropertiesCount > 0 && (
+                      <span className="ml-1 text-xs text-gray-500">
+                        (동일년도 {prior.priorPropertiesCount}건 합산
+                        {prior.isOverridden ? ', 수동' : ''})
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {formatNumberWithCommas(priorIncome) || '0'} 원
+                  </td>
+                </tr>
+                <tr className="border-b border-gray-200 bg-blue-50">
+                  <td className="px-3 py-2 font-medium text-center">21</td>
+                  <td className="px-3 py-2 font-medium">토지등 매매차익 합계액 (19+20)</td>
+                  <td className="px-3 py-2 text-right tabular-nums font-medium">
+                    {combinedIncome.toLocaleString('ko-KR')} 원
+                  </td>
+                </tr>
+                <tr className="border-b border-gray-200">
+                  <td className="px-3 py-2 bg-gray-50 text-center">22</td>
+                  <td className="px-3 py-2 bg-gray-50">양도소득세 세율</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{appliedRate}%</td>
+                </tr>
+                <tr className="border-b border-gray-200">
+                  <td className="px-3 py-2 bg-gray-50 text-center">23</td>
+                  <td className="px-3 py-2 bg-gray-50">산출세액</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {formatNumberWithCommas(totalAssessedTax) || '0'} 원
+                  </td>
+                </tr>
+                <tr className="border-b border-gray-200">
+                  <td className="px-3 py-2 bg-gray-50 text-center">24</td>
+                  <td className="px-3 py-2 bg-gray-50">가산세</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-gray-400">-</td>
+                </tr>
+                <tr className="border-b border-gray-200">
+                  <td className="px-3 py-2 bg-gray-50 text-center">25</td>
+                  <td className="px-3 py-2 bg-gray-50">기납부 총세액 (종전 산출세액 합)</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
+                    {formatNumberWithCommas(priorPrepaidIncome) || '0'} 원
+                  </td>
+                </tr>
+                <tr className="bg-orange-50">
+                  <td className="px-3 py-2 font-bold text-center text-orange-700">26</td>
+                  <td className="px-3 py-2 font-bold text-orange-700">
+                    납부할 총세액 (23+24-25)
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums font-bold text-orange-700">
+                    {formatNumberWithCommas(payableTotal) || '0'} 원
                   </td>
                 </tr>
               </tbody>
