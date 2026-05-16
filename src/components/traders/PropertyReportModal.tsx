@@ -286,30 +286,35 @@ export function PropertyReportModal({ property, clientName, onClose }: Props) {
                 </td>
               </tr>
               <tr style={{ background: '#fff7ed' }}>
-                <td className="px-4 py-3 font-bold text-orange-900">
+                <td className="px-4 py-2 text-orange-900 text-sm">
                   납부할 총세액 (산출 − 기납부)
                 </td>
-                <td className="px-4 py-3 text-right tabular-nums font-bold text-orange-900 text-lg">
+                <td className="px-4 py-2 text-right tabular-nums text-orange-900 text-sm">
                   {formatNumberWithCommas(payableTotal) || '0'}원
                 </td>
               </tr>
               <tr className="border-t border-gray-300 bg-blue-50">
-                <td className="px-4 py-2.5 text-blue-900 text-xs">└ 본 물건 종합소득세</td>
-                <td className="px-4 py-2.5 text-right tabular-nums text-blue-900 text-xs">
+                <td className="px-4 py-2 text-blue-900 text-xs">└ 본 물건 종합소득세</td>
+                <td className="px-4 py-2 text-right tabular-nums text-blue-900 text-xs">
                   {formatNumberWithCommas(prepaidIncomeTax) || '0'}원
                 </td>
               </tr>
               <tr className="bg-blue-50">
-                <td className="px-4 py-2.5 text-blue-900 text-xs">└ 본 물건 지방소득세</td>
-                <td className="px-4 py-2.5 text-right tabular-nums text-blue-900 text-xs">
+                <td className="px-4 py-2 text-blue-900 text-xs">└ 본 물건 지방소득세</td>
+                <td className="px-4 py-2 text-right tabular-nums text-blue-900 text-xs">
                   {formatNumberWithCommas(prepaidLocalTax) || '0'}원
                 </td>
               </tr>
-              <tr style={{ background: '#fef3c7' }}>
-                <td className="px-4 py-2.5 font-bold text-amber-900 text-xs">
+              <tr
+                style={{
+                  background: '#fef3c7',
+                  borderTop: '2px solid #f59e0b',
+                }}
+              >
+                <td className="px-4 py-4 font-bold text-amber-900 text-base">
                   💰 본 물건 부담세액 (종소세 + 지방세)
                 </td>
-                <td className="px-4 py-2.5 text-right tabular-nums font-bold text-amber-900">
+                <td className="px-4 py-4 text-right tabular-nums font-bold text-amber-700 text-3xl">
                   {formatNumberWithCommas(totalTax) || '0'}원
                 </td>
               </tr>

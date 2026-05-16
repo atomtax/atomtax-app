@@ -100,9 +100,11 @@ export function PropertyListManager({
           </button>
           <button
             type="button"
-            onClick={() => router.push('/traders/checklist')}
+            onClick={() =>
+              window.open('/traders/checklist', '_blank', 'noopener,noreferrer')
+            }
             className="px-3 py-1.5 bg-purple-100 text-purple-800 hover:bg-purple-200 text-sm rounded flex items-center gap-1"
-            title="매매사업자 체크리스트 페이지로 이동"
+            title="매매사업자 체크리스트를 새 탭으로 열기"
           >
             <FileText size={14} /> 체크리스트
           </button>
