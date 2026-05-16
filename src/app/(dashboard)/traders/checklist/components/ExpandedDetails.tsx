@@ -1,7 +1,5 @@
 'use client'
 
-import { useMemo } from 'react'
-import { calculateIncomeTax } from '@/lib/calculators/income-tax'
 import { formatNumberWithCommas } from '@/lib/utils/format-number'
 import type { TraderProperty } from '@/types/database'
 
@@ -10,23 +8,27 @@ interface Props {
 }
 
 export function ExpandedDetails({ property }: Props) {
-  const transferAmount = Number(property.transfer_amount) || 0
+  const grossTransferAmount = Number(property.transfer_amount) || 0
+  const vatAmount = Number(property.vat_amount) || 0
+  const netTransferAmount = Math.max(0, grossTransferAmount - vatAmount)
   const acquisitionAmount = Number(property.acquisition_amount) || 0
   const otherExpenses = Number(property.other_expenses) || 0
   const transferIncome = Number(property.transfer_income) || 0
   const landArea = Number(property.land_area) || 0
   const buildingArea = Number(property.building_area) || 0
 
-  const { incomeTax, localTax } = useMemo(() => {
-    if (transferIncome <= 0) return { incomeTax: 0, localTax: 0 }
-    const result = calculateIncomeTax(transferIncome)
-    return { incomeTax: result.tax, localTax: Math.floor(result.tax * 0.1) }
-  }, [transferIncome])
+  // 매매사업자 상세에서 입력/저장된 실제 기납부 세액(= [세금계산] 결과)을 그대로 표시.
+  // 종전 양도차익 합산을 반영한 값이라 단순 bracket(transfer_income) 추정과는 다름.
+  const incomeTax = Number(property.prepaid_income_tax) || 0
+  const localTax = Number(property.prepaid_local_tax) || 0
 
   return (
     <div className="bg-gray-50 border-l-4 border-indigo-300 p-4 text-sm">
       <div className="grid grid-cols-2 gap-x-8 gap-y-1 tabular-nums">
-        <Cell label="양도가액" value={`${formatNumberWithCommas(transferAmount) || '0'} 원`} />
+        <Cell
+          label="양도가액 (차감 후)"
+          value={`${formatNumberWithCommas(netTransferAmount) || '0'} 원`}
+        />
         <Cell label="토지면적" value={`${formatNumberWithCommas(landArea) || '0'} m²`} />
         <Cell label="취득가액" value={`${formatNumberWithCommas(acquisitionAmount) || '0'} 원`} />
         <Cell label="건물면적" value={`${formatNumberWithCommas(buildingArea) || '0'} m²`} />
@@ -43,12 +45,12 @@ export function ExpandedDetails({ property }: Props) {
 
       <div className="mt-3 pt-3 border-t border-gray-200 grid grid-cols-2 gap-x-8 gap-y-1 tabular-nums">
         <Cell
-          label="종합소득세(예상)"
+          label="기납부 종소세"
           value={`${formatNumberWithCommas(incomeTax) || '0'} 원`}
           subtle
         />
         <Cell
-          label="지방소득세(예상)"
+          label="기납부 지방소득세"
           value={`${formatNumberWithCommas(localTax) || '0'} 원`}
           subtle
         />
