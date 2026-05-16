@@ -143,8 +143,9 @@ export function PropertyListManager({
                   clientName={clientName}
                   clientFolder={clientFolder}
                   isExpanded={expandedRows.has(property.id)}
-                  onToggle={() => toggleExpand(property.id)}
-                  onChange={(updates) => handlePropertyChange(property.id, updates)}
+                  // 인라인 arrow function 대신 안정화된 dispatcher 전달 — React.memo 효과 발휘
+                  onToggle={toggleExpand}
+                  onChange={handlePropertyChange}
                 />
               ))
             )}

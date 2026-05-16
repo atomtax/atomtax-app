@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useMemo } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import dynamic from 'next/dynamic'
 import {
   calculateFilingDeadline,
@@ -31,8 +31,10 @@ interface Props {
   clientName: string
   clientFolder: string | null
   isExpanded: boolean
-  onToggle: () => void
-  onChange: (updates: Partial<TraderProperty>) => void
+  // propertyId 기반 시그니처 — 부모가 useCallback으로 안정화한 dispatcher를 그대로 전달 가능.
+  // React.memo의 얕은 비교가 의미를 가지도록.
+  onToggle: (propertyId: string) => void
+  onChange: (propertyId: string, updates: Partial<TraderProperty>) => void
 }
 
 function PropertyRowImpl({
@@ -40,9 +42,15 @@ function PropertyRowImpl({
   clientName,
   clientFolder,
   isExpanded,
-  onToggle,
-  onChange,
+  onToggle: onToggleProp,
+  onChange: onChangeProp,
 }: Props) {
+  // 자식(PropertyDetailPanel)과 자체 input에 넘기는 콜백을 property.id에 바인딩하여 안정화
+  const handleToggle = useCallback(() => onToggleProp(property.id), [onToggleProp, property.id])
+  const handleChange = useCallback(
+    (updates: Partial<TraderProperty>) => onChangeProp(property.id, updates),
+    [onChangeProp, property.id],
+  )
   const transferIncome = useMemo(
     () =>
       calculateTransferIncome(
@@ -73,7 +81,7 @@ function PropertyRowImpl({
     <>
       <tr
         className="border-b border-gray-100 cursor-pointer hover:bg-gray-50"
-        onClick={onToggle}
+        onClick={handleToggle}
       >
         <td className="px-3 py-2">
           <span className="text-indigo-600 font-medium">
@@ -93,7 +101,7 @@ function PropertyRowImpl({
             inputMode="numeric"
             value={formatNumberWithCommas(property.transfer_amount)}
             onChange={(e) =>
-              onChange({ transfer_amount: parseNumberFromCommas(e.target.value) })
+              handleChange({ transfer_amount: parseNumberFromCommas(e.target.value) })
             }
             placeholder="0"
             className="w-full px-2 py-1 text-right border border-gray-200 rounded tabular-nums focus:border-indigo-500 focus:outline-none"
@@ -110,11 +118,11 @@ function PropertyRowImpl({
           <input
             type="text"
             value={property.acquisition_date ?? ''}
-            onChange={(e) => onChange({ acquisition_date: e.target.value || null })}
+            onChange={(e) => handleChange({ acquisition_date: e.target.value || null })}
             onBlur={(e) => {
               const formatted = autoFormatDate(e.target.value)
               if (formatted !== e.target.value) {
-                onChange({ acquisition_date: formatted })
+                handleChange({ acquisition_date: formatted })
               }
             }}
             placeholder="20250101"
@@ -125,11 +133,11 @@ function PropertyRowImpl({
           <input
             type="text"
             value={property.transfer_date ?? ''}
-            onChange={(e) => onChange({ transfer_date: e.target.value || null })}
+            onChange={(e) => handleChange({ transfer_date: e.target.value || null })}
             onBlur={(e) => {
               const formatted = autoFormatDate(e.target.value)
               if (formatted !== e.target.value) {
-                onChange({ transfer_date: formatted })
+                handleChange({ transfer_date: formatted })
               }
             }}
             placeholder="20250405"
@@ -153,8 +161,8 @@ function PropertyRowImpl({
               property={property}
               clientName={clientName}
               clientFolder={clientFolder}
-              onChange={onChange}
-              onCollapse={onToggle}
+              onChange={handleChange}
+              onCollapse={handleToggle}
             />
           </td>
         </tr>
