@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useTransition } from 'react'
 import * as XLSX from 'xlsx'
-import { Plus, Upload, Download, FileSpreadsheet, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, CalendarPlus } from 'lucide-react'
+import { Plus, Upload, Download, FileSpreadsheet, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, CalendarPlus, Factory } from 'lucide-react'
 import type { Client, ClientInsert } from '@/types/database'
 import { deleteClientAction } from '@/app/(dashboard)/clients/actions'
 import ClientRow from './ClientRow'
@@ -10,6 +10,7 @@ import ClientDetailModal from './ClientDetailModal'
 import ClientFormModal from './ClientFormModal'
 import ClientExcelImportModal from './ClientExcelImportModal'
 import { BulkOpeningDateUpload } from './BulkOpeningDateUpload'
+import { BulkIndustryCodeUpload } from './BulkIndustryCodeUpload'
 
 type SortKey = 'number' | 'company_name' | 'manager'
 type SortDir = 'asc' | 'desc'
@@ -47,6 +48,7 @@ export default function ClientListManager({ initialClients, isTerminated = false
   const [showAdd, setShowAdd] = useState(false)
   const [showExcelUpload, setShowExcelUpload] = useState(false)
   const [showOpeningDateUpload, setShowOpeningDateUpload] = useState(false)
+  const [showIndustryCodeUpload, setShowIndustryCodeUpload] = useState(false)
 
   const managers = useMemo(
     () => [...new Set(clients.map((c) => c.manager).filter((m): m is string => !!m))].sort(),
@@ -283,6 +285,13 @@ export default function ClientListManager({ initialClients, isTerminated = false
                 <CalendarPlus size={14} />
                 개업일 일괄 업로드
               </button>
+              <button
+                onClick={() => setShowIndustryCodeUpload(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700"
+              >
+                <Factory size={14} />
+                업종코드 마스터
+              </button>
             </>
           )}
           <button
@@ -411,6 +420,14 @@ export default function ClientListManager({ initialClients, isTerminated = false
         <BulkOpeningDateUpload
           onClose={() => setShowOpeningDateUpload(false)}
           onDone={() => window.location.reload()}
+        />
+      )}
+
+      {/* 업종코드 마스터 업로드 */}
+      {showIndustryCodeUpload && (
+        <BulkIndustryCodeUpload
+          onClose={() => setShowIndustryCodeUpload(false)}
+          onDone={() => setShowIndustryCodeUpload(false)}
         />
       )}
     </div>
