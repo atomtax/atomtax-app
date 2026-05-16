@@ -202,10 +202,12 @@ export interface TraderProperty {
   id: string
   client_id: string
   property_name: string
+  property_type: string | null
   display_order: number
   acquisition_amount: number
   other_expenses: number
   transfer_amount: number
+  vat_amount: number
   acquisition_date: string | null
   transfer_date: string | null
   transfer_income: number
@@ -222,6 +224,17 @@ export interface TraderProperty {
   created_at: string
   updated_at: string
 }
+
+export const PROPERTY_TYPE_OPTIONS = [
+  '아파트',
+  '빌라',
+  '다세대',
+  '다가구',
+  '오피스텔',
+  '기타',
+] as const
+
+export type PropertyType = (typeof PROPERTY_TYPE_OPTIONS)[number]
 
 export type TraderPropertyInput = Omit<TraderProperty, 'id' | 'created_at' | 'updated_at'>
 export type TraderPropertyInsert = TraderPropertyInput
