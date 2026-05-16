@@ -99,10 +99,10 @@ export function PropertyListManager({
             <FolderOpen size={14} /> 부동산 폴더
           </button>
           <button
-            disabled
             type="button"
-            className="px-3 py-1.5 bg-purple-100 text-purple-800 text-sm rounded opacity-50 cursor-not-allowed flex items-center gap-1"
-            title="v20d에서 활성화"
+            onClick={() => router.push('/traders/checklist')}
+            className="px-3 py-1.5 bg-purple-100 text-purple-800 hover:bg-purple-200 text-sm rounded flex items-center gap-1"
+            title="매매사업자 체크리스트 페이지로 이동"
           >
             <FileText size={14} /> 체크리스트
           </button>

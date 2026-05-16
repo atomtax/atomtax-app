@@ -695,7 +695,7 @@ export function PropertyDetailPanel({
               <button
                 type="button"
                 onClick={handleCalculateTax}
-                className="px-3 py-1 bg-purple-100 text-purple-700 hover:bg-purple-200 text-xs rounded flex items-center gap-1"
+                className="px-3 py-1 bg-purple-600 text-white hover:bg-purple-700 text-xs rounded flex items-center gap-1"
               >
                 <Calculator size={11} /> 세금계산
               </button>
@@ -709,14 +709,14 @@ export function PropertyDetailPanel({
                   window.open('/calculator/vat/calc', '_blank', 'noopener,noreferrer')
                 }
                 title="부가세 계산기를 새 탭에서 열기"
-                className="px-3 py-1 bg-fuchsia-600 text-white hover:bg-fuchsia-700 text-xs rounded flex items-center gap-1"
+                className="px-3 py-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-300 text-xs rounded flex items-center gap-1"
               >
                 <Receipt size={11} /> 부가세 계산기
               </button>
               <button
                 type="button"
                 onClick={() => setShowReport(true)}
-                className="px-3 py-1 bg-green-100 text-green-700 hover:bg-green-200 text-xs rounded flex items-center gap-1"
+                className="px-3 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300 text-xs rounded flex items-center gap-1"
               >
                 <FileText size={11} /> 고객 보고서
               </button>
