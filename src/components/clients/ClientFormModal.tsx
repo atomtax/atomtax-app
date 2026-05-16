@@ -30,6 +30,7 @@ type FormData = {
   business_type_category: BusinessTypeCategory
   resident_number: string
   corporate_number: string
+  opening_date: string
   business_type: string
   business_item: string
   business_category_code: string
@@ -110,6 +111,7 @@ export default function ClientFormModal({ client, onClose, onSaved }: Props) {
     business_type_category: client?.business_type_category ?? '개인',
     resident_number: client?.resident_number ?? '',
     corporate_number: client?.corporate_number ?? '',
+    opening_date: client?.opening_date ?? '',
     business_type: client?.business_type ?? '',
     business_item: client?.business_item ?? '',
     business_category_code: client?.business_category_code ?? '',
@@ -159,6 +161,7 @@ export default function ClientFormModal({ client, onClose, onSaved }: Props) {
       address: form.address.trim() || null,
       business_number: form.business_number.trim() || null,
       corporate_number: form.corporate_number.trim() || null,
+      opening_date: form.opening_date || null,
       business_type: form.business_type.trim() || null,
       business_item: form.business_item.trim() || null,
       business_type_category: form.business_type_category,
@@ -271,6 +274,16 @@ export default function ClientFormModal({ client, onClose, onSaved }: Props) {
             </div>
             <TextInput label="주민등록번호" value={form.resident_number} onChange={(v) => set('resident_number', v)} onBlur={(v) => set('resident_number', formatResidentNumber(v))} placeholder="000000-0000000" />
             <TextInput label="법인등록번호" value={form.corporate_number} onChange={(v) => set('corporate_number', v)} onBlur={(v) => set('corporate_number', formatCorporateNumber(v))} placeholder="000000-0000000" />
+            <div>
+              <Label text="개업일" />
+              <input
+                type="date"
+                value={form.opening_date}
+                onChange={(e) => set('opening_date', e.target.value)}
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <div />
             <TextInput label="업태" value={form.business_type} onChange={(v) => set('business_type', v)} placeholder="서비스업" />
             <TextInput label="종목" value={form.business_item} onChange={(v) => set('business_item', v)} placeholder="세무대리" />
             <div className="col-span-2">
