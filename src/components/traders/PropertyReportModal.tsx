@@ -187,24 +187,35 @@ export function PropertyReportModal({ property, clientName, onClose }: Props) {
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b border-gray-200">
-                <td className="px-4 py-2.5">양도가액 (총액)</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">
-                  {formatNumberWithCommas(grossTransferAmount) || '0'}원
-                </td>
-              </tr>
-              <tr className="border-b border-gray-200">
-                <td className="px-4 py-2.5 pl-8 text-gray-600 text-xs">(−) 부가세</td>
-                <td className="px-4 py-2.5 text-right tabular-nums text-gray-600 text-xs">
-                  {formatNumberWithCommas(vatAmount) || '0'}원
-                </td>
-              </tr>
-              <tr className="border-b-2 border-blue-300 bg-blue-50">
-                <td className="px-4 py-2.5 font-medium text-blue-900">차감 후 양도가액</td>
-                <td className="px-4 py-2.5 text-right tabular-nums font-medium text-blue-900">
-                  {formatNumberWithCommas(netTransferAmount) || '0'}원
-                </td>
-              </tr>
+              {vatAmount > 0 ? (
+                <>
+                  <tr className="border-b border-gray-200">
+                    <td className="px-4 py-2.5">양도가액 (총액)</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums">
+                      {formatNumberWithCommas(grossTransferAmount) || '0'}원
+                    </td>
+                  </tr>
+                  <tr className="border-b border-gray-200">
+                    <td className="px-4 py-2.5 pl-8 text-gray-600 text-xs">(−) 부가세</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-gray-600 text-xs">
+                      {formatNumberWithCommas(vatAmount) || '0'}원
+                    </td>
+                  </tr>
+                  <tr className="border-b-2 border-blue-300 bg-blue-50">
+                    <td className="px-4 py-2.5 font-medium text-blue-900">차감 후 양도가액</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums font-medium text-blue-900">
+                      {formatNumberWithCommas(netTransferAmount) || '0'}원
+                    </td>
+                  </tr>
+                </>
+              ) : (
+                <tr className="border-b border-gray-200">
+                  <td className="px-4 py-2.5">양도가액</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">
+                    {formatNumberWithCommas(grossTransferAmount) || '0'}원
+                  </td>
+                </tr>
+              )}
               <tr className="border-b border-gray-200 bg-gray-50">
                 <td className="px-4 py-2.5">취득가액</td>
                 <td className="px-4 py-2.5 text-right tabular-nums">

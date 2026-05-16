@@ -145,27 +145,39 @@ export function PropertyReferenceModal({ property, onClose }: Props) {
             </h3>
             <table className="w-full border border-gray-300 text-sm">
               <tbody>
-                <tr className="border-b border-gray-200">
-                  <td className="px-3 py-2 bg-gray-50 text-center">11-1</td>
-                  <td className="px-3 py-2 bg-gray-50">양도가액 (총액)</td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {formatNumberWithCommas(grossTransferAmount) || '0'} 원
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-200">
-                  <td className="px-3 py-2 bg-gray-50 text-center">11-2</td>
-                  <td className="px-3 py-2 bg-gray-50">(−) 부가세</td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {formatNumberWithCommas(vatAmount) || '0'} 원
-                  </td>
-                </tr>
-                <tr className="border-b border-gray-200 bg-blue-50">
-                  <td className="px-3 py-2 font-medium w-12 text-center">11</td>
-                  <td className="px-3 py-2 font-medium">매매가액 (차감 후)</td>
-                  <td className="px-3 py-2 text-right tabular-nums font-medium">
-                    {formatNumberWithCommas(netTransferAmount) || '0'} 원
-                  </td>
-                </tr>
+                {vatAmount > 0 ? (
+                  <>
+                    <tr className="border-b border-gray-200">
+                      <td className="px-3 py-2 bg-gray-50 text-center">11-1</td>
+                      <td className="px-3 py-2 bg-gray-50">양도가액 (총액)</td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {formatNumberWithCommas(grossTransferAmount) || '0'} 원
+                      </td>
+                    </tr>
+                    <tr className="border-b border-gray-200">
+                      <td className="px-3 py-2 bg-gray-50 text-center">11-2</td>
+                      <td className="px-3 py-2 bg-gray-50">(−) 부가세</td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {formatNumberWithCommas(vatAmount) || '0'} 원
+                      </td>
+                    </tr>
+                    <tr className="border-b border-gray-200 bg-blue-50">
+                      <td className="px-3 py-2 font-medium w-12 text-center">11</td>
+                      <td className="px-3 py-2 font-medium">매매가액 (차감 후)</td>
+                      <td className="px-3 py-2 text-right tabular-nums font-medium">
+                        {formatNumberWithCommas(netTransferAmount) || '0'} 원
+                      </td>
+                    </tr>
+                  </>
+                ) : (
+                  <tr className="border-b border-gray-200">
+                    <td className="px-3 py-2 bg-gray-50 w-12 text-center">11</td>
+                    <td className="px-3 py-2 bg-gray-50">양도가액</td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {formatNumberWithCommas(grossTransferAmount) || '0'} 원
+                    </td>
+                  </tr>
+                )}
                 <tr className="border-b border-gray-200">
                   <td className="px-3 py-2 bg-gray-50 text-center">12</td>
                   <td className="px-3 py-2 bg-gray-50">취득가액</td>
