@@ -210,10 +210,21 @@ export async function bulkUpdateOpeningDates(
     const original = business_number.trim()
     const digitsOnly = original.replace(/\D/g, '')
 
+    // 저장 시 3-2-5 포맷(`formatBusinessNumberForSave`)으로 정규화되므로 hyphen 포맷도 후보에 포함.
+    const hyphenated =
+      digitsOnly.length === 10
+        ? `${digitsOnly.slice(0, 3)}-${digitsOnly.slice(3, 5)}-${digitsOnly.slice(5)}`
+        : null
+
+    const candidates = Array.from(
+      new Set([original, digitsOnly, hyphenated].filter((v): v is string => !!v)),
+    )
+
+    // .or() 는 값에 쉼표·점이 포함되면 파싱이 깨질 수 있어 .in()을 사용.
     const { data, error } = await supabase
       .from('clients')
       .update({ opening_date, updated_at: new Date().toISOString() })
-      .or(`business_number.eq.${original},business_number.eq.${digitsOnly}`)
+      .in('business_number', candidates)
       .eq('is_temporary', false)
       .select('id')
 
