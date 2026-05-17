@@ -229,19 +229,23 @@ export default function Sidebar() {
         })}
 
         {/* 아톰랩 — EXPERIMENT 섹션 */}
-        <div className="mt-4 mx-4 border-t border-dashed border-white/20" />
-        <div className="px-5 pt-3 pb-1 text-[10px] tracking-[1.5px] text-yellow-300 font-bold font-mono">
+        <div className="mt-4 mx-4 border-t border-dashed border-white/25" />
+        <div className="px-5 pt-3 pb-1.5 text-[11px] tracking-[2.5px] text-yellow-200 font-extrabold font-mono">
           EXPERIMENT
         </div>
         <Link
           href="/atom-lab"
-          className={`flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
+          className={`flex items-center gap-2.5 px-5 py-2.5 text-[15px] font-semibold transition-colors ${
             isAtomLabActive
-              ? 'bg-white/15 text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]'
-              : 'text-white/85 hover:bg-white/10 hover:text-white'
+              ? 'bg-white text-brand font-bold'
+              : 'text-white hover:bg-white/15'
           }`}
         >
-          <FlaskConical size={18} className="text-yellow-300" />
+          <FlaskConical
+            size={18}
+            strokeWidth={ICON_STROKE}
+            className={isAtomLabActive ? 'text-brand' : 'text-yellow-200'}
+          />
           아톰랩
         </Link>
       </nav>
@@ -250,9 +254,9 @@ export default function Sidebar() {
       <div className="border-t border-white/10 p-4">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-white/80 hover:bg-white/10 hover:text-white rounded-lg transition-colors"
+          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[14px] font-medium text-white/95 hover:bg-white/15 hover:text-white rounded-lg transition-colors"
         >
-          <LogOut size={18} />
+          <LogOut size={18} strokeWidth={ICON_STROKE} />
           로그아웃
         </button>
       </div>
