@@ -1,17 +1,16 @@
 /**
  * 조세특례제한법 §6 창업중소기업 등에 대한 세액감면
  *
- * 권역 × 청년여부 × 개업연도에 따른 감면율 계산.
+ * 사용자(세무사) 도메인 기준 단순화된 OR 분기 (PR #91):
+ *   - 비과밀억제권역 AND 청년(만 34세 이하) → 100%
+ *   - 비과밀억제권역 OR  청년                → 50%
+ *   - 둘 다 X (과밀억제 + 일반)              → X (감면 없음)
  *
- * 감면율 매트릭스:
- *   - 비수도권 + 청년 (만 35세 미만)           : 100%
- *   - 비수도권 + 일반                           : 50%
- *   - 수도권 비과밀 + 청년 (2025년 이전)        : 50%
- *   - 수도권 비과밀 + 청년 (2026년 이후)        : 75%  ⭐ 분기
- *   - 수도권 비과밀 + 일반                      : 25%
- *   - 과밀억제권역                              : 0% (감면 없음)
- *
- * 2026년부터 수도권 비과밀이 청년 75 / 일반 25로 명문 분리.
+ * 권역 분류 (regional-zones.ts):
+ *   - overcrowded           : 과밀억제권역
+ *   - metro_non_overcrowded : 수도권 비과밀
+ *   - non_metro             : 비수도권
+ *   → metro_non_overcrowded와 non_metro는 모두 "비과밀억제권역"으로 간주
  */
 
 import type { RegionZone } from '@/lib/data/regional-zones'
@@ -19,7 +18,6 @@ import type { RegionZone } from '@/lib/data/regional-zones'
 export interface ReductionInput {
   zone: RegionZone
   isYoung: boolean
-  openingYear: number
 }
 
 export interface ReductionResult {
@@ -36,73 +34,39 @@ export interface ReductionResult {
  * 창업감면율 계산 (조특법 §6)
  */
 export function calculateStartupReductionRate(input: ReductionInput): ReductionResult {
-  const { zone, isYoung, openingYear } = input
+  const { zone, isYoung } = input
+  const isNonOvercrowded = zone !== 'overcrowded'
 
-  // 1. 과밀억제권역 — 창업감면 대상 아님
-  if (zone === 'overcrowded') {
+  if (isNonOvercrowded && isYoung) {
     return {
-      rate: 0,
-      rateLabel: 'X',
-      conditions: { isYoung, isNonOvercrowded: false },
-      appliedRule: '과밀억제권역 — 창업감면 X',
-    }
-  }
-
-  // 2. 비수도권 — 가장 큰 감면
-  if (zone === 'non_metro') {
-    if (isYoung) {
-      return {
-        rate: 100,
-        rateLabel: '100',
-        conditions: { isYoung: true, isNonOvercrowded: true },
-        appliedRule: '비수도권 + 청년 — 100%',
-      }
-    }
-    return {
-      rate: 50,
-      rateLabel: '50',
-      conditions: { isYoung: false, isNonOvercrowded: true },
-      appliedRule: '비수도권 + 일반 — 50%',
-    }
-  }
-
-  // 3. 수도권 비과밀 — 2026년 분기
-  if (openingYear >= 2026) {
-    if (isYoung) {
-      return {
-        rate: 75,
-        rateLabel: '75',
-        conditions: { isYoung: true, isNonOvercrowded: true },
-        appliedRule: '2026년~ 수도권 비과밀 + 청년 — 75%',
-      }
-    }
-    return {
-      rate: 25,
-      rateLabel: '25',
-      conditions: { isYoung: false, isNonOvercrowded: true },
-      appliedRule: '2026년~ 수도권 비과밀 + 일반 — 25%',
-    }
-  }
-
-  // 2025년 이전 수도권 비과밀
-  if (isYoung) {
-    return {
-      rate: 50,
-      rateLabel: '50',
+      rate: 100,
+      rateLabel: '100%',
       conditions: { isYoung: true, isNonOvercrowded: true },
-      appliedRule: '~2025년 수도권 비과밀 + 청년 — 50%',
+      appliedRule: '비과밀억제권역 + 청년(만 34세 이하) — 100%',
     }
   }
+
+  if (isNonOvercrowded || isYoung) {
+    return {
+      rate: 50,
+      rateLabel: '50%',
+      conditions: { isYoung, isNonOvercrowded },
+      appliedRule: isNonOvercrowded
+        ? '비과밀억제권역 — 50%'
+        : '청년(만 34세 이하) — 50%',
+    }
+  }
+
   return {
-    rate: 25,
-    rateLabel: '25',
-    conditions: { isYoung: false, isNonOvercrowded: true },
-    appliedRule: '~2025년 수도권 비과밀 + 일반 — 25%',
+    rate: 0,
+    rateLabel: 'X',
+    conditions: { isYoung: false, isNonOvercrowded: false },
+    appliedRule: '과밀억제권역 + 일반 — 창업감면 X',
   }
 }
 
 /**
- * 만 35세 미만 여부 (개업당시 기준)
+ * 만 34세 이하 여부 (개업당시 기준)
  *
  * - 주민번호 앞 6자리(YYMMDD)로 생년월일 추출
  * - 7번째 자리로 세기 추정 (1·2 = 1900년대, 3·4 = 2000년대)
@@ -141,5 +105,6 @@ export function isYoungAtOpening(
     age--
   }
 
-  return age < 35
+  // 만 34세 이하 (= age <= 34, 즉 만 35세 미만과 결과 동치)
+  return age <= 34
 }
