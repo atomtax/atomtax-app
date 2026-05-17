@@ -34,15 +34,17 @@ interface NavChild {
   external?: boolean
 }
 
+const ICON_STROKE = 2.25
+
 const navItems: NavItem[] = [
   {
     label: '대시보드',
     href: '/dashboard',
-    icon: <LayoutDashboard size={18} />,
+    icon: <LayoutDashboard size={18} strokeWidth={ICON_STROKE} />,
   },
   {
     label: '고객 관리',
-    icon: <Users size={18} />,
+    icon: <Users size={18} strokeWidth={ICON_STROKE} />,
     children: [
       { label: '기장고객 목록', href: '/clients' },
       { label: '해지고객', href: '/clients/terminated' },
@@ -50,7 +52,7 @@ const navItems: NavItem[] = [
   },
   {
     label: '결산참고',
-    icon: <ClipboardList size={18} />,
+    icon: <ClipboardList size={18} strokeWidth={ICON_STROKE} />,
     children: [
       { label: '부가가치세', href: '/reports-review/vat' },
       { label: '종합소득세', href: '/reports-review/income-tax' },
@@ -59,7 +61,7 @@ const navItems: NavItem[] = [
   },
   {
     label: '청구서',
-    icon: <FileText size={18} />,
+    icon: <FileText size={18} strokeWidth={ICON_STROKE} />,
     children: [
       { label: '조정료 청구서', href: '/invoices/adjustment' },
       { label: '세금계산서', href: '/invoices/tax' },
@@ -67,7 +69,7 @@ const navItems: NavItem[] = [
   },
   {
     label: '매매사업자 관리',
-    icon: <Building2 size={18} />,
+    icon: <Building2 size={18} strokeWidth={ICON_STROKE} />,
     children: [
       { label: '매매사업자 데이터', href: '/traders' },
       { label: '매매사업자 체크리스트', href: '/traders/checklist' },
@@ -76,7 +78,7 @@ const navItems: NavItem[] = [
   },
   {
     label: '보고서 작성',
-    icon: <BarChart3 size={18} />,
+    icon: <BarChart3 size={18} strokeWidth={ICON_STROKE} />,
     children: [
       { label: '법인세 보고서', href: '/reports/corporate-tax' },
       { label: '종합소득세', href: '/reports/income-tax' },
@@ -135,9 +137,8 @@ export default function Sidebar() {
       {/* 로고 */}
       <div className="h-16 flex items-center gap-2.5 px-5 border-b border-white/10">
         <AtomLogo size={32} className="text-white shrink-0" />
-        <div className="leading-[0.95] tracking-tight font-outfit">
-          <div className="text-white text-lg font-extrabold">atom</div>
-          <div className="text-white text-lg font-extrabold opacity-90">base</div>
+        <div className="text-white text-lg font-extrabold font-outfit tracking-[0.08em]">
+          ATOM BASE
         </div>
       </div>
 
@@ -150,10 +151,10 @@ export default function Sidebar() {
               <Link
                 key={item.label}
                 href={item.href!}
-                className={`flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
+                className={`flex items-center gap-2.5 px-5 py-2.5 text-[15px] font-semibold transition-colors ${
                   isActive
-                    ? 'bg-white/15 text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]'
-                    : 'text-white/85 hover:bg-white/10 hover:text-white'
+                    ? 'bg-white text-brand font-extrabold shadow-sm'
+                    : 'text-white hover:bg-white/15'
                 }`}
               >
                 {item.icon}
@@ -170,15 +171,15 @@ export default function Sidebar() {
             <div key={item.label}>
               <button
                 onClick={() => toggleGroup(item.label)}
-                className={`w-full flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-5 py-2.5 text-[15px] font-semibold transition-colors ${
                   hasActive
-                    ? 'text-white font-semibold'
-                    : 'text-white/85 hover:bg-white/10 hover:text-white'
+                    ? 'text-white'
+                    : 'text-white hover:bg-white/15'
                 }`}
               >
                 {item.icon}
                 <span className="flex-1 text-left">{item.label}</span>
-                {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                {isOpen ? <ChevronDown size={14} strokeWidth={2.5} /> : <ChevronRight size={14} strokeWidth={2.5} />}
               </button>
               {isOpen && (
                 <div className="bg-black/10">
@@ -192,10 +193,10 @@ export default function Sidebar() {
                           href={child.href}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-3 pl-12 pr-5 py-2 text-sm text-white/75 hover:bg-white/10 hover:text-white transition-colors"
+                          className="flex items-center gap-2 pl-12 pr-5 py-2 text-[14px] font-medium text-white/95 hover:bg-white/15 hover:text-white transition-colors"
                         >
                           <span className="flex-1">{child.label}</span>
-                          <ExternalLink size={12} className="opacity-60" />
+                          <ExternalLink size={12} strokeWidth={2.5} className="opacity-80" />
                         </a>
                       )
                     }
@@ -211,10 +212,10 @@ export default function Sidebar() {
                             window.location.reload()
                           }
                         }}
-                        className={`flex items-center gap-3 pl-12 pr-5 py-2 text-sm transition-colors ${
+                        className={`flex items-center gap-2 pl-12 pr-5 py-2 text-[14px] transition-colors ${
                           isChildActive
-                            ? 'bg-white/15 text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]'
-                            : 'text-white/75 hover:bg-white/10 hover:text-white'
+                            ? 'bg-white text-brand font-extrabold shadow-sm'
+                            : 'font-medium text-white/95 hover:bg-white/15 hover:text-white'
                         }`}
                       >
                         {child.label}
@@ -228,19 +229,23 @@ export default function Sidebar() {
         })}
 
         {/* 아톰랩 — EXPERIMENT 섹션 */}
-        <div className="mt-4 mx-4 border-t border-dashed border-white/20" />
-        <div className="px-5 pt-3 pb-1 text-[10px] tracking-[1.5px] text-yellow-300 font-bold font-mono">
+        <div className="mt-4 mx-4 border-t border-dashed border-white/25" />
+        <div className="px-5 pt-3 pb-1.5 text-[11px] tracking-[2.5px] text-yellow-200 font-extrabold font-mono">
           EXPERIMENT
         </div>
         <Link
           href="/atom-lab"
-          className={`flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
+          className={`flex items-center gap-2.5 px-5 py-2.5 text-[15px] font-semibold transition-colors ${
             isAtomLabActive
-              ? 'bg-white/15 text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]'
-              : 'text-white/85 hover:bg-white/10 hover:text-white'
+              ? 'bg-white text-brand font-extrabold shadow-sm'
+              : 'text-white hover:bg-white/15'
           }`}
         >
-          <FlaskConical size={18} className="text-yellow-300" />
+          <FlaskConical
+            size={18}
+            strokeWidth={ICON_STROKE}
+            className={isAtomLabActive ? 'text-brand' : 'text-yellow-200'}
+          />
           아톰랩
         </Link>
       </nav>
@@ -249,9 +254,9 @@ export default function Sidebar() {
       <div className="border-t border-white/10 p-4">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-white/80 hover:bg-white/10 hover:text-white rounded-lg transition-colors"
+          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-[14px] font-medium text-white/95 hover:bg-white/15 hover:text-white rounded-lg transition-colors"
         >
-          <LogOut size={18} />
+          <LogOut size={18} strokeWidth={ICON_STROKE} />
           로그아웃
         </button>
       </div>
