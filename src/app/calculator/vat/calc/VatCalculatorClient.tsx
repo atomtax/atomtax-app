@@ -340,7 +340,7 @@ export function VatCalculatorClient() {
         onClick={handleCalculate}
         className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-white font-medium shadow hover:shadow-md transition-shadow"
         style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'var(--brand-grad)',
         }}
       >
         <Calculator size={16} /> 부가가치세 계산하기

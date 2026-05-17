@@ -13,7 +13,7 @@ export function ManagerGroupCard({ manager, rows }: Props) {
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <div
         className="px-5 py-2.5 flex items-center gap-2 text-white text-sm font-semibold"
-        style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+        style={{ background: 'var(--brand-grad)' }}
       >
         <span>👤</span>
         <span>{manager}</span>

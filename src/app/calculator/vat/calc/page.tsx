@@ -11,7 +11,7 @@ export default function VatCalculatorCalcPage() {
       <header
         className="rounded-2xl text-white p-6 shadow"
         style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'var(--brand-grad)',
         }}
       >
         <h1 className="text-xl font-bold">

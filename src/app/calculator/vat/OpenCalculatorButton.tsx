@@ -17,7 +17,7 @@ export function OpenCalculatorButton() {
       onClick={handleOpen}
       className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium text-sm shadow hover:shadow-md transition-shadow"
       style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'var(--brand-grad)',
       }}
     >
       <ExternalLink size={16} /> 계산기 열기 (새 창)

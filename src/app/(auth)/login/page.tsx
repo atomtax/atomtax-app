@@ -39,7 +39,7 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <div
             className="inline-block text-white text-xl font-bold px-5 py-3 rounded-xl mb-3"
-            style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)' }}
+            style={{ background: 'var(--brand-grad)' }}
           >
             아톰세무회계
           </div>
@@ -91,7 +91,7 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className="w-full py-2.5 text-sm font-medium text-white rounded-lg transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-              style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)' }}
+              style={{ background: 'var(--brand-grad)' }}
             >
               {loading ? '로그인 중...' : '로그인'}
             </button>
