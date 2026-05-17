@@ -8,7 +8,7 @@ export default function AdjustmentInvoiceFeeSchedule() {
       {/* 상단 색상 바 */}
       <div
         style={{
-          background: 'linear-gradient(90deg, #667eea, #764ba2)',
+          background: 'linear-gradient(90deg, #6927FF 0%, #9333ea 100%)',
           height: '6px',
           marginLeft: '-15mm',
           marginRight: '-15mm',

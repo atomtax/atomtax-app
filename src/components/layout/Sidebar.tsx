@@ -14,9 +14,11 @@ import {
   ChevronRight,
   ExternalLink,
   LogOut,
+  FlaskConical,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import AtomLogo from '@/components/ui/AtomLogo'
 
 interface NavItem {
   label: string
@@ -123,15 +125,19 @@ export default function Sidebar() {
     router.refresh()
   }
 
+  const isAtomLabActive = isPrefixMatch('/atom-lab')
+
   return (
-    <aside className="w-60 min-h-screen bg-white border-r border-gray-200 flex flex-col">
+    <aside
+      className="w-60 min-h-screen flex flex-col text-white"
+      style={{ background: 'var(--sidebar-grad)' }}
+    >
       {/* 로고 */}
-      <div className="h-16 flex items-center px-5 border-b border-gray-200">
-        <div
-          className="text-lg font-bold text-white px-3 py-1.5 rounded-lg"
-          style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)' }}
-        >
-          아톰세무회계
+      <div className="h-16 flex items-center gap-2.5 px-5 border-b border-white/10">
+        <AtomLogo size={32} className="text-white shrink-0" />
+        <div className="leading-[0.95] tracking-tight font-outfit">
+          <div className="text-white text-lg font-extrabold">atom</div>
+          <div className="text-white text-lg font-extrabold opacity-90">base</div>
         </div>
       </div>
 
@@ -146,8 +152,8 @@ export default function Sidebar() {
                 href={item.href!}
                 className={`flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
                   isActive
-                    ? 'text-indigo-600 bg-indigo-50 font-medium border-r-2 border-indigo-600'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-white/15 text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]'
+                    : 'text-white/85 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 {item.icon}
@@ -166,8 +172,8 @@ export default function Sidebar() {
                 onClick={() => toggleGroup(item.label)}
                 className={`w-full flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
                   hasActive
-                    ? 'text-indigo-600 font-medium'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'text-white font-semibold'
+                    : 'text-white/85 hover:bg-white/10 hover:text-white'
                 }`}
               >
                 {item.icon}
@@ -175,7 +181,7 @@ export default function Sidebar() {
                 {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               </button>
               {isOpen && (
-                <div className="bg-gray-50">
+                <div className="bg-black/10">
                   {item.children.map((child) => {
                     const isChildActive = !child.external && child.href === activeChildHref
 
@@ -186,7 +192,7 @@ export default function Sidebar() {
                           href={child.href}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-3 pl-12 pr-5 py-2 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                          className="flex items-center gap-3 pl-12 pr-5 py-2 text-sm text-white/75 hover:bg-white/10 hover:text-white transition-colors"
                         >
                           <span className="flex-1">{child.label}</span>
                           <ExternalLink size={12} className="opacity-60" />
@@ -207,8 +213,8 @@ export default function Sidebar() {
                         }}
                         className={`flex items-center gap-3 pl-12 pr-5 py-2 text-sm transition-colors ${
                           isChildActive
-                            ? 'text-indigo-600 bg-indigo-50 font-medium border-r-2 border-indigo-600'
-                            : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+                            ? 'bg-white/15 text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]'
+                            : 'text-white/75 hover:bg-white/10 hover:text-white'
                         }`}
                       >
                         {child.label}
@@ -220,13 +226,30 @@ export default function Sidebar() {
             </div>
           )
         })}
+
+        {/* 아톰랩 — EXPERIMENT 섹션 */}
+        <div className="mt-4 mx-4 border-t border-dashed border-white/20" />
+        <div className="px-5 pt-3 pb-1 text-[10px] tracking-[1.5px] text-yellow-300 font-bold font-mono">
+          EXPERIMENT
+        </div>
+        <Link
+          href="/atom-lab"
+          className={`flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
+            isAtomLabActive
+              ? 'bg-white/15 text-white font-semibold shadow-[inset_0_0_0_1px_rgba(255,255,255,0.2)]'
+              : 'text-white/85 hover:bg-white/10 hover:text-white'
+          }`}
+        >
+          <FlaskConical size={18} className="text-yellow-300" />
+          아톰랩
+        </Link>
       </nav>
 
       {/* 로그아웃 */}
-      <div className="border-t border-gray-200 p-4">
+      <div className="border-t border-white/10 p-4">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-900 rounded-lg transition-colors"
+          className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-white/80 hover:bg-white/10 hover:text-white rounded-lg transition-colors"
         >
           <LogOut size={18} />
           로그아웃

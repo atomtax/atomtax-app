@@ -36,7 +36,7 @@ export function IncomeTaxReportList({ items, year }: Props) {
           <section key={manager} className="bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm">
             <header
               className="px-5 py-3 flex items-center justify-between text-white"
-              style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+              style={{ background: 'var(--brand-grad)' }}
             >
               <h2 className="text-base font-semibold">👤 {manager}</h2>
               <span className="text-sm opacity-90">

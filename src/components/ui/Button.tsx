@@ -28,7 +28,7 @@ export default function Button({
 
   const primaryStyle =
     variant === 'primary'
-      ? { background: 'linear-gradient(135deg, #667eea, #764ba2)' }
+      ? { background: 'var(--brand-grad)' }
       : {}
 
   return (

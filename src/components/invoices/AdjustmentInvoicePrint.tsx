@@ -34,7 +34,7 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
       {/* 상단 색상 바 */}
       <div
         style={{
-          background: 'linear-gradient(90deg, #667eea, #764ba2)',
+          background: 'linear-gradient(90deg, #6927FF 0%, #9333ea 100%)',
           height: '6px',
           marginLeft: '-15mm',
           marginRight: '-15mm',
@@ -201,7 +201,7 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
             </td>
           </tr>
           <tr style={{
-            background: 'linear-gradient(135deg, #667eea, #764ba2)',
+            background: 'var(--brand-grad)',
             printColorAdjust: 'exact',
             WebkitPrintColorAdjust: 'exact',
           } as React.CSSProperties}>
@@ -219,7 +219,7 @@ export default function AdjustmentInvoicePrint({ invoice }: Props) {
       <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '20px', marginBottom: '28px' }}>
         <div style={{ fontSize: '10px', letterSpacing: '0.2em', color: '#9ca3af', marginBottom: '12px' }}>PAYMENT · 입금 안내</div>
         <div style={{
-          background: 'linear-gradient(90deg, #667eea, #764ba2)',
+          background: 'linear-gradient(90deg, #6927FF 0%, #9333ea 100%)',
           borderRadius: '6px',
           padding: '10px 16px',
           marginBottom: '16px',

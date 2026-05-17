@@ -48,7 +48,7 @@ export default function VatCalculatorLanding() {
         <div
           className="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-5 text-white"
           style={{
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'var(--brand-grad)',
           }}
         >
           <Building2 size={28} />
