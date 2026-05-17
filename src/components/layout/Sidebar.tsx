@@ -153,7 +153,7 @@ export default function Sidebar() {
                 href={item.href!}
                 className={`flex items-center gap-2.5 px-5 py-2.5 text-[15px] font-semibold transition-colors ${
                   isActive
-                    ? 'bg-white text-brand font-bold'
+                    ? 'bg-white text-brand font-extrabold shadow-sm'
                     : 'text-white hover:bg-white/15'
                 }`}
               >
@@ -214,7 +214,7 @@ export default function Sidebar() {
                         }}
                         className={`flex items-center gap-2 pl-12 pr-5 py-2 text-[14px] transition-colors ${
                           isChildActive
-                            ? 'bg-white text-brand font-bold'
+                            ? 'bg-white text-brand font-extrabold shadow-sm'
                             : 'font-medium text-white/95 hover:bg-white/15 hover:text-white'
                         }`}
                       >
@@ -237,7 +237,7 @@ export default function Sidebar() {
           href="/atom-lab"
           className={`flex items-center gap-2.5 px-5 py-2.5 text-[15px] font-semibold transition-colors ${
             isAtomLabActive
-              ? 'bg-white text-brand font-bold'
+              ? 'bg-white text-brand font-extrabold shadow-sm'
               : 'text-white hover:bg-white/15'
           }`}
         >
