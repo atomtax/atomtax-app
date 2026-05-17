@@ -4,6 +4,15 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
+:root {
+  --brand: #6927FF;
+  --brand-dark: #5118e0;
+  --brand-light: #8b5cff;
+  --brand-soft: #f4efff;
+  --brand-grad: linear-gradient(135deg, #6927FF 0%, #9333ea 100%);
+  --sidebar-grad: linear-gradient(180deg, #6927FF 0%, #5118e0 100%);
+}
+
 * {
   box-sizing: border-box;
 }

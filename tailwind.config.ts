@@ -10,12 +10,23 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
+        outfit: ['var(--font-outfit)', 'sans-serif'],
       },
       colors: {
         primary: {
           from: '#667eea',
           to: '#764ba2',
         },
+        brand: {
+          DEFAULT: '#6927FF',
+          dark: '#5118e0',
+          light: '#8b5cff',
+          soft: '#f4efff',
+        },
+      },
+      backgroundImage: {
+        'brand-grad': 'linear-gradient(135deg, #6927FF 0%, #9333ea 100%)',
+        'sidebar-grad': 'linear-gradient(180deg, #6927FF 0%, #5118e0 100%)',
       },
     },
   },
