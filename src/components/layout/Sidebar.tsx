@@ -135,9 +135,8 @@ export default function Sidebar() {
       {/* 로고 */}
       <div className="h-16 flex items-center gap-2.5 px-5 border-b border-white/10">
         <AtomLogo size={32} className="text-white shrink-0" />
-        <div className="leading-[0.95] tracking-tight font-outfit">
-          <div className="text-white text-lg font-extrabold">atom</div>
-          <div className="text-white text-lg font-extrabold opacity-90">base</div>
+        <div className="text-white text-lg font-extrabold font-outfit tracking-[0.08em]">
+          ATOM BASE
         </div>
       </div>
 

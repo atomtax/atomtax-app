@@ -43,9 +43,8 @@ export default function LoginPage() {
             style={{ background: 'var(--brand-grad)' }}
           >
             <AtomLogo size={32} className="text-white shrink-0" />
-            <div className="leading-[0.95] tracking-tight font-outfit text-left">
-              <div className="text-lg font-extrabold">atom</div>
-              <div className="text-lg font-extrabold opacity-90">base</div>
+            <div className="text-lg font-extrabold font-outfit tracking-[0.08em]">
+              ATOM BASE
             </div>
           </div>
           <p className="text-sm text-gray-500">아톰세무회계 내부 업무 시스템</p>
