@@ -65,13 +65,9 @@ function startupBadgeOf(row: ReviewRow): StartupBadge {
   const className =
     result.rate === 100
       ? 'bg-green-100 text-green-800'
-      : result.rate === 75
+      : result.rate === 50
         ? 'bg-emerald-100 text-emerald-700'
-        : result.rate === 50
-          ? 'bg-yellow-100 text-yellow-800'
-          : result.rate === 25
-            ? 'bg-amber-100 text-amber-700'
-            : 'bg-gray-100 text-gray-500'
+        : 'bg-gray-100 text-gray-500'
   const tooltip = `${result.appliedRule} · ${getRegionZoneName(row.region_zone)}${row.is_young ? ' · 청년' : ''}`
   return { label: result.rateLabel, tooltip, className }
 }
