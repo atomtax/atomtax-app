@@ -40,7 +40,7 @@ interface StartupBadge {
   className: string
 }
 
-function startupBadgeOf(row: ReviewRow, reportYear: number): StartupBadge {
+function startupBadgeOf(row: ReviewRow): StartupBadge {
   // 1. 업종코드 마스터에 없음
   if (!row.industry_info) {
     return {
@@ -57,12 +57,10 @@ function startupBadgeOf(row: ReviewRow, reportYear: number): StartupBadge {
       className: 'bg-gray-100 text-gray-500',
     }
   }
-  // 3. 권역 × 청년 × 개업연도로 감면율 결정
-  const openingYear = row.opening_year ?? reportYear
+  // 3. 권역 × 청년으로 감면율 결정 (PR #91 OR 분기)
   const result = calculateStartupReductionRate({
     zone: row.region_zone,
     isYoung: row.is_young,
-    openingYear,
   })
   const className =
     result.rate === 100
@@ -408,7 +406,7 @@ const ReviewRowItem = memo(function ReviewRowItem({
   onEditChange,
 }: ReviewRowItemProps) {
   const rowMuted = !row.has_report ? 'text-gray-400' : ''
-  const startup = startupBadgeOf(row, year)
+  const startup = startupBadgeOf(row)
   const mid = midSpecialBadgeOf(row)
   return (
     <>
