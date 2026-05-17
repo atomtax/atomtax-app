@@ -131,7 +131,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="w-60 min-h-screen flex flex-col text-white"
+      className="w-60 h-screen shrink-0 flex flex-col text-white print:hidden"
       style={{ background: 'var(--sidebar-grad)' }}
     >
       {/* 로고 */}
