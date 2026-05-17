@@ -21,6 +21,18 @@ body {
   font-family: 'Inter', sans-serif;
 }
 
+/* 사이드바 내부 스크롤바 — 보라 그라디언트 위에서 자연스럽게 */
+aside nav::-webkit-scrollbar {
+  width: 6px;
+}
+aside nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+}
+aside nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* A4 인쇄 레이아웃 */
 .a4-page {
   width: 210mm;
