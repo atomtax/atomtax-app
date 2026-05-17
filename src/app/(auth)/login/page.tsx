@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import AtomLogo from '@/components/ui/AtomLogo'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -38,12 +39,16 @@ export default function LoginPage() {
         {/* 로고 */}
         <div className="text-center mb-8">
           <div
-            className="inline-block text-white text-xl font-bold px-5 py-3 rounded-xl mb-3"
+            className="inline-flex items-center gap-2.5 px-5 py-3 rounded-xl mb-3 text-white"
             style={{ background: 'var(--brand-grad)' }}
           >
-            아톰세무회계
+            <AtomLogo size={32} className="text-white shrink-0" />
+            <div className="leading-[0.95] tracking-tight font-outfit text-left">
+              <div className="text-lg font-extrabold">atom</div>
+              <div className="text-lg font-extrabold opacity-90">base</div>
+            </div>
           </div>
-          <p className="text-sm text-gray-500">내부 업무 시스템</p>
+          <p className="text-sm text-gray-500">아톰세무회계 내부 업무 시스템</p>
         </div>
 
         {/* 폼 */}
