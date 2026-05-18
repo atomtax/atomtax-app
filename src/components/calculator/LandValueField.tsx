@@ -47,16 +47,22 @@ export function LandValueField({
       }
       lastLookedUpRef.current = trimmed
       setStatus('looking')
+      console.log('[land-value lookup] start', { address: trimmed })
       try {
         const geo = await geocodeAddress(trimmed)
+        console.log('[land-value lookup] geocode result', geo)
         if (!geo) {
+          console.warn('[land-value lookup] geocode failed (VWorld 주소→좌표)')
           setStatus('failed')
           return
         }
         // PNU 먼저 추출해 부모에 즉시 전달 (공시지가 실패해도 건물면적 조회 가능하게)
         const pnu = await getPnuByPoint(geo.x, geo.y)
+        console.log('[land-value lookup] pnu result', pnu)
         if (pnu) {
           onPnuResolved?.(pnu)
+        } else {
+          console.warn('[land-value lookup] pnu lookup failed (VWorld 좌표→PNU)')
         }
         const land = pnu ? await getLandValueByPnu(pnu) : null
         if (!land) {
