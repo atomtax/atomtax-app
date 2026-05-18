@@ -11,12 +11,9 @@ export function filterByMonth(
   rows: ChecklistRowData[],
   yearMonth: string,
 ): ChecklistRowData[] {
-  return rows.filter((r) => {
-    const ym = extractYearMonth(r.property.filing_deadline)
-    // 양도일 미입력(filing_deadline === null) 물건은 진행단계 관계없이
-    // 매월 체크리스트에 노출 — 미확인 단계 물건 누락 방지 (PR #92)
-    return ym === null || ym === yearMonth
-  })
+  return rows.filter(
+    (r) => extractYearMonth(r.property.filing_deadline) === yearMonth,
+  )
 }
 
 export function filterByManager(
