@@ -47,14 +47,23 @@ export type LookupBuildingAreaResponse =
 export async function POST(
   req: Request,
 ): Promise<NextResponse<LookupBuildingAreaResponse>> {
+  const ua = req.headers.get('user-agent') ?? ''
   try {
     const body = (await req.json()) as LookupBuildingAreaRequest
+    console.log('[lookup-building-area] request', {
+      pnu: body.pnu,
+      dongInput: body.dongInput,
+      hoInput: body.hoInput,
+      isBasement: body.isBasement,
+      ua: ua.slice(0, 120),
+    })
 
     if (!body.pnu) {
       return NextResponse.json({ ok: false, reason: 'NO_PNU' })
     }
     const parts = parsePnu(body.pnu)
     if (!parts) {
+      console.warn('[lookup-building-area] invalid pnu', body.pnu)
       return NextResponse.json({ ok: false, reason: 'INVALID_PNU' })
     }
 

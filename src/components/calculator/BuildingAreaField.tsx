@@ -105,7 +105,11 @@ export function BuildingAreaField({
   const triggerLookup = useCallback(
     async (force = false) => {
       if (!pnu) {
-        setStatus('idle')
+        console.warn('[building-area lookup] aborted: pnu empty (주소 자동조회 미완료)')
+        setStatus('failed')
+        setFailedMessage(
+          '주소 자동조회가 아직 완료되지 않았습니다. 토지공시지가가 자동으로 채워질 때까지 잠시 기다린 후 다시 시도해주세요.',
+        )
         return
       }
       const key = `${pnu}|${dongInput}|${hoInput}|${isBasement}`
@@ -113,13 +117,22 @@ export function BuildingAreaField({
       lastKeyRef.current = key
 
       setStatus('looking')
+      console.log('[building-area lookup] start', { pnu, dongInput, hoInput, isBasement })
       try {
         const res = await fetch('/api/calculator/lookup-building-area', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pnu, dongInput, hoInput, isBasement }),
         })
+        if (!res.ok) {
+          console.error('[building-area lookup] non-OK HTTP', res.status)
+          setFailedMessage(`서버 응답 오류 (HTTP ${res.status}). 잠시 후 다시 시도해주세요.`)
+          setInfo(null)
+          setStatus('failed')
+          return
+        }
         const json = (await res.json()) as LookupResponse
+        console.log('[building-area lookup] response', json)
         if (json.ok) {
           onChange(json.totalArea)
           setInfo({
@@ -156,12 +169,20 @@ export function BuildingAreaField({
           setInfo(null)
           setStatus('needDongHo')
         } else {
-          setFailedMessage(json.message ?? null)
+          // reason 코드를 그대로 노출하여 모바일 환경에서도 진단 가능
+          const reasonText = reasonToKorean(json.reason)
+          setFailedMessage(
+            json.message
+              ? `${reasonText} — ${json.message}`
+              : `${reasonText} (코드: ${json.reason})`,
+          )
           setInfo(null)
           setStatus('failed')
         }
       } catch (e) {
-        console.error('[building-area lookup]', e)
+        const detail = e instanceof Error ? `${e.name}: ${e.message}` : String(e)
+        console.error('[building-area lookup] fetch error', e)
+        setFailedMessage(`네트워크 오류 — ${detail}. 잠시 후 다시 시도해주세요.`)
         setStatus('failed')
       }
     },
@@ -229,18 +250,13 @@ export function BuildingAreaField({
             <>
               <button
                 type="button"
-                onClick={() => {
-                  if (!pnu) {
-                    alert(
-                      '먼저 주소를 검색해주세요. 토지공시지가 자동조회가 완료되면 건물면적도 조회됩니다.',
-                    )
-                    return
-                  }
-                  triggerLookup(true)
-                }}
-                className="text-xs px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 inline-flex items-center gap-1"
+                onClick={() => triggerLookup(true)}
+                disabled={!pnu}
+                className="text-xs px-2 py-1 border border-gray-200 rounded hover:bg-gray-50 inline-flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                 title={
-                  pnu ? '건축물대장에서 다시 조회' : '먼저 주소를 검색하세요'
+                  pnu
+                    ? '건축물대장에서 다시 조회'
+                    : '주소 자동조회 완료 후 활성화됩니다'
                 }
               >
                 {status === 'success' ? (
@@ -356,6 +372,26 @@ export function BuildingAreaField({
       </div>
     </div>
   )
+}
+
+/** API reason 코드 → 사용자용 한글 설명 (모바일 디버깅용) */
+function reasonToKorean(reason: string): string {
+  switch (reason) {
+    case 'NO_PNU':
+      return '필지번호(PNU)가 없습니다'
+    case 'INVALID_PNU':
+      return 'PNU 형식이 올바르지 않습니다'
+    case 'NO_DATA':
+      return '건축물대장에 데이터가 없습니다'
+    case 'NO_DONG_HO_FOR_COLLECTIVE':
+      return '집합건물입니다 — 동/호수가 필요합니다'
+    case 'EXPOS_PUBUSE_NOT_FOUND':
+      return '해당 동/호의 전유공용 데이터를 찾지 못했습니다'
+    case 'INTERNAL_ERROR':
+      return '서버 내부 오류가 발생했습니다'
+    default:
+      return '알 수 없는 오류'
+  }
 }
 
 function StatusBadge({ status }: { status: Status }) {
