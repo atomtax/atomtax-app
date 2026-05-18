@@ -45,28 +45,8 @@ export const STRUCTURES: readonly StructureOption[] = [
   { id: 'container', name: '컨테이너건물', index: 59, depreciationGroup: 'IV' },
 ] as const
 
-export interface UsageOption {
-  id: string
-  name: string
-  index: number
-  description: string
-}
-
-export const USAGES: readonly UsageOption[] = [
-  {
-    id: 'apartment',
-    name: '아파트',
-    index: 110,
-    description: '공동주택 중 아파트 (5층 이상)',
-  },
-  {
-    id: 'residential_other',
-    name: '기타 주거용 건물',
-    index: 100,
-    description:
-      '단독주택, 다중주택, 다가구주택, 연립주택, 다세대주택, 기숙사, 도시형 생활주택 등',
-  },
-] as const
+// 용도(USAGES)는 src/lib/data/building-use-codes.ts (BUILDING_USES)로 이전 (PR #97).
+// 시행령 별표 45개 용도 + 주거용/상업용 1차 분기 지원.
 
 export interface LocationBracket {
   no: number
