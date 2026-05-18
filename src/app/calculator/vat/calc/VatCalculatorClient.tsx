@@ -376,6 +376,21 @@ export function VatCalculatorClient() {
               />
             </Field>
           </div>
+
+          {/* 선택된 용도 설명 (시행령 원문) */}
+          {(() => {
+            const selectedUse = getBuildingUseByCode(Number(form.usageId))
+            if (!selectedUse) return null
+            return (
+              <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2 text-xs text-gray-600">
+                <span className="font-semibold text-gray-800">
+                  용도지수 {selectedUse.index}
+                </span>
+                <span className="text-gray-400 mx-1.5">·</span>
+                <span>{selectedUse.description}</span>
+              </div>
+            )
+          })()}
         </section>
 
         {/* 3. 조회 정보 */}
