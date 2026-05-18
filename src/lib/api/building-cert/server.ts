@@ -164,13 +164,16 @@ function mapStructureNameToId(name: string | undefined): string | undefined {
 }
 
 /**
- * 표제부 API의 mainPurpsCdNm("공동주택" 등) → USAGES의 id 매핑.
- * 비주거 용도는 매핑하지 않음 (계산기가 주거용만 지원).
+ * 표제부 API의 mainPurpsCdNm("공동주택" 등) → BUILDING_USES.code(string) 매핑.
+ * PR #97 이후 주거용/상업용 1차 분기 지원. 자동조회는 표제부의 mainPurpsCdNm을
+ * 기반으로 주거용 2개 코드(1=아파트, 2=단독·다세대 등)와 일부 명확한 상업용
+ * 키워드만 매핑한다. 모호한 케이스는 undefined 반환 → 사용자가 직접 선택.
  */
 function mapMainPurpsToUsageId(name: string | undefined): string | undefined {
   if (!name) return undefined
-  if (name.includes('아파트')) return 'apartment'
-  if (name.includes('공동주택')) return 'apartment'
+  // 주거용
+  if (name.includes('아파트')) return '1'
+  if (name.includes('공동주택')) return '1'
   if (
     name.includes('단독주택') ||
     name.includes('다가구주택') ||
@@ -180,8 +183,12 @@ function mapMainPurpsToUsageId(name: string | undefined): string | undefined {
     name.includes('기숙사') ||
     name.includes('도시형')
   ) {
-    return 'residential_other'
+    return '2'
   }
+  // 상업용 — 명확한 키워드만 자동 매핑
+  if (name.includes('오피스텔')) return '28'
+  if (name.includes('근린생활시설')) return '41'
+  if (name.includes('업무시설')) return '29'
   return undefined
 }
 

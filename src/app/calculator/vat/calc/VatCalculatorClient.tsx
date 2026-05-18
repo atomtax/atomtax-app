@@ -15,10 +15,14 @@ import { BuildingStandardValueField } from '@/components/calculator/BuildingStan
 import { LandValueField } from '@/components/calculator/LandValueField'
 import { NumberInput } from '@/components/calculator/NumberInput'
 import { VatResultPanel } from '@/components/calculator/VatResultPanel'
+import { STRUCTURES } from '@/lib/calculators/building-standard-data'
 import {
-  STRUCTURES,
-  USAGES,
-} from '@/lib/calculators/building-standard-data'
+  getBuildingUseByCode,
+  groupBuildingUsesBySubCategory,
+  SUB_CATEGORY_ORDER,
+  type BuildingUseCategory,
+  type BuildingUseSubCategory,
+} from '@/lib/data/building-use-codes'
 import {
   calculateVatAllocation,
   type VatAllocationResult,
@@ -35,6 +39,9 @@ interface FormState {
   landUnitPrice: number
   buildingStandardValue: number
   structureId: string
+  /** 용도 1차 분기 (주거용/상업용) */
+  useCategory: BuildingUseCategory
+  /** BUILDING_USES.code의 string 형태 ('1' = 아파트, '2' = 단독·다세대 등) */
   usageId: string
   completionYear: string
 }
@@ -50,7 +57,8 @@ const INITIAL_FORM: FormState = {
   landUnitPrice: 0,
   buildingStandardValue: 0,
   structureId: 'cheolgeun',
-  usageId: 'apartment',
+  useCategory: '주거용',
+  usageId: '1',
   completionYear: '',
 }
 
@@ -115,9 +123,24 @@ export function VatCalculatorClient() {
       }
       if (meta.usageId) {
         next.usageId = meta.usageId
+        // 자동 매핑된 코드의 카테고리도 함께 갱신
+        const use = getBuildingUseByCode(Number(meta.usageId))
+        if (use) {
+          next.useCategory = use.category
+        }
         changed = true
       }
       return changed ? next : prev
+    })
+  }
+
+  /** 카테고리 변경 시: 선택 코드를 새 카테고리의 첫 번째 용도로 초기화 */
+  function handleCategoryChange(category: BuildingUseCategory) {
+    setForm((prev) => {
+      if (prev.useCategory === category) return prev
+      // 주거용 → '1' (아파트), 상업용 → '3' (관광호텔 5/4성급, 시행령 첫 항목)
+      const defaultCode = category === '주거용' ? '1' : '3'
+      return { ...prev, useCategory: category, usageId: defaultCode }
     })
   }
 
@@ -264,12 +287,50 @@ export function VatCalculatorClient() {
             채워집니다.
           </p>
 
+          {/* 용도 1차 분기 (PR #97) — 주거용/상업용 풀폭 토글 */}
+          <Field label="용도 구분" required>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleCategoryChange('주거용')}
+                className={
+                  form.useCategory === '주거용'
+                    ? 'flex-1 py-3 rounded-lg text-white font-bold text-base shadow-sm'
+                    : 'flex-1 py-3 rounded-lg border border-gray-300 text-gray-700 text-base hover:bg-gray-50'
+                }
+                style={
+                  form.useCategory === '주거용'
+                    ? { background: 'var(--brand-grad)' }
+                    : undefined
+                }
+              >
+                주거용
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCategoryChange('상업용')}
+                className={
+                  form.useCategory === '상업용'
+                    ? 'flex-1 py-3 rounded-lg text-white font-bold text-base shadow-sm'
+                    : 'flex-1 py-3 rounded-lg border border-gray-300 text-gray-700 text-base hover:bg-gray-50'
+                }
+                style={
+                  form.useCategory === '상업용'
+                    ? { background: 'var(--brand-grad)' }
+                    : undefined
+                }
+              >
+                상업용
+              </button>
+            </div>
+          </Field>
+
           <div className="grid grid-cols-3 gap-4">
             <Field label="구조" required>
               <select
                 value={form.structureId}
                 onChange={(e) => update('structureId', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-base focus:border-indigo-500 focus:outline-none"
               >
                 {STRUCTURES.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -282,13 +343,25 @@ export function VatCalculatorClient() {
               <select
                 value={form.usageId}
                 onChange={(e) => update('usageId', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-base focus:border-indigo-500 focus:outline-none"
               >
-                {USAGES.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
+                {Object.entries(
+                  groupBuildingUsesBySubCategory(form.useCategory),
+                )
+                  .sort(
+                    ([a], [b]) =>
+                      SUB_CATEGORY_ORDER.indexOf(a as BuildingUseSubCategory) -
+                      SUB_CATEGORY_ORDER.indexOf(b as BuildingUseSubCategory),
+                  )
+                  .map(([subCategory, uses]) => (
+                    <optgroup key={subCategory} label={subCategory}>
+                      {uses.map((use) => (
+                        <option key={use.code} value={String(use.code)}>
+                          {use.name} ({use.index})
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
               </select>
             </Field>
             <Field label="신축연도" required>
@@ -299,7 +372,7 @@ export function VatCalculatorClient() {
                 onChange={(e) => update('completionYear', e.target.value)}
                 placeholder="2026"
                 maxLength={4}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-right tabular-nums text-sm focus:border-indigo-500 focus:outline-none"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-right tabular-nums text-base focus:border-indigo-500 focus:outline-none"
               />
             </Field>
           </div>

@@ -17,17 +17,19 @@ import {
   DEPRECIATION_GROUPS,
   LOCATION_INDEX,
   STRUCTURES,
-  USAGES,
   type DepreciationGroup,
   type LocationBracket,
   type StructureOption,
-  type UsageOption,
 } from './building-standard-data'
+import {
+  getBuildingUseByCode,
+  type BuildingUse,
+} from '@/lib/data/building-use-codes'
 
 export interface BuildingStandardValueInput {
   /** 구조 id (STRUCTURES) */
   structureId: string
-  /** 용도 id (USAGES) */
+  /** 용도 코드 (BUILDING_USES.code의 string 형태, 예: '1', '2', '28') */
   usageId: string
   /** 토지공시지가 (원/㎡) — 위치지수 자동 매핑에 사용 */
   landUnitPrice: number
@@ -42,7 +44,7 @@ export interface BuildingStandardValueInput {
 export interface BuildingStandardValueResult {
   baseValue: number
   structure: StructureOption
-  usage: UsageOption
+  usage: BuildingUse
   location: LocationBracket
   depreciationGroup: DepreciationGroup
   yearsElapsed: number
@@ -92,7 +94,7 @@ export function calculateBuildingStandardValue(
   } = input
 
   const structure = STRUCTURES.find((s) => s.id === structureId)
-  const usage = USAGES.find((u) => u.id === usageId)
+  const usage = getBuildingUseByCode(Number(usageId))
   const location = findLocationBracket(landUnitPrice)
 
   if (!structure || !usage || !location) return null
