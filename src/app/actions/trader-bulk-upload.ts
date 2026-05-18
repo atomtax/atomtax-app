@@ -10,6 +10,7 @@ import {
   TRADER_BUSINESS_CODES,
   type TraderExpenseCategory,
 } from '@/types/database'
+import { calculateFilingDeadline } from '@/lib/calculators/property'
 
 export interface BulkUploadInput {
   properties: ParsedProperty[]
@@ -154,6 +155,7 @@ export async function bulkUploadTraderProperties(
     }
 
     // 5-1. trader_properties INSERT — v33 이후 property_type 컬럼에 매핑
+    // filing_deadline은 transfer_date 기준 자동 계산 (체크리스트 월별 분류용)
     const propertyRow = {
       client_id: client.id,
       property_name: property.property_name,
@@ -161,6 +163,7 @@ export async function bulkUploadTraderProperties(
       location: property.location || null,
       acquisition_date: property.acquisition_date,
       transfer_date: property.transfer_date,
+      filing_deadline: calculateFilingDeadline(property.transfer_date),
       transfer_amount: property.transfer_amount,
       prepaid_income_tax: property.prepaid_income_tax,
       prepaid_local_tax: property.prepaid_local_tax,
