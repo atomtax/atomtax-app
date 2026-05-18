@@ -277,7 +277,7 @@ export async function saveExpensesAndProperty(
   const filing_deadline = calculateFilingDeadline(meta.transfer_date ?? null)
 
   // 3) 물건 마스터 업데이트
-  const { data, error: updateError } = await supabase
+  const { error: updateError } = await supabase
     .from('trader_properties')
     .update({
       ...meta,
@@ -288,14 +288,13 @@ export async function saveExpensesAndProperty(
       updated_at: new Date().toISOString(),
     })
     .eq('id', propertyId)
-    .select('client_id')
-    .single()
 
   if (updateError) throw new Error(updateError.message)
 
-  if (data?.client_id) {
-    revalidatePath(`/traders/${data.client_id}`)
-  }
+  // revalidatePath 의도적으로 호출 안 함 — 호출자가 router.refresh() 또는
+  // 후속 액션(calculatePropertyTax)의 revalidate에 위임. handleCalculateTax 흐름에서
+  // 이 함수의 revalidate가 백그라운드 RSC refetch를 일으켜 다음 단계의 prepaid UPDATE
+  // 보다 먼저 도착하면 옛 값으로 로컬 state를 덮어쓰는 race 발생 (PR #95).
 }
 
 /** 물건 삭제 (v20ac에서 실제 동작) */
@@ -534,7 +533,7 @@ export async function calculatePropertyTax(
 
   const { data, error } = await supabase
     .from('trader_properties')
-    .select('transfer_income')
+    .select('transfer_income, client_id')
     .eq('id', propertyId)
     .single()
 
@@ -563,6 +562,13 @@ export async function calculatePropertyTax(
     .eq('id', propertyId)
 
   if (updateError) throw new Error(updateError.message)
+
+  // UPDATE 완료 후 revalidate — 이때의 RSC refetch는 새 prepaid 값을 포함한다.
+  // handleCalculateTax 흐름에서 saveExpensesAndProperty의 revalidate를 제거했기에
+  // 이곳이 유일한 revalidate 지점이 됨 (PR #95 race condition 해결).
+  if (data.client_id) {
+    revalidatePath(`/traders/${data.client_id}`)
+  }
 
   return {
     income_tax: thisIncomeTax,
