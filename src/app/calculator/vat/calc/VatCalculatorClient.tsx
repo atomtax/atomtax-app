@@ -75,6 +75,7 @@ export function VatCalculatorClient() {
   const [resetKey, setResetKey] = useState(0)
   const [downloading, setDownloading] = useState(false)
   const [pnu, setPnu] = useState<string>('')
+  const [lookupMeta, setLookupMeta] = useState<AutoLookupMeta | null>(null)
   const reportRef = useRef<HTMLDivElement>(null)
 
   /**
@@ -141,6 +142,7 @@ export function VatCalculatorClient() {
   function handleAutoLookupDone(meta: AutoLookupMeta) {
     // [자동 조회] / [다시 조회] 누를 때마다 API 매핑 결과 항상 덮어쓰기.
     // 사용자가 수동으로 수정한 값을 유지하려면 [다시 조회]를 누르지 않으면 됨.
+    setLookupMeta(meta)
     setForm((prev) => {
       const next = { ...prev }
       let changed = false
@@ -182,7 +184,31 @@ export function VatCalculatorClient() {
     setResult(null)
     setResultSellingPrice(0)
     setPnu('')
+    setLookupMeta(null)
     setResetKey((k) => k + 1)
+  }
+
+  /** 보고서용 자동조회 안내 텍스트 (예: "102동 904호의 전유 29.98㎡ + 공용 38.89㎡") */
+  function buildAutoLookupInfo(): string | null {
+    if (!lookupMeta) return null
+    if (lookupMeta.mode === 'exposPubuse') {
+      const where = `${lookupMeta.dongNm ? `${lookupMeta.dongNm}동 ` : ''}${
+        lookupMeta.hoNm ?? ''
+      }`.trim()
+      const expos = lookupMeta.exposArea?.toFixed(2)
+      const pubuse = lookupMeta.pubuseArea?.toFixed(2)
+      if (expos && pubuse) {
+        return `${where}의 전유 ${expos}㎡ + 공용 ${pubuse}㎡ = ${(
+          (lookupMeta.exposArea ?? 0) + (lookupMeta.pubuseArea ?? 0)
+        ).toFixed(2)}㎡`
+      }
+    }
+    if (lookupMeta.mode === 'title') {
+      return `건축물대장 표제부 연면적 자동 조회${
+        lookupMeta.buildingType ? ` (${lookupMeta.buildingType})` : ''
+      }`
+    }
+    return null
   }
 
   function handleCalculate() {
@@ -235,7 +261,7 @@ export function VatCalculatorClient() {
               completionYear: form.completionYear,
               landUnitPrice: form.landUnitPrice,
               buildingStandardValue: form.buildingStandardValue,
-              autoLookupInfo: null,
+              autoLookupInfo: buildAutoLookupInfo(),
               calcFormula: buildCalcFormula(),
               vatMarket: result.vatMarket,
               vatLow: result.vatLow,
