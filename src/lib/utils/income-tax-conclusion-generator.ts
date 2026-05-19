@@ -37,8 +37,9 @@ function buildSummarySection(
 ): string {
   const revenue = summary?.revenue ?? 0
   const netIncome = summary?.net_income ?? 0
+  const netLabel = netIncome < 0 ? '당기순손실' : '당기순이익'
   return `## 결산 요약
-${data.report_year}년도 결산 결과 매출액은 ${formatBillionOrZero(revenue)}, 당기순이익은 ${formatBillionOrZero(netIncome)}입니다.`
+${data.report_year}년도 결산 결과 매출액은 ${formatBillionOrZero(revenue)}, ${netLabel}은 ${formatBillionOrZero(Math.abs(netIncome))}입니다.`
 }
 
 /**

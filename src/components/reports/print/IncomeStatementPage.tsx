@@ -4,6 +4,10 @@ import {
   toBillionWon, safePercentage, formatNumber,
 } from './CorporateTaxPrintTokens'
 import type { IncomeStatementSummary } from '@/types/database'
+import {
+  getIncomeStatementLabel,
+  isLossAwareKey,
+} from '@/lib/utils/income-statement-labels'
 
 interface Props {
   reportYear: number
@@ -138,9 +142,11 @@ export function IncomeStatementPage({ reportYear, summary, periodLabel }: Props)
                   {row.sign ?? ''}
                 </div>
 
-                {/* 항목명 */}
+                {/* 항목명 — 손실 부호일 때 동적 라벨 (PR #102) */}
                 <span style={{ fontSize: '14px', color: textColor, fontWeight }}>
-                  {row.label}
+                  {isLossAwareKey(row.key)
+                    ? getIncomeStatementLabel(row.key, value)
+                    : row.label}
                 </span>
 
                 {/* 금액 */}
@@ -179,8 +185,10 @@ export function IncomeStatementPage({ reportYear, summary, periodLabel }: Props)
         }}>
           <div style={{ width: '4px', height: '36px', background: PRINT_TOKENS.primary, borderRadius: '2px', flexShrink: 0 }} />
           <p style={{ fontSize: '14px', color: PRINT_TOKENS.textSecondary, margin: 0, lineHeight: 1.6 }}>
-            매출 {toBillionWon(summary?.revenue)} → 영업이익 {toBillionWon(summary?.operating_income)}
-            ({operatingMarginRate === '—' ? '—' : `${operatingMarginRate}%`}) → 당기순이익 {toBillionWon(summary?.net_income)}으로 마감
+            매출 {toBillionWon(summary?.revenue)} → {getIncomeStatementLabel('operating_income', summary?.operating_income)}{' '}
+            {toBillionWon(summary?.operating_income)}
+            ({operatingMarginRate === '—' ? '—' : `${operatingMarginRate}%`}) → {getIncomeStatementLabel('net_income', summary?.net_income)}{' '}
+            {toBillionWon(summary?.net_income)}으로 마감
           </p>
         </div>
       </div>

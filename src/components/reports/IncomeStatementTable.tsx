@@ -1,5 +1,9 @@
 import type { IncomeStatementSummary } from '@/types/database'
-import { formatAmount } from '@/lib/utils/format'
+import {
+  formatIncomeAmount,
+  getIncomeStatementLabel,
+  isLossAwareKey,
+} from '@/lib/utils/income-statement-labels'
 
 interface Props {
   periodLabel: string
@@ -10,29 +14,47 @@ interface Props {
 
 type NumericKey = Exclude<keyof IncomeStatementSummary, 'details'>
 
-const FULL_ROWS: Array<{ label: string; key: NumericKey; bold?: boolean }> = [
-  { label: 'Ⅰ. 매출액', key: 'revenue', bold: true },
-  { label: 'Ⅱ. 매출원가', key: 'cogs' },
-  { label: 'Ⅲ. 매출총이익', key: 'gross_profit', bold: true },
-  { label: 'Ⅳ. 판매비와 관리비', key: 'sga' },
-  { label: 'Ⅴ. 영업이익', key: 'operating_income', bold: true },
-  { label: 'Ⅵ. 영업외수익', key: 'non_operating_revenue' },
-  { label: 'Ⅶ. 영업외비용', key: 'non_operating_expense' },
-  { label: 'Ⅷ. 법인세차감전이익', key: 'pretax_income' },
-  { label: 'Ⅸ. 법인세등', key: 'corporate_tax' },
-  { label: 'Ⅹ. 당기순이익', key: 'net_income', bold: true },
+// 손실 부호에 따라 동적 라벨이 필요한 행은 staticLabel 대신 roman + 헬퍼로 표시 (PR #102)
+interface RowDef {
+  roman: string
+  /** 정적 라벨 (손실 케이스 분기 없는 항목) */
+  staticLabel?: string
+  key: NumericKey
+  bold?: boolean
+}
+
+const FULL_ROWS: RowDef[] = [
+  { roman: 'Ⅰ', staticLabel: '매출액', key: 'revenue', bold: true },
+  { roman: 'Ⅱ', staticLabel: '매출원가', key: 'cogs' },
+  { roman: 'Ⅲ', staticLabel: '매출총이익', key: 'gross_profit', bold: true },
+  { roman: 'Ⅳ', staticLabel: '판매비와 관리비', key: 'sga' },
+  { roman: 'Ⅴ', key: 'operating_income', bold: true }, // 영업이익/손실 동적
+  { roman: 'Ⅵ', staticLabel: '영업외수익', key: 'non_operating_revenue' },
+  { roman: 'Ⅶ', staticLabel: '영업외비용', key: 'non_operating_expense' },
+  { roman: 'Ⅷ', key: 'pretax_income' }, // 법인세차감전이익/손실 동적
+  { roman: 'Ⅸ', staticLabel: '법인세등', key: 'corporate_tax' },
+  { roman: 'Ⅹ', key: 'net_income', bold: true }, // 당기순이익/손실 동적
 ]
 
-const INCOME_TAX_ROWS: Array<{ label: string; key: NumericKey; bold?: boolean }> = [
-  { label: 'Ⅰ. 매출액', key: 'revenue', bold: true },
-  { label: 'Ⅱ. 매출원가', key: 'cogs' },
-  { label: 'Ⅲ. 매출총이익', key: 'gross_profit', bold: true },
-  { label: 'Ⅳ. 판매비와 관리비', key: 'sga' },
-  { label: 'Ⅴ. 영업이익', key: 'operating_income', bold: true },
-  { label: 'Ⅵ. 영업외수익', key: 'non_operating_revenue' },
-  { label: 'Ⅶ. 영업외비용', key: 'non_operating_expense' },
-  { label: 'Ⅷ. 당기순이익', key: 'net_income', bold: true },
+const INCOME_TAX_ROWS: RowDef[] = [
+  { roman: 'Ⅰ', staticLabel: '매출액', key: 'revenue', bold: true },
+  { roman: 'Ⅱ', staticLabel: '매출원가', key: 'cogs' },
+  { roman: 'Ⅲ', staticLabel: '매출총이익', key: 'gross_profit', bold: true },
+  { roman: 'Ⅳ', staticLabel: '판매비와 관리비', key: 'sga' },
+  { roman: 'Ⅴ', key: 'operating_income', bold: true }, // 영업이익/손실 동적
+  { roman: 'Ⅵ', staticLabel: '영업외수익', key: 'non_operating_revenue' },
+  { roman: 'Ⅶ', staticLabel: '영업외비용', key: 'non_operating_expense' },
+  { roman: 'Ⅷ', key: 'net_income', bold: true }, // 당기순이익/손실 동적
 ]
+
+function rowLabel(row: RowDef, value: number): string {
+  if (row.staticLabel) return `${row.roman}. ${row.staticLabel}`
+  // 동적 라벨 행 — 손익 부호에 따라 이익/손실 분기
+  if (isLossAwareKey(row.key)) {
+    return `${row.roman}. ${getIncomeStatementLabel(row.key, value)}`
+  }
+  return row.roman
+}
 
 export function IncomeStatementTable({ periodLabel, summary, hideCorporateTaxRows }: Props) {
   const rows = hideCorporateTaxRows ? INCOME_TAX_ROWS : FULL_ROWS
@@ -51,19 +73,29 @@ export function IncomeStatementTable({ periodLabel, summary, hideCorporateTaxRow
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr
-              key={row.key}
-              className={`border-b border-gray-100 ${row.bold ? 'bg-blue-50/40' : ''}`}
-            >
-              <td className={`px-5 py-2.5 ${row.bold ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
-                {row.label}
-              </td>
-              <td className={`px-5 py-2.5 text-right tabular-nums ${row.bold ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
-                {formatAmount(summary[row.key])}
-              </td>
-            </tr>
-          ))}
+          {rows.map((row) => {
+            const value = Number(summary[row.key] ?? 0)
+            const isNegative = value < 0
+            return (
+              <tr
+                key={row.key}
+                className={`border-b border-gray-100 ${row.bold ? 'bg-blue-50/40' : ''}`}
+              >
+                <td className={`px-5 py-2.5 ${row.bold ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                  {rowLabel(row, value)}
+                </td>
+                <td
+                  className={`px-5 py-2.5 text-right tabular-nums ${
+                    row.bold ? 'font-semibold' : ''
+                  } ${isNegative ? 'text-red-600' : 'text-gray-700'} ${
+                    row.bold && !isNegative ? 'text-gray-900' : ''
+                  }`}
+                >
+                  {formatIncomeAmount(summary[row.key])}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </section>
