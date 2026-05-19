@@ -4,5 +4,10 @@
       "path": "/api/cron/cleanup-share-links",
       "schedule": "0 3 * * *"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "claude/push-to-main-KjAEB": false
+    }
+  }
 }
