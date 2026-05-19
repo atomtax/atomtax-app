@@ -69,9 +69,6 @@ export class IncomeStatementParseError extends Error {
  * Roman numeral 행의 합계 + 그 아래 세부 항목까지 수집.
  */
 export function parseIncomeStatement(buffer: ArrayBuffer): ParsedIncomeStatement {
-  console.log('[income-statement-parser] ===== parse start =====', {
-    bufferSize: buffer.byteLength,
-  })
   const wb = XLSX.read(buffer, { type: 'array' })
   if (!wb.SheetNames.length) {
     throw new IncomeStatementParseError('엑셀에 시트가 없습니다.')
@@ -126,26 +123,12 @@ export function parseIncomeStatement(buffer: ArrayBuffer): ParsedIncomeStatement
     const key = ROMAN_TO_KEY[firstChar]
 
     if (key) {
-      // Roman 합계 행 — 손실 부호 처리 (PR #102, PR #103 보강)
-      // 행 전체(모든 컬럼) 텍스트를 합쳐서 "손실" 키워드 검사 — Roman과 라벨이
-      // 별도 셀에 있는 경우(병합 해제 등) 까지 견고하게 처리.
+      // Roman 합계 행 — 손실 부호 처리. 행 전체(모든 컬럼) 텍스트를 합쳐서
+      // "손실" 키워드 검사 — Roman과 라벨이 별도 셀에 있는 경우에도 견고.
       foundRomans.add(firstChar)
       const rawAmount = toNumber(rows[i][summaryCol])
-      const rowText = rows[i].map((c) => String(c ?? '')).join(' | ')
-      const signed = applyLossSign(key, rawAmount, rowText)
-      summary[key] = signed
-      // 모든 Roman 행을 로깅 (안 잡히는 케이스 진단 위해)
-      console.log('[income-statement-parser] roman row', {
-        row: i,
-        key,
-        firstChar,
-        subjectTrimmed,
-        rowText: rowText.slice(0, 300),
-        rawAmount,
-        signed,
-        isLossAware: LOSS_AWARE_KEYS.has(key),
-        hasLossKeyword: rowText.includes('손실'),
-      })
+      const rowText = rows[i].map((c) => String(c ?? '')).join(' ')
+      summary[key] = applyLossSign(key, rawAmount, rowText)
       currentDetailKey = isDetailKey(key) ? key : null
       continue
     }
@@ -186,10 +169,6 @@ export function parseIncomeStatement(buffer: ArrayBuffer): ParsedIncomeStatement
     ...(hasAnyDetails ? { details } : {}),
   }
 
-  console.log('[income-statement-parser] ===== parse done =====', {
-    period_label: periodLabel,
-    summary: fullSummary,
-  })
   return { period_label: periodLabel, summary: fullSummary }
 }
 
