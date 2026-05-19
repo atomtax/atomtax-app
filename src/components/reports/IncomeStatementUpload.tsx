@@ -27,6 +27,10 @@ export function IncomeStatementUpload({ currentFilename, onParsed }: Props) {
   }
 
   async function handleParse() {
+    console.log('[IncomeStatementUpload] handleParse clicked', {
+      file: file?.name,
+      size: file?.size,
+    })
     if (!file) {
       setError('파일을 먼저 선택해주세요.')
       return
@@ -37,13 +41,21 @@ export function IncomeStatementUpload({ currentFilename, onParsed }: Props) {
 
     try {
       const buffer = await file.arrayBuffer()
+      console.log('[IncomeStatementUpload] buffer ready, calling parser')
       const result = parseIncomeStatement(buffer)
+      console.log('[IncomeStatementUpload] parser returned', {
+        period_label: result.period_label,
+        operating_income: result.summary.operating_income,
+        pretax_income: result.summary.pretax_income,
+        net_income: result.summary.net_income,
+      })
       onParsed({
         filename: file.name,
         period_label: result.period_label,
         summary: result.summary,
       })
     } catch (e) {
+      console.error('[IncomeStatementUpload] parse error', e)
       setError(
         e instanceof IncomeStatementParseError
           ? e.message

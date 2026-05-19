@@ -69,6 +69,9 @@ export class IncomeStatementParseError extends Error {
  * Roman numeral 행의 합계 + 그 아래 세부 항목까지 수집.
  */
 export function parseIncomeStatement(buffer: ArrayBuffer): ParsedIncomeStatement {
+  console.log('[income-statement-parser] ===== parse start =====', {
+    bufferSize: buffer.byteLength,
+  })
   const wb = XLSX.read(buffer, { type: 'array' })
   if (!wb.SheetNames.length) {
     throw new IncomeStatementParseError('엑셀에 시트가 없습니다.')
@@ -128,20 +131,21 @@ export function parseIncomeStatement(buffer: ArrayBuffer): ParsedIncomeStatement
       // 별도 셀에 있는 경우(병합 해제 등) 까지 견고하게 처리.
       foundRomans.add(firstChar)
       const rawAmount = toNumber(rows[i][summaryCol])
-      const rowText = rows[i].map((c) => String(c ?? '')).join(' ')
+      const rowText = rows[i].map((c) => String(c ?? '')).join(' | ')
       const signed = applyLossSign(key, rawAmount, rowText)
       summary[key] = signed
-      if (LOSS_AWARE_KEYS.has(key)) {
-        console.log('[income-statement-parser] roman row', {
-          row: i,
-          key,
-          firstChar,
-          subjectTrimmed,
-          rowText: rowText.slice(0, 200),
-          rawAmount,
-          signed,
-        })
-      }
+      // 모든 Roman 행을 로깅 (안 잡히는 케이스 진단 위해)
+      console.log('[income-statement-parser] roman row', {
+        row: i,
+        key,
+        firstChar,
+        subjectTrimmed,
+        rowText: rowText.slice(0, 300),
+        rawAmount,
+        signed,
+        isLossAware: LOSS_AWARE_KEYS.has(key),
+        hasLossKeyword: rowText.includes('손실'),
+      })
       currentDetailKey = isDetailKey(key) ? key : null
       continue
     }
@@ -182,6 +186,10 @@ export function parseIncomeStatement(buffer: ArrayBuffer): ParsedIncomeStatement
     ...(hasAnyDetails ? { details } : {}),
   }
 
+  console.log('[income-statement-parser] ===== parse done =====', {
+    period_label: periodLabel,
+    summary: fullSummary,
+  })
   return { period_label: periodLabel, summary: fullSummary }
 }
 
