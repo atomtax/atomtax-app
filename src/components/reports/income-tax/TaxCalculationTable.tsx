@@ -39,13 +39,9 @@ const ROWS: RowDef[] = [
   { label: '합계',                sublabel: '(결정 + 가산 + 추가)', incomeKey: 'income_total_tax', ruralKey: 'rural_total_tax', type: 'auto', emphasize: true },
   { label: '기납부세액계',               incomeKey: 'income_prepaid_tax',      ruralKey: 'rural_prepaid_tax',      type: 'input' },
   { label: '납부(환급)할 총세액',        incomeKey: 'income_payable',          ruralKey: 'rural_payable',          type: 'auto', emphasize: true },
-  { label: '주식매수 특례 — 차감',       incomeKey: 'income_stock_deduct',     ruralKey: 'rural_stock_deduct',     type: 'input' },
-  { label: '주식매수 특례 — 가산',       incomeKey: 'income_stock_add',        ruralKey: 'rural_stock_add',        type: 'input' },
-  { label: '분납할세액',                 incomeKey: 'income_installment',      ruralKey: 'rural_installment',      type: 'input' },
-  { label: '신고기한내 납부할 세액', sublabel: '(총세액 − 차감 + 가산 − 분납)', incomeKey: 'income_within_deadline', ruralKey: 'rural_within_deadline', type: 'auto', emphasize: true },
-  { label: '국세환급금 충당',            incomeKey: 'income_refund_offset',    ruralKey: 'income_refund_offset',   type: 'input', ruralDisabled: true },
-  { label: '충당후 납부(환급)할 세액',   incomeKey: 'income_final_payable',    ruralKey: 'rural_final_payable',    type: 'auto', emphasize: true },
-  { label: '지방소득세', sublabel: '(충당후 세액 × 10%)', incomeKey: 'income_local_tax', ruralKey: 'income_local_tax', type: 'auto', ruralDisabled: true },
+  // 주식매수 특례/분납할세액/국세환급금 충당 행은 일반 종소세 작성에서 거의 사용 안 함 →
+  // UI에서 제거 (PR #100). DB 컬럼은 호환성 위해 유지, 기존 값은 recalculate에 그대로 반영됨.
+  { label: '지방소득세', sublabel: '(총세액 × 10%)', incomeKey: 'income_local_tax', ruralKey: 'income_local_tax', type: 'auto', ruralDisabled: true },
   { label: '농어촌특별세', sublabel: '(홈택스 입력)', incomeKey: 'farm_special_tax', ruralKey: 'farm_special_tax', type: 'input', ruralDisabled: true },
   { label: '최종 납부할 세액', sublabel: '(지방세 + 농특세 포함)', incomeKey: 'income_final_with_local', ruralKey: 'income_final_with_local', type: 'auto', emphasize: true, highlight: 'green', ruralDisabled: true },
 ]
