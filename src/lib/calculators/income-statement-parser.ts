@@ -39,10 +39,11 @@ const LOSS_AWARE_KEYS: ReadonlySet<keyof IncomeStatementSummary> = new Set([
 function applyLossSign(
   key: keyof IncomeStatementSummary,
   amount: number,
-  label: string,
+  rowText: string,
 ): number {
   if (!LOSS_AWARE_KEYS.has(key)) return amount
-  return label.includes('손실') ? -Math.abs(amount) : amount
+  // "손실" 키워드는 같은 셀이 아닌 다른 셀에 있을 수 있으므로 행 전체 텍스트를 검사 (PR #103 보강)
+  return rowText.includes('손실') ? -Math.abs(amount) : amount
 }
 
 function isDetailKey(
@@ -122,10 +123,25 @@ export function parseIncomeStatement(buffer: ArrayBuffer): ParsedIncomeStatement
     const key = ROMAN_TO_KEY[firstChar]
 
     if (key) {
-      // Roman 합계 행 — 라벨 텍스트 기준 손실 부호 처리 (PR #102)
+      // Roman 합계 행 — 손실 부호 처리 (PR #102, PR #103 보강)
+      // 행 전체(모든 컬럼) 텍스트를 합쳐서 "손실" 키워드 검사 — Roman과 라벨이
+      // 별도 셀에 있는 경우(병합 해제 등) 까지 견고하게 처리.
       foundRomans.add(firstChar)
       const rawAmount = toNumber(rows[i][summaryCol])
-      summary[key] = applyLossSign(key, rawAmount, subjectTrimmed)
+      const rowText = rows[i].map((c) => String(c ?? '')).join(' ')
+      const signed = applyLossSign(key, rawAmount, rowText)
+      summary[key] = signed
+      if (LOSS_AWARE_KEYS.has(key)) {
+        console.log('[income-statement-parser] roman row', {
+          row: i,
+          key,
+          firstChar,
+          subjectTrimmed,
+          rowText: rowText.slice(0, 200),
+          rawAmount,
+          signed,
+        })
+      }
       currentDetailKey = isDetailKey(key) ? key : null
       continue
     }
