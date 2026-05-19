@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { Calculator, Download, RotateCcw } from 'lucide-react'
+import { syncFormValuesForCapture } from '@/lib/utils/html2canvas-form-sync'
 import {
   AddressSearchInput,
   type AddressSelection,
@@ -82,6 +83,9 @@ export function VatCalculatorClient() {
         backgroundColor: '#ffffff',
         useCORS: true,
         logging: false,
+        // input/select/textarea의 사용자 입력값을 cloned DOM의 attribute로
+        // 동기화 — html2canvas가 빈 칸으로 캡처하는 함정 해결 (PR #111)
+        onclone: (doc) => syncFormValuesForCapture(doc),
       })
       const today = new Date().toISOString().slice(0, 10)
       const link = document.createElement('a')
