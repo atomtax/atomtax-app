@@ -27,6 +27,24 @@ const DETAIL_KEYS: ReadonlyArray<keyof IncomeStatementDetails> = [
   'non_operating_expense',
 ]
 
+// 손실 부호 처리 대상 키 (PR #102):
+// Ⅴ 영업이익/손실, Ⅷ 소득세(법인세) 차감전 이익/손실, Ⅹ 당기순이익/손실
+// 엑셀 라벨 텍스트에 "손실"이 들어있으면 음수로 저장.
+const LOSS_AWARE_KEYS: ReadonlySet<keyof IncomeStatementSummary> = new Set([
+  'operating_income',
+  'pretax_income',
+  'net_income',
+])
+
+function applyLossSign(
+  key: keyof IncomeStatementSummary,
+  amount: number,
+  label: string,
+): number {
+  if (!LOSS_AWARE_KEYS.has(key)) return amount
+  return label.includes('손실') ? -Math.abs(amount) : amount
+}
+
 function isDetailKey(
   key: keyof IncomeStatementSummary,
 ): key is keyof IncomeStatementDetails {
@@ -104,9 +122,10 @@ export function parseIncomeStatement(buffer: ArrayBuffer): ParsedIncomeStatement
     const key = ROMAN_TO_KEY[firstChar]
 
     if (key) {
-      // Roman 합계 행
+      // Roman 합계 행 — 라벨 텍스트 기준 손실 부호 처리 (PR #102)
       foundRomans.add(firstChar)
-      summary[key] = toNumber(rows[i][summaryCol])
+      const rawAmount = toNumber(rows[i][summaryCol])
+      summary[key] = applyLossSign(key, rawAmount, subjectTrimmed)
       currentDetailKey = isDetailKey(key) ? key : null
       continue
     }
