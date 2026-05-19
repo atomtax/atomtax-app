@@ -275,11 +275,15 @@ export interface ExposResult {
 /**
  * 내부 헬퍼: 주어진 hoNm으로 한 번 시도.
  * 매칭된 결과가 있으면 ExposResult 반환, 없으면 null.
+ *
+ * @param attemptHoNm API에 보낼 hoNm. 빈 문자열이면 hoNm 파라미터 생략(=전체 조회).
+ * @param targetHoNm 클라이언트 측 필터 기준 (사용자 원본 호 입력의 숫자)
  */
 async function tryExposLookup(
   parts: PnuParts,
   dongNm: string,
-  hoNm: string,
+  attemptHoNm: string,
+  targetHoNm: string,
 ): Promise<ExposResult | null> {
   const params: Record<string, string> = {
     sigunguCd: parts.sigunguCd,
@@ -288,13 +292,19 @@ async function tryExposLookup(
     bun: parts.bun,
     ji: parts.ji,
   }
-  if (hoNm) params.hoNm = hoNm
+  if (attemptHoNm) params.hoNm = attemptHoNm
 
   const items = await fetchApi<BrExposItem>('getBrExposPubuseAreaInfo', params)
+  console.log('[building-cert] expos lookup', {
+    dongNm,
+    attemptHoNm: attemptHoNm || '(omitted)',
+    targetHoNm,
+    itemCount: items.length,
+  })
   if (items.length === 0) return null
 
   const targetDongNum = extractNumber(dongNm)
-  const targetHoNum = extractNumber(hoNm)
+  const targetHoNum = extractNumber(targetHoNm)
 
   let exposArea = 0
   let pubuseArea = 0
@@ -329,27 +339,54 @@ async function tryExposLookup(
     exposArea,
     pubuseArea,
     dongNm: dongNm || matchedDongNm,
-    hoNm: hoNm || matchedHoNm,
+    hoNm: targetHoNm || matchedHoNm,
   }
 }
 
 /**
  * 전유공용면적 조회 — 자동 재시도 포함.
- * 1차: hoNm 그대로 (예: "1702호") — 가락금호 등 "호" 접미 단지
- * 2차 폴백: 호 접미 제거한 숫자만 (예: "1702") — 학하지구 등 숫자만 단지
+ *
+ * 일부 단지(태형팰리스 등 오피스텔/구형 단지)는 API에 hoNm이 zero-pad 4자리
+ * 또는 "호" 접미 여부가 다르게 저장됨 → 여러 변형 시도 + 최종에 hoNm 생략 후
+ * 단지 전체를 받아 클라이언트 측 매칭 (PR #109 보강).
+ *
+ * 시도 순서:
+ *   1. 사용자 입력 그대로 (예: "904호")
+ *   2. 숫자만 (예: "904")
+ *   3. 4자리 zero-pad (예: "0904")
+ *   4. 4자리 zero-pad + 호 (예: "0904호")
+ *   5. 최종 폴백: hoNm 생략하고 단지 전체 받아 클라이언트 측 필터
  */
 export async function getExposPubuseArea(
   parts: PnuParts,
   dongNm: string,
   hoNm: string,
 ): Promise<ExposResult | null> {
-  const firstAttempt = await tryExposLookup(parts, dongNm, hoNm)
-  if (firstAttempt) return firstAttempt
-
-  if (!hoNm) return null
+  if (!hoNm) {
+    // 호 미입력 — 그대로 한 번만
+    return tryExposLookup(parts, dongNm, '', '')
+  }
 
   const hoNumber = extractNumber(hoNm)
-  if (!hoNumber || hoNumber === hoNm) return null
+  if (!hoNumber) return null
 
-  return tryExposLookup(parts, dongNm, hoNumber)
+  // 시도할 hoNm 변형 목록 (중복 제거)
+  const variants = new Set<string>([hoNm])
+  variants.add(hoNumber)
+  variants.add(`${hoNumber}호`)
+  if (hoNumber.length < 4) {
+    const padded = hoNumber.padStart(4, '0')
+    variants.add(padded)
+    variants.add(`${padded}호`)
+  }
+
+  for (const variant of variants) {
+    const result = await tryExposLookup(parts, dongNm, variant, hoNumber)
+    if (result) return result
+  }
+
+  // 최종 폴백: hoNm 파라미터 생략 → 단지 전체 → 클라이언트 측 매칭
+  // 일부 단지는 hoNm을 어떤 형식으로 보내도 매칭 안 됨 (DB 등록 형식 차이)
+  console.log('[building-cert] expos fallback: omit hoNm', { dongNm, hoNumber })
+  return tryExposLookup(parts, dongNm, '', hoNumber)
 }
