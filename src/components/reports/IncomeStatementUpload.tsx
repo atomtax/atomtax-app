@@ -14,10 +14,21 @@ interface Props {
   }) => void
 }
 
+interface DebugInfo {
+  /** 파서 호출 시점 (사용자에게 "정말 호출됐다" 시각화) */
+  parsedAt: string
+  operating_income: number
+  pretax_income: number
+  net_income: number
+  /** 손실 라벨 감지된 키들 */
+  lossDetected: string[]
+}
+
 export function IncomeStatementUpload({ currentFilename, onParsed }: Props) {
   const [file, setFile] = useState<File | null>(null)
   const [isParsing, setIsParsing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [debug, setDebug] = useState<DebugInfo | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -48,6 +59,18 @@ export function IncomeStatementUpload({ currentFilename, onParsed }: Props) {
         operating_income: result.summary.operating_income,
         pretax_income: result.summary.pretax_income,
         net_income: result.summary.net_income,
+      })
+      // 화면에 직접 표시되는 디버그 정보 (PR #105 — 콘솔 의존성 제거)
+      const lossDetected: string[] = []
+      if (result.summary.operating_income < 0) lossDetected.push('영업손실')
+      if (result.summary.pretax_income < 0) lossDetected.push('차감전손실')
+      if (result.summary.net_income < 0) lossDetected.push('당기순손실')
+      setDebug({
+        parsedAt: new Date().toLocaleTimeString('ko-KR'),
+        operating_income: result.summary.operating_income,
+        pretax_income: result.summary.pretax_income,
+        net_income: result.summary.net_income,
+        lossDetected,
       })
       onParsed({
         filename: file.name,
@@ -112,6 +135,55 @@ export function IncomeStatementUpload({ currentFilename, onParsed }: Props) {
           <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
             ⚠️ {error}
           </p>
+        )}
+
+        {debug && (
+          <div className="text-xs bg-yellow-50 border-2 border-yellow-400 rounded px-3 py-2 space-y-1">
+            <div className="font-bold text-yellow-900">
+              🔍 디버그 정보 (파서 결과) · 호출 시각: {debug.parsedAt}
+            </div>
+            <div className="grid grid-cols-3 gap-2 font-mono">
+              <div>
+                Ⅴ 영업이익/손실:{' '}
+                <span
+                  className={
+                    debug.operating_income < 0
+                      ? 'font-bold text-red-700'
+                      : 'text-gray-800'
+                  }
+                >
+                  {debug.operating_income.toLocaleString('ko-KR')}
+                </span>
+              </div>
+              <div>
+                Ⅷ 차감전 이익/손실:{' '}
+                <span
+                  className={
+                    debug.pretax_income < 0
+                      ? 'font-bold text-red-700'
+                      : 'text-gray-800'
+                  }
+                >
+                  {debug.pretax_income.toLocaleString('ko-KR')}
+                </span>
+              </div>
+              <div>
+                Ⅹ 당기순이익/손실:{' '}
+                <span
+                  className={
+                    debug.net_income < 0 ? 'font-bold text-red-700' : 'text-gray-800'
+                  }
+                >
+                  {debug.net_income.toLocaleString('ko-KR')}
+                </span>
+              </div>
+            </div>
+            <div className="text-yellow-800">
+              {debug.lossDetected.length > 0
+                ? `✅ 손실 감지: ${debug.lossDetected.join(', ')}`
+                : '⚠️ 손실 감지 안 됨 — 파서가 "손실" 라벨을 못 잡았거나 모두 이익 케이스. 위 숫자가 양수인데 실제로 손실 케이스라면, 엑셀 파일을 그대로 공유 부탁드립니다.'}
+            </div>
+          </div>
         )}
       </div>
     </section>
