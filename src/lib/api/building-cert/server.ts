@@ -273,6 +273,35 @@ export interface ExposResult {
 }
 
 /**
+ * 빠른 PNU 확인 — 해당 PNU에 건축물대장 전유공용 데이터가 존재하는지 카운트만 반환.
+ * VWorld가 잘못된 부번을 골랐을 경우 변형 PNU를 빠르게 시도하기 위한 헬퍼 (PR #110).
+ */
+export async function probeExposApi(parts: PnuParts): Promise<number> {
+  const items = await fetchApi<BrExposItem>('getBrExposPubuseAreaInfo', {
+    sigunguCd: parts.sigunguCd,
+    bjdongCd: parts.bjdongCd,
+    platGbCd: parts.platGbCd,
+    bun: parts.bun,
+    ji: parts.ji,
+  })
+  return items.length
+}
+
+/**
+ * 빠른 PNU 확인 (표제부 버전) — 단독주택 케이스 (동/호 미입력) 자동 PNU 변형용.
+ */
+export async function probeTitleApi(parts: PnuParts): Promise<number> {
+  const items = await fetchApi<BrTitleItem>('getBrTitleInfo', {
+    sigunguCd: parts.sigunguCd,
+    bjdongCd: parts.bjdongCd,
+    platGbCd: parts.platGbCd,
+    bun: parts.bun,
+    ji: parts.ji,
+  })
+  return items.length
+}
+
+/**
  * 내부 헬퍼: 주어진 hoNm으로 한 번 시도.
  * 매칭된 결과가 있으면 ExposResult 반환, 없으면 null.
  *

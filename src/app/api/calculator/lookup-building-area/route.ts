@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server'
 import {
   getExposPubuseArea,
   getTitleInfo,
+  probeExposApi,
+  probeTitleApi,
 } from '@/lib/api/building-cert/server'
 import { buildDongHoApiParams } from '@/lib/utils/building-location'
-import { parsePnu } from '@/lib/utils/pnu'
+import { generatePnuVariants, parsePnu, type PnuParts } from '@/lib/utils/pnu'
 
 export const runtime = 'nodejs'
 
@@ -44,6 +46,72 @@ export type LookupBuildingAreaResponse =
       message?: string
     }
 
+/**
+ * 원본 PNU에서 전유공용 데이터가 0건이면 부번/대표지번/산여부 변형을 시도.
+ * 매칭되는 PNU의 parts를 반환. 모두 실패하면 null.
+ */
+async function findWorkingPartsForExpos(
+  originalPnu: string,
+  originalParts: PnuParts,
+): Promise<PnuParts | null> {
+  const probe0 = await probeExposApi(originalParts)
+  console.log('[lookup-building-area] pnu probe (expos)', {
+    candidate: originalPnu,
+    itemCount: probe0,
+  })
+  if (probe0 > 0) return originalParts
+
+  const variants = generatePnuVariants(originalPnu).filter((v) => v !== originalPnu)
+  for (const candidate of variants) {
+    const cParts = parsePnu(candidate)
+    if (!cParts) continue
+    const count = await probeExposApi(cParts)
+    console.log('[lookup-building-area] pnu probe (expos)', {
+      candidate,
+      itemCount: count,
+    })
+    if (count > 0) {
+      console.log('[lookup-building-area] pnu adjusted (expos)', {
+        original: originalPnu,
+        matched: candidate,
+      })
+      return cParts
+    }
+  }
+  return null
+}
+
+async function findWorkingPartsForTitle(
+  originalPnu: string,
+  originalParts: PnuParts,
+): Promise<PnuParts | null> {
+  const probe0 = await probeTitleApi(originalParts)
+  console.log('[lookup-building-area] pnu probe (title)', {
+    candidate: originalPnu,
+    itemCount: probe0,
+  })
+  if (probe0 > 0) return originalParts
+
+  const variants = generatePnuVariants(originalPnu).filter((v) => v !== originalPnu)
+  for (const candidate of variants) {
+    const cParts = parsePnu(candidate)
+    if (!cParts) continue
+    const count = await probeTitleApi(cParts)
+    console.log('[lookup-building-area] pnu probe (title)', {
+      candidate,
+      itemCount: count,
+    })
+    if (count > 0) {
+      console.log('[lookup-building-area] pnu adjusted (title)', {
+        original: originalPnu,
+        matched: candidate,
+      })
+      return cParts
+    }
+  }
+  return null
+}
+
 export async function POST(
   req: Request,
 ): Promise<NextResponse<LookupBuildingAreaResponse>> {
@@ -76,15 +144,27 @@ export async function POST(
     // 동/호 입력 시 → 전유공용면적만 시도 (표제부 폴백 금지)
     // 표제부로 폴백하면 단지 전체 연면적이 반환되어 사용자에게 잘못된 값 전달.
     if (apiParams) {
+      // PNU probe: VWorld가 잘못된 부번을 골랐을 가능성 대비 (PR #110).
+      // 원본 PNU에서 0건이면 인접 부번/대표지번/산여부 변형을 시도.
+      const workingParts = await findWorkingPartsForExpos(body.pnu, parts)
+      if (!workingParts) {
+        const label = `${apiParams.dongNm ? `${apiParams.dongNm}동 ` : ''}${apiParams.hoNm}`
+        return NextResponse.json({
+          ok: false,
+          reason: 'EXPOS_PUBUSE_NOT_FOUND',
+          message: `${label}의 데이터를 찾지 못했습니다. PNU 변형 시도 모두 실패 — 정부 데이터에 누락되었거나 다른 필지일 수 있습니다. [PDF 업로드] 사용을 권장합니다.`,
+        })
+      }
+
       const result = await getExposPubuseArea(
-        parts,
+        workingParts,
         apiParams.dongNm,
         apiParams.hoNm,
       )
       if (result) {
         // 준공연도/구조/용도 메타데이터는 표제부에서 — 부가 호출 1회.
         // 사용자 입력 dong과 매칭되는 동의 정보를 받음 (105동 vs 211동 등).
-        const titleForMeta = await getTitleInfo(parts, body.dongInput ?? '')
+        const titleForMeta = await getTitleInfo(workingParts, body.dongInput ?? '')
         return NextResponse.json({
           ok: true,
           totalArea: result.totalArea,
@@ -110,7 +190,12 @@ export async function POST(
     }
 
     // 동/호 미입력 (단독주택 케이스) → 표제부 조회
-    const titleResult = await getTitleInfo(parts)
+    // 같은 PNU 변형 폴백 적용 (PR #110)
+    const titleParts = await findWorkingPartsForTitle(body.pnu, parts)
+    if (!titleParts) {
+      return NextResponse.json({ ok: false, reason: 'NO_DATA' })
+    }
+    const titleResult = await getTitleInfo(titleParts)
     if (!titleResult) {
       return NextResponse.json({ ok: false, reason: 'NO_DATA' })
     }

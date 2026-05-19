@@ -39,3 +39,48 @@ export function parsePnu(pnu: string): PnuParts | null {
 
   return { sigunguCd, bjdongCd, platGbCd, bun, ji }
 }
+
+/**
+ * PNU 부번 변형 시도 목록 — VWorld가 잘못된 부번을 골랐을 때 폴백 (PR #110).
+ *
+ * 흔한 케이스: "109-1 외 1필지" 같이 여러 필지에 걸친 단지에서 VWorld는 109-2를
+ * 매핑하지만 건축물대장은 대표지번 109-1에만 등록 → API 0건.
+ *
+ * 시도 순서:
+ *   1. 원본
+ *   2. 부번 -1, +1 (가장 흔한 케이스)
+ *   3. 부번 -2, +2
+ *   4. 부번 0000 (대표지번만 등록된 경우)
+ *   5. 산여부 반대 (1↔2)
+ *
+ * 19자리 형식 유지. 중복 제거.
+ */
+export function generatePnuVariants(pnu: string): string[] {
+  if (pnu.length !== 19 || !/^\d{19}$/.test(pnu)) return [pnu]
+
+  const prefix = pnu.slice(0, 10) // 시군구5+법정동5
+  const sanYn = pnu.slice(10, 11)
+  const bun = pnu.slice(11, 15)
+  const jiNum = parseInt(pnu.slice(15, 19), 10)
+
+  const variants = new Set<string>([pnu])
+
+  // 부번 인접값 (-1, +1, -2, +2)
+  for (const offset of [-1, 1, -2, 2]) {
+    const newJi = jiNum + offset
+    if (newJi >= 0 && newJi <= 9999) {
+      variants.add(`${prefix}${sanYn}${bun}${String(newJi).padStart(4, '0')}`)
+    }
+  }
+
+  // 대표지번 (부번 0000)
+  if (jiNum !== 0) {
+    variants.add(`${prefix}${sanYn}${bun}0000`)
+  }
+
+  // 산여부 반대 (대지 ↔ 산)
+  const altSanYn = sanYn === '1' ? '2' : '1'
+  variants.add(`${prefix}${altSanYn}${bun}${pnu.slice(15, 19)}`)
+
+  return Array.from(variants)
+}
