@@ -31,13 +31,9 @@ const ROWS: RowDef[] = [
   { label: '추가납부세액',               incomeKey: 'income_additional_tax',   ruralKey: 'rural_additional_tax',   type: 'input' },
   { label: '합계',                       incomeKey: 'income_total_tax',        ruralKey: 'rural_total_tax',        type: 'auto', emphasize: true },
   { label: '기납부세액계',               incomeKey: 'income_prepaid_tax',      ruralKey: 'rural_prepaid_tax',      type: 'input' },
-  { label: '납부(환급)할 총세액',        incomeKey: 'income_payable',          ruralKey: 'rural_payable',          type: 'auto', emphasize: true },
-  { label: '주식매수 특례 — 차감',       incomeKey: 'income_stock_deduct',     ruralKey: 'rural_stock_deduct',     type: 'input' },
-  { label: '주식매수 특례 — 가산',       incomeKey: 'income_stock_add',        ruralKey: 'rural_stock_add',        type: 'input' },
-  { label: '분납할세액',                 incomeKey: 'income_installment',      ruralKey: 'rural_installment',      type: 'input' },
-  { label: '신고기한내 납부할 세액',     incomeKey: 'income_within_deadline',  ruralKey: 'rural_within_deadline',  type: 'auto', emphasize: true },
-  { label: '국세환급금 충당',            incomeKey: 'income_refund_offset',    ruralKey: 'income_refund_offset',   type: 'input', ruralDisabled: true },
-  { label: '충당후 납부(환급)할 세액',   incomeKey: 'income_final_payable',    ruralKey: 'rural_final_payable',    type: 'auto', emphasize: true, highlight: 'green' },
+  { label: '납부(환급)할 총세액',        incomeKey: 'income_payable',          ruralKey: 'rural_payable',          type: 'auto', emphasize: true, highlight: 'green' },
+  // 주식매수 특례/분납할세액/국세환급금 충당 행은 일반 종소세 작성에서 거의 사용 안 함 →
+  // PDF 출력에서도 제거 (PR #100). 표는 "납부(환급)할 총세액"에서 종료.
 ]
 
 interface Props {
