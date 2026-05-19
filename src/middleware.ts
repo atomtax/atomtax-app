@@ -5,8 +5,11 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // 공개 경로는 인증 검사 완전 통과 (Supabase 호출 자체를 안 함)
+  // /api/calculator/* 도 포함 — 계산기 페이지의 자동조회 API는 비로그인 호출이라
+  // 누락 시 미들웨어가 /login 으로 307 redirect → POST → 405 (PR #101).
   if (
     pathname.startsWith('/calculator') ||
+    pathname.startsWith('/api/calculator/') ||
     pathname.startsWith('/share/') ||
     pathname.startsWith('/api/cron/')
   ) {
