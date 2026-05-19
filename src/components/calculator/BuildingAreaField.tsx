@@ -69,6 +69,13 @@ export interface AutoLookupMeta {
   usageId?: string
   structureRaw?: string
   buildingType?: string
+  /** 자동조회 모드 (PR #112 보고서에서 안내 텍스트 생성용) */
+  mode?: 'title' | 'exposPubuse'
+  exposArea?: number
+  pubuseArea?: number
+  dongNm?: string
+  hoNm?: string
+  buildingName?: string
 }
 
 interface Props {
@@ -160,6 +167,12 @@ export function BuildingAreaField({
             usageId: json.usageId,
             structureRaw: json.structureRaw,
             buildingType: json.buildingType,
+            mode: json.mode,
+            exposArea: json.exposArea,
+            pubuseArea: json.pubuseArea,
+            dongNm: json.dongNm,
+            hoNm: json.hoNm,
+            buildingName: json.buildingName,
           })
         } else if (json.reason === 'NO_DONG_HO_FOR_COLLECTIVE') {
           setNeedDongHoMessage(

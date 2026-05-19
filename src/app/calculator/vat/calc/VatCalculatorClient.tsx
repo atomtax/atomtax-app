@@ -2,7 +2,6 @@
 
 import { useRef, useState } from 'react'
 import { Calculator, Download, RotateCcw } from 'lucide-react'
-import { syncFormValuesForCapture } from '@/lib/utils/html2canvas-form-sync'
 import {
   AddressSearchInput,
   type AddressSelection,
@@ -16,7 +15,12 @@ import { BuildingStandardValueField } from '@/components/calculator/BuildingStan
 import { LandValueField } from '@/components/calculator/LandValueField'
 import { NumberInput } from '@/components/calculator/NumberInput'
 import { VatResultPanel } from '@/components/calculator/VatResultPanel'
+import { VatCalcReport } from '@/components/calculator/VatCalcReport'
 import { STRUCTURES } from '@/lib/calculators/building-standard-data'
+import {
+  calculateBuildingStandardValue,
+  findLocationBracket,
+} from '@/lib/calculators/building-standard-value'
 import {
   getBuildingUseByCode,
   groupBuildingUsesBySubCategory,
@@ -71,21 +75,23 @@ export function VatCalculatorClient() {
   const [resetKey, setResetKey] = useState(0)
   const [downloading, setDownloading] = useState(false)
   const [pnu, setPnu] = useState<string>('')
-  const captureRef = useRef<HTMLDivElement>(null)
+  const [lookupMeta, setLookupMeta] = useState<AutoLookupMeta | null>(null)
+  const reportRef = useRef<HTMLDivElement>(null)
 
+  /**
+   * PNG 다운로드 — 화면 폼이 아니라 별도 보고서 컴포넌트(VatCalcReport)를
+   * 캡처. input/placeholder/hover 등 화면 캡처 함정 회피 (PR #112).
+   */
   async function handleDownloadPng() {
-    if (!captureRef.current) return
+    if (!reportRef.current) return
     setDownloading(true)
     try {
       const { default: html2canvas } = await import('html2canvas')
-      const canvas = await html2canvas(captureRef.current, {
+      const canvas = await html2canvas(reportRef.current, {
         scale: 2,
         backgroundColor: '#ffffff',
         useCORS: true,
         logging: false,
-        // input/select/textarea의 사용자 입력값을 cloned DOM의 attribute로
-        // 동기화 — html2canvas가 빈 칸으로 캡처하는 함정 해결 (PR #111)
-        onclone: (doc) => syncFormValuesForCapture(doc),
       })
       const today = new Date().toISOString().slice(0, 10)
       const link = document.createElement('a')
@@ -98,6 +104,28 @@ export function VatCalculatorClient() {
     } finally {
       setDownloading(false)
     }
+  }
+
+  /** 보고서에 전달할 계산 수식 텍스트 (가능할 때만) */
+  function buildCalcFormula(): string | null {
+    const builtYear = parseInt(form.completionYear, 10)
+    if (!Number.isFinite(builtYear)) return null
+    const valueResult = calculateBuildingStandardValue({
+      structureId: form.structureId,
+      usageId: form.usageId,
+      landUnitPrice: form.landUnitPrice,
+      buildingArea: form.buildingArea,
+      builtYear,
+    })
+    if (!valueResult) return null
+    const bracket = findLocationBracket(form.landUnitPrice)
+    return `850,000 × ${valueResult.structure.index}(구조) × ${
+      valueResult.usage.index
+    }(용도) × ${bracket?.index ?? '-'}(위치) × ${valueResult.residualRate.toFixed(
+      3,
+    )}(잔가율, 경과 ${valueResult.yearsElapsed}년) → ${valueResult.perSqmRounded.toLocaleString(
+      'ko-KR',
+    )}원/㎡ × ${valueResult.totalArea}㎡`
   }
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -114,6 +142,7 @@ export function VatCalculatorClient() {
   function handleAutoLookupDone(meta: AutoLookupMeta) {
     // [자동 조회] / [다시 조회] 누를 때마다 API 매핑 결과 항상 덮어쓰기.
     // 사용자가 수동으로 수정한 값을 유지하려면 [다시 조회]를 누르지 않으면 됨.
+    setLookupMeta(meta)
     setForm((prev) => {
       const next = { ...prev }
       let changed = false
@@ -155,7 +184,31 @@ export function VatCalculatorClient() {
     setResult(null)
     setResultSellingPrice(0)
     setPnu('')
+    setLookupMeta(null)
     setResetKey((k) => k + 1)
+  }
+
+  /** 보고서용 자동조회 안내 텍스트 (예: "102동 904호의 전유 29.98㎡ + 공용 38.89㎡") */
+  function buildAutoLookupInfo(): string | null {
+    if (!lookupMeta) return null
+    if (lookupMeta.mode === 'exposPubuse') {
+      const where = `${lookupMeta.dongNm ? `${lookupMeta.dongNm}동 ` : ''}${
+        lookupMeta.hoNm ?? ''
+      }`.trim()
+      const expos = lookupMeta.exposArea?.toFixed(2)
+      const pubuse = lookupMeta.pubuseArea?.toFixed(2)
+      if (expos && pubuse) {
+        return `${where}의 전유 ${expos}㎡ + 공용 ${pubuse}㎡ = ${(
+          (lookupMeta.exposArea ?? 0) + (lookupMeta.pubuseArea ?? 0)
+        ).toFixed(2)}㎡`
+      }
+    }
+    if (lookupMeta.mode === 'title') {
+      return `건축물대장 표제부 연면적 자동 조회${
+        lookupMeta.buildingType ? ` (${lookupMeta.buildingType})` : ''
+      }`
+    }
+    return null
   }
 
   function handleCalculate() {
@@ -181,7 +234,47 @@ export function VatCalculatorClient() {
 
   return (
     <div className="space-y-5">
-      <div ref={captureRef} className="space-y-5 bg-white">
+      {/* PNG 출력 전용 보고서 — 화면 밖에 렌더 (PR #112). result 있을 때만 mount. */}
+      {result && (
+        <div
+          ref={reportRef}
+          style={{
+            position: 'absolute',
+            left: '-9999px',
+            top: 0,
+            width: '800px',
+          }}
+          aria-hidden="true"
+        >
+          <VatCalcReport
+            data={{
+              address: form.address,
+              dongInput: form.dongInput,
+              hoInput: form.hoInput,
+              isBasement: form.isBasement,
+              landArea: form.landArea,
+              buildingArea: form.buildingArea,
+              sellingPrice: resultSellingPrice || form.sellingPrice,
+              useCategory: form.useCategory,
+              structureId: form.structureId,
+              usageId: form.usageId,
+              completionYear: form.completionYear,
+              landUnitPrice: form.landUnitPrice,
+              buildingStandardValue: form.buildingStandardValue,
+              autoLookupInfo: buildAutoLookupInfo(),
+              calcFormula: buildCalcFormula(),
+              vatMarket: result.vatMarket,
+              vatLow: result.vatLow,
+              allocatedLand: result.allocatedLand,
+              allocatedBuilding: result.allocatedBuilding,
+              verifyTotal: result.verifyTotal,
+              isValid: result.isValid,
+            }}
+          />
+        </div>
+      )}
+
+      <div className="space-y-5 bg-white">
         {result && (
           <div className="text-center pt-4 pb-2 space-y-2">
             <h2 className="text-lg font-bold text-gray-900">
