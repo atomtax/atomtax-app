@@ -10,6 +10,7 @@ export async function ensureIncomeTaxReport(
 ): Promise<{ id: string }> {
   const supabase = await createClient()
 
+  // 1. Fast path: 이미 있으면 그 row 반환
   const { data: existing, error: e1 } = await supabase
     .from('income_tax_reports')
     .select('id')
@@ -20,15 +21,33 @@ export async function ensureIncomeTaxReport(
   if (e1) throw new Error(`보고서 조회 실패: ${e1.message}`)
   if (existing) return { id: existing.id }
 
+  // 2. 없으면 INSERT 시도. race condition 대비:
+  //    Next.js prefetch + actual navigation이 page server component를 2회
+  //    실행하면 둘 다 SELECT에서 "없음" 보고 INSERT 시도 → 두 번째가 UNIQUE
+  //    제약(income_tax_reports_client_id_report_year_key) 위반으로 실패 →
+  //    page throw → Application error (PR #113 수정).
   const { data, error: e2 } = await supabase
     .from('income_tax_reports')
     .insert({ client_id: clientId, report_year: year, status: 'draft' })
     .select('id')
     .single()
 
-  if (e2) throw new Error(`보고서 생성 실패: ${e2.message}`)
+  if (data) return { id: data.id }
 
-  return { id: data.id }
+  // PostgreSQL unique_violation = 23505. 동시 호출의 다른 쪽이 INSERT 성공한 것
+  // → 다시 SELECT 하여 winner row 반환.
+  if (e2 && (e2.code === '23505' || /duplicate key/i.test(e2.message))) {
+    const { data: winner, error: e3 } = await supabase
+      .from('income_tax_reports')
+      .select('id')
+      .eq('client_id', clientId)
+      .eq('report_year', year)
+      .single()
+    if (winner) return { id: winner.id }
+    throw new Error(`보고서 조회 실패(race 재조회): ${e3?.message ?? 'unknown'}`)
+  }
+
+  throw new Error(`보고서 생성 실패: ${e2?.message ?? 'unknown'}`)
 }
 
 type SaveInput = Omit<IncomeTaxReport, 'id' | 'client_id' | 'created_at' | 'updated_at' | 'completed_at'>
