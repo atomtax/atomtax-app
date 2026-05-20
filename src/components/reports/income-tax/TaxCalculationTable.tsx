@@ -41,7 +41,8 @@ const ROWS: RowDef[] = [
   { label: '납부(환급)할 총세액',        incomeKey: 'income_payable',          ruralKey: 'rural_payable',          type: 'auto', emphasize: true },
   // 주식매수 특례/분납할세액/국세환급금 충당 행은 일반 종소세 작성에서 거의 사용 안 함 →
   // UI에서 제거 (PR #100). DB 컬럼은 호환성 위해 유지, 기존 값은 recalculate에 그대로 반영됨.
-  { label: '지방소득세', sublabel: '(총세액 × 10%)', incomeKey: 'income_local_tax', ruralKey: 'income_local_tax', type: 'auto', ruralDisabled: true },
+  // 지방소득세는 LocalTaxRow에서 별도 렌더 (자동/수동 override + 🔄 자동복귀)
+  { label: '지방소득세', sublabel: '(총세액 × 10%, 직접 수정 가능)', incomeKey: 'income_local_tax', ruralKey: 'income_local_tax', type: 'auto', ruralDisabled: true },
   { label: '농어촌특별세', sublabel: '(홈택스 입력)', incomeKey: 'farm_special_tax', ruralKey: 'farm_special_tax', type: 'input', ruralDisabled: true },
   { label: '최종 납부할 세액', sublabel: '(지방세 + 농특세 포함)', incomeKey: 'income_final_with_local', ruralKey: 'income_final_with_local', type: 'auto', emphasize: true, highlight: 'green', ruralDisabled: true },
 ]
@@ -72,6 +73,19 @@ export function TaxCalculationTable({ data, onChange }: Props) {
               : row.emphasize
               ? 'bg-blue-50/40 font-semibold'
               : ''
+
+            // 지방소득세는 override 지원 — 별도 렌더 (PR #115)
+            if (row.incomeKey === 'income_local_tax') {
+              return (
+                <LocalTaxRow
+                  key={idx}
+                  row={row}
+                  rowClass={rowClass}
+                  data={data}
+                  onChange={onChange}
+                />
+              )
+            }
 
             return (
               <tr key={idx} className={`border-b border-gray-100 ${rowClass}`}>
@@ -117,6 +131,92 @@ interface CellInputProps {
   isPercent?: boolean
   isFinal?: boolean
   onChange: (v: number) => void
+}
+
+/**
+ * 지방소득세 행 — 자동계산(납부할 총세액 × 10%)이 기본이지만 사용자가
+ * 직접 수정 가능 (income_local_tax_override) (PR #115).
+ *
+ * 값 입력 시 → override 저장. 빈칸 또는 자동계산값과 동일 → override null로 복귀.
+ * 🔄 자동복귀 버튼: override 명시적 해제.
+ */
+function LocalTaxRow({
+  row,
+  rowClass,
+  data,
+  onChange,
+}: {
+  row: RowDef
+  rowClass: string
+  data: IncomeTaxReport
+  onChange: <K extends keyof IncomeTaxReport>(key: K, value: IncomeTaxReport[K]) => void
+}) {
+  const finalPayable = Number(data.income_final_payable ?? 0)
+  const autoCalc = Math.floor(finalPayable * 0.1)
+  const override = data.income_local_tax_override
+  const hasOverride = override !== null && override !== undefined
+  const displayValue = hasOverride ? Number(override) : autoCalc
+
+  function handleValueChange(v: number) {
+    // 빈값(0) + 자동값이 0인 경우 또는 사용자가 자동값과 동일하게 입력하면 override 해제
+    if (v === autoCalc) {
+      onChange('income_local_tax_override', null)
+    } else {
+      onChange('income_local_tax_override', v)
+    }
+  }
+
+  function handleReset() {
+    onChange('income_local_tax_override', null)
+  }
+
+  return (
+    <tr className={`border-b border-gray-100 ${rowClass}`}>
+      <td className="px-4 py-2.5">
+        <div className="text-sm">{row.label}</div>
+        {row.sublabel && (
+          <div className="text-xs text-gray-400 mt-0.5">{row.sublabel}</div>
+        )}
+      </td>
+      <td className="px-4 py-2 text-right">
+        <div className="flex items-center justify-end gap-1.5">
+          <input
+            type="text"
+            inputMode="numeric"
+            value={displayValue === 0 ? '' : formatNumberWithCommas(displayValue)}
+            onChange={(e) => handleValueChange(parseNumberFromCommas(e.target.value))}
+            placeholder={String(autoCalc)}
+            className={`w-full px-2 py-1 border rounded text-right tabular-nums text-sm focus:border-blue-500 focus:outline-none ${
+              hasOverride ? 'border-amber-300 bg-amber-50' : 'border-gray-200'
+            }`}
+            title={
+              hasOverride
+                ? `수동 입력 (자동계산: ${formatNumberWithCommas(autoCalc)}원)`
+                : '자동계산 (납부할 총세액 × 10%) — 직접 입력하면 수동값으로 저장'
+            }
+          />
+          {hasOverride && (
+            <button
+              type="button"
+              onClick={handleReset}
+              title={`자동계산값으로 복귀 (${formatNumberWithCommas(autoCalc)}원)`}
+              className="text-xs px-1.5 py-1 border border-gray-200 rounded hover:bg-gray-50 text-gray-600 shrink-0"
+            >
+              🔄
+            </button>
+          )}
+        </div>
+        {hasOverride && (
+          <p className="text-[10px] text-amber-700 mt-0.5 text-right">
+            수동 입력 · 자동값 {formatNumberWithCommas(autoCalc)}
+          </p>
+        )}
+      </td>
+      <td className="px-4 py-2 text-right">
+        <span className="text-xs text-gray-300 px-2">—</span>
+      </td>
+    </tr>
+  )
 }
 
 function CellInput({ value, readonly, isPercent, isFinal, onChange }: CellInputProps) {
