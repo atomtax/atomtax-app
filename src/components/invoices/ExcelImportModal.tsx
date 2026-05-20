@@ -88,6 +88,7 @@ export default function ExcelImportModal({
           vatAmount: calc.vatAmount,
           totalAmount: calc.totalAmount,
           paymentMethod: (pm === '자동이체' || pm === '직접입금' ? pm : '미확인') as RowState['paymentMethod'],
+          isSent: r['발송여부'] === '완료',
           isPaid: r['납부여부'] === '완료',
           isDirty: true,
           isDeleted: false,

@@ -37,6 +37,7 @@ export type RowState = {
   vatAmount: number
   totalAmount: number
   paymentMethod: '자동이체' | '직접입금' | '미확인'
+  isSent: boolean
   isPaid: boolean
   isDirty: boolean
   isDeleted: boolean
@@ -225,6 +226,7 @@ export default function AdjustmentInvoiceManager({
       maemaeDiscount: 0, isMaemaeDiscountManual: false,
       supplyAmount: 0, vatAmount: 0, totalAmount: 0,
       paymentMethod: '미확인',
+      isSent: false,
       isPaid: false,
       isDirty: true, isDeleted: false, selected: false,
     }))
@@ -247,6 +249,7 @@ export default function AdjustmentInvoiceManager({
         maemaeDiscount: 0, isMaemaeDiscountManual: false,
         supplyAmount: 0, vatAmount: 0, totalAmount: 0,
         paymentMethod: '미확인',
+        isSent: false,
         isPaid: false,
         isDirty: true, isDeleted: false, selected: false,
       },
@@ -451,6 +454,7 @@ export default function AdjustmentInvoiceManager({
       부가세: r.vatAmount,
       최종청구액: r.totalAmount,
       납부방법: r.paymentMethod,
+      발송여부: r.isSent ? '완료' : '미발송',
       납부여부: r.isPaid ? '완료' : '미납',
     }))
     const ws = XLSX.utils.json_to_sheet(data)
@@ -732,6 +736,7 @@ export default function AdjustmentInvoiceManager({
                     vatAmount: nr.vatAmount,
                     totalAmount: nr.totalAmount,
                     paymentMethod: nr.paymentMethod,
+                    isSent: nr.isSent,
                     isPaid: nr.isPaid,
                     clientName: nr.clientName || r.clientName,
                     isDirty: true,
@@ -777,6 +782,7 @@ function invoiceToRow(
     vatAmount: inv.vat_amount ?? 0,
     totalAmount: inv.total_amount ?? 0,
     paymentMethod: inv.payment_method ?? '미확인',
+    isSent: inv.is_sent ?? false,
     isPaid: inv.is_paid ?? false,
     isDirty: false,
     isDeleted: false,
@@ -811,6 +817,7 @@ function rowToPayload(
     final_fee: row.totalAmount,
     year,
     payment_method: row.paymentMethod,
+    is_sent: row.isSent,
     is_paid: row.isPaid,
   }
 }
