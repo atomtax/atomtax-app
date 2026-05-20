@@ -114,6 +114,14 @@ export default function InvoiceRow({
       <td className="p-2 text-center">
         <input
           type="checkbox"
+          checked={row.isSent}
+          onChange={(e) => onChangeCell(row.rowId, 'isSent', e.target.checked)}
+          title="청구서 발송 완료 여부"
+        />
+      </td>
+      <td className="p-2 text-center">
+        <input
+          type="checkbox"
           checked={row.isPaid}
           onChange={(e) => onChangeCell(row.rowId, 'isPaid', e.target.checked)}
         />

@@ -37,6 +37,7 @@ export type RowState = {
   vatAmount: number
   totalAmount: number
   paymentMethod: '자동이체' | '직접입금' | '미확인'
+  isSent: boolean
   isPaid: boolean
   isDirty: boolean
   isDeleted: boolean
@@ -63,6 +64,11 @@ export default function AdjustmentInvoiceManager({
   const [pendingBusinessType, setPendingBusinessType] = useState<'corporate' | 'individual'>(initialBusinessType)
   const [pendingManagerFilter, setPendingManagerFilter] = useState('all')
   const [appliedManagerFilter, setAppliedManagerFilter] = useState('all')
+
+  // 즉시 적용되는 클라이언트 측 필터 (PR #114) — 조회 버튼 없이 useMemo 갱신
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<'all' | '자동이체' | '직접입금' | '미확인'>('all')
+  const [sentFilter, setSentFilter] = useState<'all' | 'sent' | 'unsent'>('all')
+  const [paidFilter, setPaidFilter] = useState<'all' | 'paid' | 'unpaid'>('all')
 
   const managerMap = useMemo(() => {
     const m = new Map<string, string | null>()
@@ -93,9 +99,33 @@ export default function AdjustmentInvoiceManager({
         const client = initialClients.find((c) => c.id === r.clientId)
         if (!client || client.manager !== appliedManagerFilter) return false
       }
+      // 클라이언트 측 즉시 필터 (PR #114)
+      if (paymentMethodFilter !== 'all' && r.paymentMethod !== paymentMethodFilter) return false
+      if (sentFilter === 'sent' && !r.isSent) return false
+      if (sentFilter === 'unsent' && r.isSent) return false
+      if (paidFilter === 'paid' && !r.isPaid) return false
+      if (paidFilter === 'unpaid' && r.isPaid) return false
       return true
     })
-  }, [rows, appliedManagerFilter, initialClients])
+  }, [
+    rows,
+    appliedManagerFilter,
+    initialClients,
+    paymentMethodFilter,
+    sentFilter,
+    paidFilter,
+  ])
+
+  const clientFiltersActive =
+    paymentMethodFilter !== 'all' ||
+    sentFilter !== 'all' ||
+    paidFilter !== 'all'
+
+  function resetClientFilters() {
+    setPaymentMethodFilter('all')
+    setSentFilter('all')
+    setPaidFilter('all')
+  }
 
   const managers = useMemo(
     () => [...new Set(initialClients.map((c) => c.manager).filter((m): m is string => !!m))],
@@ -108,6 +138,7 @@ export default function AdjustmentInvoiceManager({
       taxCreditAdditional: 0, faithfulReportFee: 0, discount: 0,
       maemaeDiscount: 0,
       supplyAmount: 0, vatAmount: 0, totalAmount: 0,
+      sentCount: 0, unsentCount: 0,
       paidCount: 0, unpaidCount: 0,
     }
     for (const r of visibleRows) {
@@ -121,6 +152,7 @@ export default function AdjustmentInvoiceManager({
       acc.supplyAmount += r.supplyAmount
       acc.vatAmount += r.vatAmount
       acc.totalAmount += r.totalAmount
+      if (r.isSent) acc.sentCount++; else acc.unsentCount++
       if (r.isPaid) acc.paidCount++; else acc.unpaidCount++
     }
     return acc
@@ -225,6 +257,7 @@ export default function AdjustmentInvoiceManager({
       maemaeDiscount: 0, isMaemaeDiscountManual: false,
       supplyAmount: 0, vatAmount: 0, totalAmount: 0,
       paymentMethod: '미확인',
+      isSent: false,
       isPaid: false,
       isDirty: true, isDeleted: false, selected: false,
     }))
@@ -247,6 +280,7 @@ export default function AdjustmentInvoiceManager({
         maemaeDiscount: 0, isMaemaeDiscountManual: false,
         supplyAmount: 0, vatAmount: 0, totalAmount: 0,
         paymentMethod: '미확인',
+        isSent: false,
         isPaid: false,
         isDirty: true, isDeleted: false, selected: false,
       },
@@ -451,6 +485,7 @@ export default function AdjustmentInvoiceManager({
       부가세: r.vatAmount,
       최종청구액: r.totalAmount,
       납부방법: r.paymentMethod,
+      발송여부: r.isSent ? '완료' : '미발송',
       납부여부: r.isPaid ? '완료' : '미납',
     }))
     const ws = XLSX.utils.json_to_sheet(data)
@@ -598,6 +633,61 @@ export default function AdjustmentInvoiceManager({
           </button>
         </div>
         </div>
+
+        {/* 즉시 적용 클라이언트 필터 (PR #114) — 납부방법 / 발송 / 납부 */}
+        <div className="flex flex-wrap items-center gap-3 px-1 py-2 border-t border-gray-200">
+          <span className="text-xs font-medium text-gray-500">필터</span>
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-gray-600">납부방법</label>
+            <select
+              value={paymentMethodFilter}
+              onChange={(e) =>
+                setPaymentMethodFilter(
+                  e.target.value as typeof paymentMethodFilter,
+                )
+              }
+              className="px-2 py-1 text-xs border border-gray-300 rounded"
+            >
+              <option value="all">전체</option>
+              <option value="미확인">미확인</option>
+              <option value="자동이체">자동이체</option>
+              <option value="직접입금">직접입금</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-gray-600">발송</label>
+            <select
+              value={sentFilter}
+              onChange={(e) => setSentFilter(e.target.value as typeof sentFilter)}
+              className="px-2 py-1 text-xs border border-gray-300 rounded"
+            >
+              <option value="all">전체</option>
+              <option value="sent">발송 완료</option>
+              <option value="unsent">미발송</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-gray-600">납부</label>
+            <select
+              value={paidFilter}
+              onChange={(e) => setPaidFilter(e.target.value as typeof paidFilter)}
+              className="px-2 py-1 text-xs border border-gray-300 rounded"
+            >
+              <option value="all">전체</option>
+              <option value="paid">납부 완료</option>
+              <option value="unpaid">미납</option>
+            </select>
+          </div>
+          {clientFiltersActive && (
+            <button
+              type="button"
+              onClick={resetClientFilters}
+              className="text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
+            >
+              필터 초기화
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 테이블 — 내부 스크롤 컨테이너. thead 가 이 컨테이너 기준 sticky top-0 */}
@@ -629,6 +719,7 @@ export default function AdjustmentInvoiceManager({
               <th className="text-center p-2 bg-blue-50">부가세</th>
               <th className="text-center p-2 bg-blue-50 font-semibold">최종청구액</th>
               <th className="text-center p-2">납부방법</th>
+              <th className="text-center p-2" title="청구서 발송 완료 여부">발송</th>
               <th className="text-center p-2">납부</th>
               <th className="text-center p-2 w-20">작업</th>
             </tr>
@@ -646,7 +737,7 @@ export default function AdjustmentInvoiceManager({
             ))}
             {visibleRows.length === 0 && (
               <tr>
-                <td colSpan={16} className="text-center py-12 text-gray-400 text-sm">
+                <td colSpan={17} className="text-center py-12 text-gray-400 text-sm">
                   데이터가 없습니다.{' '}
                   <button onClick={handleLoadClients} className="text-indigo-600 underline">
                     고객사 불러오기
@@ -674,7 +765,11 @@ export default function AdjustmentInvoiceManager({
                 <td className="p-2 text-right tabular-nums bg-blue-50">{formatCurrency(totals.supplyAmount)}</td>
                 <td className="p-2 text-right tabular-nums bg-blue-50">{formatCurrency(totals.vatAmount)}</td>
                 <td className="p-2 text-right tabular-nums bg-blue-50 font-bold">{formatCurrency(totals.totalAmount)}</td>
-                <td colSpan={2} className="p-2 text-center text-xs text-gray-600">
+                <td className="p-2" />
+                <td className="p-2 text-center text-xs text-gray-600">
+                  완료 {totals.sentCount} / 미발송 {totals.unsentCount}
+                </td>
+                <td className="p-2 text-center text-xs text-gray-600">
                   완료 {totals.paidCount} / 미납 {totals.unpaidCount}
                 </td>
                 <td />
@@ -732,6 +827,7 @@ export default function AdjustmentInvoiceManager({
                     vatAmount: nr.vatAmount,
                     totalAmount: nr.totalAmount,
                     paymentMethod: nr.paymentMethod,
+                    isSent: nr.isSent,
                     isPaid: nr.isPaid,
                     clientName: nr.clientName || r.clientName,
                     isDirty: true,
@@ -777,6 +873,7 @@ function invoiceToRow(
     vatAmount: inv.vat_amount ?? 0,
     totalAmount: inv.total_amount ?? 0,
     paymentMethod: inv.payment_method ?? '미확인',
+    isSent: inv.is_sent ?? false,
     isPaid: inv.is_paid ?? false,
     isDirty: false,
     isDeleted: false,
@@ -811,6 +908,7 @@ function rowToPayload(
     final_fee: row.totalAmount,
     year,
     payment_method: row.paymentMethod,
+    is_sent: row.isSent,
     is_paid: row.isPaid,
   }
 }

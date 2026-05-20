@@ -24,6 +24,7 @@ type UpsertPayload = {
   final_fee: number
   year: number
   payment_method: string
+  is_sent: boolean
   is_paid: boolean
 }
 
