@@ -118,7 +118,15 @@ export async function saveIncomeTaxReportFull(reportId: string, input: SaveInput
     .select('id, client_id')
     .single()
 
-  if (error) throw new Error(`보고서 저장 실패: ${error.message}`)
+  if (error) {
+    // PostgreSQL 42703 = undefined_column. 마이그레이션 누락 케이스 친화적 메시지 (PR #116).
+    if (error.code === '42703' || /column .* does not exist/i.test(error.message)) {
+      throw new Error(
+        `DB 마이그레이션이 필요합니다 — Supabase SQL 에디터에서 최신 migrations/v*.sql 을 실행해 주세요. (원본 에러: ${error.message})`,
+      )
+    }
+    throw new Error(`보고서 저장 실패: ${error.message}`)
+  }
 
   revalidatePath('/reports/income-tax')
   if (data.client_id) revalidatePath(`/reports/income-tax/${data.client_id}`)
