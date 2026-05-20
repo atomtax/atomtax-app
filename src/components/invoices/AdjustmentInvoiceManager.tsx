@@ -109,6 +109,7 @@ export default function AdjustmentInvoiceManager({
       taxCreditAdditional: 0, faithfulReportFee: 0, discount: 0,
       maemaeDiscount: 0,
       supplyAmount: 0, vatAmount: 0, totalAmount: 0,
+      sentCount: 0, unsentCount: 0,
       paidCount: 0, unpaidCount: 0,
     }
     for (const r of visibleRows) {
@@ -122,6 +123,7 @@ export default function AdjustmentInvoiceManager({
       acc.supplyAmount += r.supplyAmount
       acc.vatAmount += r.vatAmount
       acc.totalAmount += r.totalAmount
+      if (r.isSent) acc.sentCount++; else acc.unsentCount++
       if (r.isPaid) acc.paidCount++; else acc.unpaidCount++
     }
     return acc
@@ -633,6 +635,7 @@ export default function AdjustmentInvoiceManager({
               <th className="text-center p-2 bg-blue-50">부가세</th>
               <th className="text-center p-2 bg-blue-50 font-semibold">최종청구액</th>
               <th className="text-center p-2">납부방법</th>
+              <th className="text-center p-2" title="청구서 발송 완료 여부">발송</th>
               <th className="text-center p-2">납부</th>
               <th className="text-center p-2 w-20">작업</th>
             </tr>
@@ -650,7 +653,7 @@ export default function AdjustmentInvoiceManager({
             ))}
             {visibleRows.length === 0 && (
               <tr>
-                <td colSpan={16} className="text-center py-12 text-gray-400 text-sm">
+                <td colSpan={17} className="text-center py-12 text-gray-400 text-sm">
                   데이터가 없습니다.{' '}
                   <button onClick={handleLoadClients} className="text-indigo-600 underline">
                     고객사 불러오기
@@ -678,7 +681,11 @@ export default function AdjustmentInvoiceManager({
                 <td className="p-2 text-right tabular-nums bg-blue-50">{formatCurrency(totals.supplyAmount)}</td>
                 <td className="p-2 text-right tabular-nums bg-blue-50">{formatCurrency(totals.vatAmount)}</td>
                 <td className="p-2 text-right tabular-nums bg-blue-50 font-bold">{formatCurrency(totals.totalAmount)}</td>
-                <td colSpan={2} className="p-2 text-center text-xs text-gray-600">
+                <td className="p-2" />
+                <td className="p-2 text-center text-xs text-gray-600">
+                  완료 {totals.sentCount} / 미발송 {totals.unsentCount}
+                </td>
+                <td className="p-2 text-center text-xs text-gray-600">
                   완료 {totals.paidCount} / 미납 {totals.unpaidCount}
                 </td>
                 <td />
