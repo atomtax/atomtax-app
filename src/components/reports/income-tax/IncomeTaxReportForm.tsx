@@ -41,7 +41,12 @@ function recalculate(d: IncomeTaxReport): IncomeTaxReport {
   const payable = total_tax - d.income_prepaid_tax
   const within_deadline = payable - d.income_stock_deduct + d.income_stock_add - d.income_installment
   const final_payable = within_deadline - d.income_refund_offset
-  const local_tax = Math.floor(final_payable * 0.1)
+  // 지방소득세: 자동계산(납부할 총세액 × 10%) — override 있으면 그 값 사용 (PR #115)
+  const local_tax_auto = Math.floor(final_payable * 0.1)
+  const local_tax =
+    d.income_local_tax_override !== null && d.income_local_tax_override !== undefined
+      ? Number(d.income_local_tax_override)
+      : local_tax_auto
   // 농어촌특별세: 사용자가 직접 입력. final_with_local 에 더해 단일 합계 표시
   const farm_special = Number(d.farm_special_tax) || 0
   const final_with_local = final_payable + local_tax + farm_special
