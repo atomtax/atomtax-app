@@ -196,6 +196,14 @@ export function IncomeTaxSummaryPage({
                       {row.sublabel}
                     </span>
                   )}
+                  {/* 지방세 override 표시 (PR #115) */}
+                  {row.incomeKey === 'income_local_tax' &&
+                    report.income_local_tax_override !== null &&
+                    report.income_local_tax_override !== undefined && (
+                      <span style={{ fontSize: '10px', color: '#b45309', marginLeft: '6px', fontWeight: 600 }}>
+                        (수동입력)
+                      </span>
+                    )}
                 </div>
 
                 {/* 종합소득세 값 */}
