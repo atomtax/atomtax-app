@@ -82,6 +82,7 @@ export async function saveIncomeTaxReportFull(reportId: string, input: SaveInput
       income_refund_offset: input.income_refund_offset,
       income_final_payable: input.income_final_payable,
       income_local_tax: input.income_local_tax,
+      income_local_tax_override: input.income_local_tax_override,
       income_final_with_local: input.income_final_with_local,
       farm_special_tax: input.farm_special_tax,
       rural_total: input.rural_total,

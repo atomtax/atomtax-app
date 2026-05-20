@@ -315,6 +315,8 @@ export interface IncomeTaxReport {
   income_refund_offset: number
   income_final_payable: number
   income_local_tax: number
+  /** v37: 지방소득세 수동 override. NULL이면 자동계산(납부할 총세액 × 10%) 사용. */
+  income_local_tax_override: number | null
   income_final_with_local: number
   /** v28: 농어촌특별세 (사용자 직접 입력, 기본 0). final_with_local 합계에 더해짐 */
   farm_special_tax: number
