@@ -65,6 +65,11 @@ export default function AdjustmentInvoiceManager({
   const [pendingManagerFilter, setPendingManagerFilter] = useState('all')
   const [appliedManagerFilter, setAppliedManagerFilter] = useState('all')
 
+  // 즉시 적용되는 클라이언트 측 필터 (PR #114) — 조회 버튼 없이 useMemo 갱신
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<'all' | '자동이체' | '직접입금' | '미확인'>('all')
+  const [sentFilter, setSentFilter] = useState<'all' | 'sent' | 'unsent'>('all')
+  const [paidFilter, setPaidFilter] = useState<'all' | 'paid' | 'unpaid'>('all')
+
   const managerMap = useMemo(() => {
     const m = new Map<string, string | null>()
     for (const c of initialClients) m.set(c.id, c.manager ?? null)
@@ -94,9 +99,33 @@ export default function AdjustmentInvoiceManager({
         const client = initialClients.find((c) => c.id === r.clientId)
         if (!client || client.manager !== appliedManagerFilter) return false
       }
+      // 클라이언트 측 즉시 필터 (PR #114)
+      if (paymentMethodFilter !== 'all' && r.paymentMethod !== paymentMethodFilter) return false
+      if (sentFilter === 'sent' && !r.isSent) return false
+      if (sentFilter === 'unsent' && r.isSent) return false
+      if (paidFilter === 'paid' && !r.isPaid) return false
+      if (paidFilter === 'unpaid' && r.isPaid) return false
       return true
     })
-  }, [rows, appliedManagerFilter, initialClients])
+  }, [
+    rows,
+    appliedManagerFilter,
+    initialClients,
+    paymentMethodFilter,
+    sentFilter,
+    paidFilter,
+  ])
+
+  const clientFiltersActive =
+    paymentMethodFilter !== 'all' ||
+    sentFilter !== 'all' ||
+    paidFilter !== 'all'
+
+  function resetClientFilters() {
+    setPaymentMethodFilter('all')
+    setSentFilter('all')
+    setPaidFilter('all')
+  }
 
   const managers = useMemo(
     () => [...new Set(initialClients.map((c) => c.manager).filter((m): m is string => !!m))],
@@ -603,6 +632,61 @@ export default function AdjustmentInvoiceManager({
             일괄 출력
           </button>
         </div>
+        </div>
+
+        {/* 즉시 적용 클라이언트 필터 (PR #114) — 납부방법 / 발송 / 납부 */}
+        <div className="flex flex-wrap items-center gap-3 px-1 py-2 border-t border-gray-200">
+          <span className="text-xs font-medium text-gray-500">필터</span>
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-gray-600">납부방법</label>
+            <select
+              value={paymentMethodFilter}
+              onChange={(e) =>
+                setPaymentMethodFilter(
+                  e.target.value as typeof paymentMethodFilter,
+                )
+              }
+              className="px-2 py-1 text-xs border border-gray-300 rounded"
+            >
+              <option value="all">전체</option>
+              <option value="미확인">미확인</option>
+              <option value="자동이체">자동이체</option>
+              <option value="직접입금">직접입금</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-gray-600">발송</label>
+            <select
+              value={sentFilter}
+              onChange={(e) => setSentFilter(e.target.value as typeof sentFilter)}
+              className="px-2 py-1 text-xs border border-gray-300 rounded"
+            >
+              <option value="all">전체</option>
+              <option value="sent">발송 완료</option>
+              <option value="unsent">미발송</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-gray-600">납부</label>
+            <select
+              value={paidFilter}
+              onChange={(e) => setPaidFilter(e.target.value as typeof paidFilter)}
+              className="px-2 py-1 text-xs border border-gray-300 rounded"
+            >
+              <option value="all">전체</option>
+              <option value="paid">납부 완료</option>
+              <option value="unpaid">미납</option>
+            </select>
+          </div>
+          {clientFiltersActive && (
+            <button
+              type="button"
+              onClick={resetClientFilters}
+              className="text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
+            >
+              필터 초기화
+            </button>
+          )}
         </div>
       </div>
 
