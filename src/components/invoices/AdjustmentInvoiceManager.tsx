@@ -9,9 +9,10 @@ import {
   calculateInvoiceRow,
   isMaemaeBusinessCode,
 } from '@/lib/calculators/fee-schedule'
-import { saveInvoiceBatch } from '@/app/actions/adjustment-invoices'
+import { saveInvoiceBatch, updateInvoiceField } from '@/app/actions/adjustment-invoices'
 import { downloadInvoice, downloadInvoicesBatch } from '@/lib/utils/invoice-export'
 import { formatCurrency } from '@/lib/utils/format'
+import Toast, { type ToastType } from '@/components/ui/Toast'
 import InvoiceRow from './InvoiceRow'
 import InvoicePreviewModal from './InvoicePreviewModal'
 import ExcelImportModal from './ExcelImportModal'
@@ -91,6 +92,7 @@ export default function AdjustmentInvoiceManager({
   const [batchExportModalOpen, setBatchExportModalOpen] = useState(false)
   const [batchExporting, setBatchExporting] = useState(false)
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | undefined>()
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
 
   const visibleRows = useMemo(() => {
     return rows.filter((r) => {
@@ -205,6 +207,53 @@ export default function AdjustmentInvoiceManager({
         return next
       })
     )
+  }
+
+  /**
+   * 단일 필드 즉시 저장 (PR #119) — 납부방법/발송/납부 토글 시 호출.
+   * DB에 이미 저장된 행(dbId 있음)에만 적용. 새 행은 일반 updateCell로 처리되어
+   * 다음 [저장] 시 INSERT됨.
+   *
+   * 흐름:
+   *  1. 낙관적 UI 업데이트 (즉시 반영, isDirty 갱신 X)
+   *  2. updateInvoiceField 서버 액션 호출
+   *  3. 실패 시 이전 값으로 롤백 + 에러 토스트
+   */
+  async function immediateSaveField(
+    rowId: string,
+    field: 'paymentMethod' | 'isSent' | 'isPaid',
+    value: RowState['paymentMethod'] | boolean,
+  ) {
+    const target = rows.find((r) => r.rowId === rowId)
+    if (!target || !target.dbId) {
+      // 새 행(dbId 없음) — 일반 updateCell 흐름 사용 (저장 버튼 시 INSERT)
+      updateCell(rowId, field, value)
+      return
+    }
+    const previous = target[field]
+
+    // 1. 낙관적 업데이트 (isDirty 켜지 않음 — 즉시 저장되므로)
+    setRows((prev) =>
+      prev.map((r) => (r.rowId === rowId ? { ...r, [field]: value } : r)),
+    )
+
+    // 2. 서버 액션
+    const dbField =
+      field === 'paymentMethod' ? 'payment_method'
+      : field === 'isSent' ? 'is_sent'
+      : 'is_paid'
+    try {
+      await updateInvoiceField(target.dbId, dbField, value)
+    } catch (e) {
+      // 3. 실패 시 롤백
+      setRows((prev) =>
+        prev.map((r) => (r.rowId === rowId ? { ...r, [field]: previous } : r)),
+      )
+      setToast({
+        message: `저장 실패: ${e instanceof Error ? e.message : String(e)}`,
+        type: 'error',
+      })
+    }
   }
 
   function resetMaemaeDiscount(rowId: string) {
@@ -731,6 +780,7 @@ export default function AdjustmentInvoiceManager({
                 row={row}
                 managers={managers}
                 onChangeCell={updateCell}
+                onImmediateSave={immediateSaveField}
                 onPrint={handlePrintPreview}
                 onDelete={handleDeleteRow}
                 onResetMaemaeDiscount={resetMaemaeDiscount}
@@ -841,6 +891,14 @@ export default function AdjustmentInvoiceManager({
             setExcelModalOpen(false)
             alert(`엑셀 업로드 완료: ${newRows.length}건 처리됨`)
           }}
+        />
+      )}
+
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
         />
       )}
     </div>

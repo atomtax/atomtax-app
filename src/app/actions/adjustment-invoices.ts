@@ -74,3 +74,23 @@ export async function saveInvoiceBatch(input: {
 
   return { refreshedInvoices: (data ?? []) as AdjustmentInvoice[] }
 }
+
+/**
+ * 단일 필드 즉시 저장 (PR #119). DB에 이미 존재하는 청구서(dbId 있음)의
+ * payment_method / is_sent / is_paid 토글을 액션 즉시 부분 UPDATE.
+ *
+ * revalidatePath 호출하지 않음 — 클라이언트 측 낙관적 업데이트로 화면 갱신.
+ * (PR #95 회고: 백그라운드 RSC refetch race 회피)
+ */
+export async function updateInvoiceField(
+  id: string,
+  field: 'payment_method' | 'is_sent' | 'is_paid',
+  value: string | boolean,
+): Promise<void> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('adjustment_invoices')
+    .update({ [field]: value })
+    .eq('id', id)
+  if (error) throw new Error(`${field} 저장 실패: ${error.message}`)
+}

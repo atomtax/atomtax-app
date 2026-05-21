@@ -10,6 +10,12 @@ type Props = {
   /** 수동 행(고객사 미연결)의 담당자 select 옵션 목록 (PR #117). 부모와 동일 소스. */
   managers: string[]
   onChangeCell: (rowId: string, field: keyof RowState, value: RowState[keyof RowState]) => void
+  /** 납부방법/발송/납부 즉시 저장 (PR #119). DB에 이미 있는 행만 부분 UPDATE. */
+  onImmediateSave: (
+    rowId: string,
+    field: 'paymentMethod' | 'isSent' | 'isPaid',
+    value: RowState['paymentMethod'] | boolean,
+  ) => void
   onPrint: (rowId: string) => void
   onDelete: (rowId: string) => void
   onResetMaemaeDiscount: (rowId: string) => void
@@ -19,6 +25,7 @@ export default function InvoiceRow({
   row,
   managers,
   onChangeCell,
+  onImmediateSave,
   onPrint,
   onDelete,
   onResetMaemaeDiscount,
@@ -124,8 +131,15 @@ export default function InvoiceRow({
       <td className="p-1 text-center">
         <select
           value={row.paymentMethod}
-          onChange={(e) => onChangeCell(row.rowId, 'paymentMethod', e.target.value as RowState['paymentMethod'])}
+          onChange={(e) =>
+            onImmediateSave(
+              row.rowId,
+              'paymentMethod',
+              e.target.value as RowState['paymentMethod'],
+            )
+          }
           className="px-1 py-1 text-xs border border-gray-200 rounded bg-white"
+          title="변경 시 즉시 저장 (PR #119)"
         >
           <option value="미확인">미확인</option>
           <option value="자동이체">자동이체</option>
@@ -136,15 +150,16 @@ export default function InvoiceRow({
         <input
           type="checkbox"
           checked={row.isSent}
-          onChange={(e) => onChangeCell(row.rowId, 'isSent', e.target.checked)}
-          title="청구서 발송 완료 여부"
+          onChange={(e) => onImmediateSave(row.rowId, 'isSent', e.target.checked)}
+          title="청구서 발송 완료 여부 (즉시 저장)"
         />
       </td>
       <td className="p-2 text-center">
         <input
           type="checkbox"
           checked={row.isPaid}
-          onChange={(e) => onChangeCell(row.rowId, 'isPaid', e.target.checked)}
+          onChange={(e) => onImmediateSave(row.rowId, 'isPaid', e.target.checked)}
+          title="납부 완료 여부 (즉시 저장)"
         />
       </td>
       <td className="p-1 text-center whitespace-nowrap">
