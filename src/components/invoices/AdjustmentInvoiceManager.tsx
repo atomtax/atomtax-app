@@ -729,6 +729,7 @@ export default function AdjustmentInvoiceManager({
               <InvoiceRow
                 key={row.rowId}
                 row={row}
+                managers={managers}
                 onChangeCell={updateCell}
                 onPrint={handlePrintPreview}
                 onDelete={handleDeleteRow}
