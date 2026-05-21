@@ -7,6 +7,8 @@ import type { RowState } from './AdjustmentInvoiceManager'
 
 type Props = {
   row: RowState
+  /** 수동 행(고객사 미연결)의 담당자 select 옵션 목록 (PR #117). 부모와 동일 소스. */
+  managers: string[]
   onChangeCell: (rowId: string, field: keyof RowState, value: RowState[keyof RowState]) => void
   onPrint: (rowId: string) => void
   onDelete: (rowId: string) => void
@@ -15,6 +17,7 @@ type Props = {
 
 export default function InvoiceRow({
   row,
+  managers,
   onChangeCell,
   onPrint,
   onDelete,
@@ -34,13 +37,31 @@ export default function InvoiceRow({
       </td>
       <td className="p-1 text-center whitespace-nowrap min-w-[80px]">
         {isManualRow ? (
-          <input
-            type="text"
-            value={row.manager ?? ''}
-            onChange={(e) => onChangeCell(row.rowId, 'manager', e.target.value || null)}
-            placeholder="담당자"
-            className="w-20 px-1 py-1 border border-gray-200 rounded bg-white text-sm text-center"
-          />
+          (() => {
+            // 옛 담당자값이 목록에 없으면 옵션에 추가하여 보존 (PR #117)
+            const current = row.manager ?? ''
+            const options =
+              current && !managers.includes(current)
+                ? [current, ...managers]
+                : managers
+            return (
+              <select
+                value={current}
+                onChange={(e) =>
+                  onChangeCell(row.rowId, 'manager', e.target.value || null)
+                }
+                className="w-20 px-1 py-1 border border-gray-200 rounded bg-white text-sm text-center"
+                title="담당자 선택 (위쪽 드롭박스와 동일 목록)"
+              >
+                <option value="">선택</option>
+                {options.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            )
+          })()
         ) : (
           <span className="text-sm text-gray-700">{row.manager ?? '-'}</span>
         )}
