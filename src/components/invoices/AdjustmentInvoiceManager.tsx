@@ -96,8 +96,9 @@ export default function AdjustmentInvoiceManager({
     return rows.filter((r) => {
       if (r.isDeleted) return false
       if (appliedManagerFilter !== 'all') {
-        const client = initialClients.find((c) => c.id === r.clientId)
-        if (!client || client.manager !== appliedManagerFilter) return false
+        // RowState.manager는 자동 연결 행은 clients.manager, 수동 행은 inv.manager(DB)를
+        // 통합해서 들고 있으므로 r.manager 한 곳만 비교하면 양쪽 모두 매칭됨 (PR #118).
+        if (r.manager !== appliedManagerFilter) return false
       }
       // 클라이언트 측 즉시 필터 (PR #114)
       if (paymentMethodFilter !== 'all' && r.paymentMethod !== paymentMethodFilter) return false
@@ -110,7 +111,6 @@ export default function AdjustmentInvoiceManager({
   }, [
     rows,
     appliedManagerFilter,
-    initialClients,
     paymentMethodFilter,
     sentFilter,
     paidFilter,
