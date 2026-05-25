@@ -104,11 +104,12 @@ export function parseIncomeTaxTable(text: string): ParsedIncomeTaxData {
     )
   }
 
-  // v28 농특세 단일 필드 — "충당후 납부할 세액" 행의 농특세 컬럼을 우선 사용.
-  // 표에 따라 행 누락 가능성 있어 가장 final 한 값부터 폴백.
+  // v28 농특세 단일 필드 — "납부(환급)할 총세액" 행의 농특세 컬럼 사용 (PR #120).
+  // 기존엔 rural_final_payable(충당후) / rural_within_deadline(신고기한내)을 먼저
+  // 잡아 분납 차감된 값(예: 1,957,501)이 들어가는 버그가 있었음.
+  // 농특세는 PR #99에서 UI 단순화 기준과 동일하게 "납부(환급)할 총세액"(rural_payable)
+  // 을 우선 사용. 그 행이 없을 때만 합계/결정세액 합계로 폴백 (분납·충당 행은 제외).
   const farmCandidate =
-    result.rural_final_payable ??
-    result.rural_within_deadline ??
     result.rural_payable ??
     result.rural_total_tax ??
     result.rural_determined_total
