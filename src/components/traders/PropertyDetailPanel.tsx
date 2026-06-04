@@ -25,6 +25,7 @@ import {
   type PriorAmounts,
 } from '@/app/actions/trader-properties'
 import Toast, { type ToastType } from '@/components/ui/Toast'
+import { AreaInput } from '@/components/calculator/AreaInput'
 import { EXPENSE_NAMES } from '@/lib/constants/property-expense'
 import { PROGRESS_OPTIONS, PROGRESS_STYLES } from '@/lib/constants/property-progress'
 import {
@@ -646,13 +647,9 @@ export function PropertyDetailPanel({
               <label className="text-xs font-medium text-gray-600 whitespace-nowrap">
                 토지면적
               </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={formatNumberWithCommas(property.land_area)}
-                onChange={(e) =>
-                  onChange({ land_area: parseNumberFromCommas(e.target.value) })
-                }
+              <AreaInput
+                value={Number(property.land_area) || 0}
+                onChange={(v) => onChange({ land_area: v })}
                 placeholder="0"
                 className="w-24 px-2 py-1 border border-gray-200 rounded text-sm text-right tabular-nums focus:border-indigo-500 focus:outline-none"
               />
@@ -663,13 +660,9 @@ export function PropertyDetailPanel({
               <label className="text-xs font-medium text-gray-600 whitespace-nowrap">
                 건물면적
               </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={formatNumberWithCommas(property.building_area)}
-                onChange={(e) =>
-                  onChange({ building_area: parseNumberFromCommas(e.target.value) })
-                }
+              <AreaInput
+                value={Number(property.building_area) || 0}
+                onChange={(v) => onChange({ building_area: v })}
                 placeholder="0"
                 className="w-24 px-2 py-1 border border-gray-200 rounded text-sm text-right tabular-nums focus:border-indigo-500 focus:outline-none"
               />
