@@ -15,6 +15,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import {
+  calculatePriorAmounts,
   calculatePropertyTax,
   clearPriorPrepaidOverride,
   deleteProperty,
@@ -105,8 +106,11 @@ export function PropertyDetailPanel({
     setPropertyName(property.property_name)
   }, [property.property_name])
 
-  // 페이지 진입 시 server 호출 없이 override 값만으로 stub 구성.
-  // 자동계산은 [세금계산] 버튼 클릭 시에만 명시적으로 수행.
+  // 1) 즉시: server 호출 없이 override 값만으로 stub 구성.
+  // 2) 행 expand 시 비동기로 calculatePriorAmounts 호출 — override가 NULL인 필드만
+  //    이전 물건들에서 합산하여 표시 (PR #122).
+  // 🛡️ 단방향 원칙: SELECT only — 다른 물건 DB 절대 수정 X (calculatePriorAmounts 자체가 SELECT만).
+  // 자동 prepaid_income_tax/prepaid_local_tax 저장은 [세금계산] 클릭 시에만 (기존 동작 그대로).
   useEffect(() => {
     const incomeOverride = property.prior_transfer_income_override
     const prepaidIncomeOverride = property.prior_prepaid_income_tax_override
@@ -134,6 +138,41 @@ export function PropertyDetailPanel({
     setPriorPrepaidLocalInput(
       prepaidLocalOverride !== null ? formatNumberWithCommas(prepaidLocalOverride) : '',
     )
+
+    // 모든 필드에 override가 있으면 server 호출 불필요 (성능)
+    const allOverridden =
+      incomeOverride !== null &&
+      prepaidIncomeOverride !== null &&
+      prepaidLocalOverride !== null
+    if (allOverridden) return
+
+    let cancelled = false
+    calculatePriorAmounts(property.id)
+      .then((result) => {
+        if (cancelled) return
+        setPrior(result)
+        // override가 NULL인 필드만 자동값으로 input 채움. 사용자 입력 보존.
+        if (incomeOverride === null) {
+          setPriorInput(formatNumberWithCommas(result.priorTransferIncome))
+        }
+        if (prepaidIncomeOverride === null) {
+          setPriorPrepaidIncomeInput(
+            formatNumberWithCommas(result.priorPrepaidIncomeTax),
+          )
+        }
+        if (prepaidLocalOverride === null) {
+          setPriorPrepaidLocalInput(
+            formatNumberWithCommas(result.priorPrepaidLocalTax),
+          )
+        }
+      })
+      .catch((e) => {
+        if (cancelled) return
+        console.error('[calculatePriorAmounts auto on expand]', e)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [
     property.id,
     property.prior_transfer_income_override,
