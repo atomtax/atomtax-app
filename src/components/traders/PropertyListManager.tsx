@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, useTransition } from 'react'
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Save, Building, FileText, FolderOpen } from 'lucide-react'
 import { addProperty, updateProperty } from '@/app/actions/trader-properties'
@@ -28,6 +28,19 @@ export function PropertyListManager({
   useEffect(() => {
     setProperties(initialProperties)
   }, [initialProperties])
+
+  // PR #124: tax_category 기준 2섹션 분리 (매매사업자/양도소득세)
+  const tradeProperties = useMemo(
+    () =>
+      properties.filter(
+        (p) => (p.tax_category ?? '매매사업자') === '매매사업자',
+      ),
+    [properties],
+  )
+  const transferTaxProperties = useMemo(
+    () => properties.filter((p) => p.tax_category === '양도소득세'),
+    [properties],
+  )
 
   function handleAddRow() {
     startTransition(async () => {
@@ -139,18 +152,56 @@ export function PropertyListManager({
                 </td>
               </tr>
             ) : (
-              properties.map((property) => (
-                <PropertyRow
-                  key={property.id}
-                  property={property}
-                  clientName={clientName}
-                  clientFolder={clientFolder}
-                  isExpanded={expandedRows.has(property.id)}
-                  // 인라인 arrow function 대신 안정화된 dispatcher 전달 — React.memo 효과 발휘
-                  onToggle={toggleExpand}
-                  onChange={handlePropertyChange}
-                />
-              ))
+              <>
+                {/* 매매사업자 섹션 (PR #124) — 종소세 합산 대상. 물건 없으면 섹션 자체 숨김 */}
+                {tradeProperties.length > 0 && (
+                  <>
+                    <tr className="bg-purple-50 border-y border-purple-200">
+                      <td
+                        colSpan={9}
+                        className="px-3 py-1.5 text-xs font-extrabold tracking-wider text-brand"
+                      >
+                        매매사업자 · {tradeProperties.length}건 (종소세 합산 대상)
+                      </td>
+                    </tr>
+                    {tradeProperties.map((property) => (
+                      <PropertyRow
+                        key={property.id}
+                        property={property}
+                        clientName={clientName}
+                        clientFolder={clientFolder}
+                        isExpanded={expandedRows.has(property.id)}
+                        onToggle={toggleExpand}
+                        onChange={handlePropertyChange}
+                      />
+                    ))}
+                  </>
+                )}
+                {/* 양도소득세 섹션 (PR #124) — 합산 제외, 체크리스트만 */}
+                {transferTaxProperties.length > 0 && (
+                  <>
+                    <tr className="bg-amber-50 border-y border-amber-200">
+                      <td
+                        colSpan={9}
+                        className="px-3 py-1.5 text-xs font-extrabold tracking-wider text-amber-700"
+                      >
+                        양도소득세 · {transferTaxProperties.length}건 (합산 제외 · 체크리스트만)
+                      </td>
+                    </tr>
+                    {transferTaxProperties.map((property) => (
+                      <PropertyRow
+                        key={property.id}
+                        property={property}
+                        clientName={clientName}
+                        clientFolder={clientFolder}
+                        isExpanded={expandedRows.has(property.id)}
+                        onToggle={toggleExpand}
+                        onChange={handlePropertyChange}
+                      />
+                    ))}
+                  </>
+                )}
+              </>
             )}
           </tbody>
         </table>
