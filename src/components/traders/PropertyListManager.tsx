@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Save, Building, FileText, FolderOpen } from 'lucide-react'
-import { addProperty, updateProperty } from '@/app/actions/trader-properties'
+import { addProperty, updateProperty, updatePropertyField } from '@/app/actions/trader-properties'
 import { PropertyRow } from './PropertyRow'
 import type { TraderProperty } from '@/types/database'
 
@@ -69,6 +69,41 @@ export function PropertyListManager({
       )
     },
     [],
+  )
+
+  /**
+   * 단일 필드 즉시 저장 (PR #126) — 종류(property_type) / 세금 구분(tax_category).
+   * 1. 낙관적 UI 업데이트
+   * 2. 서버 액션 호출
+   * 3. 실패 시 이전 값으로 롤백 + alert
+   */
+  const handleImmediateSaveField = useCallback(
+    async (
+      propertyId: string,
+      field: 'property_type' | 'tax_category',
+      value: string | null,
+    ) => {
+      const target = properties.find((p) => p.id === propertyId)
+      if (!target) return
+      const previous = target[field] as string | null
+
+      // 1. 낙관적 업데이트
+      setProperties((prev) =>
+        prev.map((p) => (p.id === propertyId ? { ...p, [field]: value } : p)),
+      )
+
+      // 2. 서버 저장
+      try {
+        await updatePropertyField(propertyId, field, value)
+      } catch (e) {
+        // 3. 실패 시 롤백
+        setProperties((prev) =>
+          prev.map((p) => (p.id === propertyId ? { ...p, [field]: previous } : p)),
+        )
+        alert(`저장 실패: ${e instanceof Error ? e.message : String(e)}`)
+      }
+    },
+    [properties],
   )
 
   function handleSaveAll() {
@@ -173,6 +208,7 @@ export function PropertyListManager({
                         isExpanded={expandedRows.has(property.id)}
                         onToggle={toggleExpand}
                         onChange={handlePropertyChange}
+                        onImmediateSaveField={handleImmediateSaveField}
                       />
                     ))}
                   </>
@@ -203,6 +239,7 @@ export function PropertyListManager({
                         isExpanded={expandedRows.has(property.id)}
                         onToggle={toggleExpand}
                         onChange={handlePropertyChange}
+                        onImmediateSaveField={handleImmediateSaveField}
                       />
                     ))}
                   </>
