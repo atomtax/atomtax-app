@@ -35,6 +35,12 @@ interface Props {
   // React.memo의 얕은 비교가 의미를 가지도록.
   onToggle: (propertyId: string) => void
   onChange: (propertyId: string, updates: Partial<TraderProperty>) => void
+  /** 종류/세금 구분 드롭다운 즉시 저장 (PR #126) */
+  onImmediateSaveField: (
+    propertyId: string,
+    field: 'property_type' | 'tax_category',
+    value: string | null,
+  ) => Promise<void> | void
 }
 
 function PropertyRowImpl({
@@ -44,12 +50,18 @@ function PropertyRowImpl({
   isExpanded,
   onToggle: onToggleProp,
   onChange: onChangeProp,
+  onImmediateSaveField: onImmediateSaveFieldProp,
 }: Props) {
   // 자식(PropertyDetailPanel)과 자체 input에 넘기는 콜백을 property.id에 바인딩하여 안정화
   const handleToggle = useCallback(() => onToggleProp(property.id), [onToggleProp, property.id])
   const handleChange = useCallback(
     (updates: Partial<TraderProperty>) => onChangeProp(property.id, updates),
     [onChangeProp, property.id],
+  )
+  const handleImmediateSaveField = useCallback(
+    (field: 'property_type' | 'tax_category', value: string | null) =>
+      onImmediateSaveFieldProp(property.id, field, value),
+    [onImmediateSaveFieldProp, property.id],
   )
   const transferIncome = useMemo(
     () =>
@@ -162,6 +174,7 @@ function PropertyRowImpl({
               clientName={clientName}
               clientFolder={clientFolder}
               onChange={handleChange}
+              onImmediateSaveField={handleImmediateSaveField}
               onCollapse={handleToggle}
             />
           </td>

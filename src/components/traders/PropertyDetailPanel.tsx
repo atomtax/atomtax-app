@@ -56,6 +56,11 @@ interface Props {
   clientName: string
   clientFolder: string | null
   onChange: (updates: Partial<TraderProperty>) => void
+  /** 종류/세금 구분 드롭다운 즉시 저장 (PR #126) */
+  onImmediateSaveField: (
+    field: 'property_type' | 'tax_category',
+    value: string | null,
+  ) => Promise<void> | void
   onCollapse: () => void
 }
 
@@ -64,6 +69,7 @@ export function PropertyDetailPanel({
   clientName,
   clientFolder,
   onChange,
+  onImmediateSaveField,
   onCollapse,
 }: Props) {
   const router = useRouter()
@@ -473,8 +479,14 @@ export function PropertyDetailPanel({
           <label className="text-xs font-medium text-gray-600">종류</label>
           <select
             value={property.property_type ?? ''}
-            onChange={(e) => onChange({ property_type: e.target.value || null })}
+            onChange={(e) => {
+              const v = e.target.value || null
+              // 낙관적 UI 갱신 + 즉시 저장 (PR #126)
+              onChange({ property_type: v })
+              onImmediateSaveField('property_type', v)
+            }}
             className="px-2 py-1.5 border border-gray-300 rounded text-sm focus:border-indigo-500 focus:outline-none"
+            title="변경 시 즉시 저장"
           >
             <option value="">선택</option>
             {PROPERTY_TYPE_OPTIONS.map((opt) => (
@@ -744,17 +756,20 @@ export function PropertyDetailPanel({
               </label>
               <select
                 value={property.tax_category ?? '매매사업자'}
-                onChange={(e) =>
-                  onChange({
-                    tax_category: e.target.value as TraderProperty['tax_category'],
-                  })
-                }
+                onChange={(e) => {
+                  const v = e.target.value as TraderProperty['tax_category']
+                  // 낙관적 UI 갱신 + 즉시 저장 (PR #126).
+                  // state 갱신만으로 PropertyListManager의 useMemo가 재계산되어
+                  // 해당 물건이 즉시 반대 섹션(매매사업자↔양도소득세)으로 이동.
+                  onChange({ tax_category: v })
+                  onImmediateSaveField('tax_category', v)
+                }}
                 className={`px-2 py-1 border rounded text-sm focus:border-indigo-500 focus:outline-none ${
                   property.tax_category === '양도소득세'
                     ? 'border-amber-300 bg-amber-50 text-amber-800'
                     : 'border-gray-200 bg-white'
                 }`}
-                title="양도소득세 선택 시 종소세 합산/결산참고/보고서에서 제외 (체크리스트는 유지)"
+                title="양도소득세 선택 시 종소세 합산/결산참고/보고서에서 제외 (체크리스트는 유지). 변경 시 즉시 저장."
               >
                 <option value="매매사업자">매매사업자</option>
                 <option value="양도소득세">양도소득세</option>

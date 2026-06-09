@@ -329,6 +329,33 @@ export async function deleteProperty(propertyId: string): Promise<void> {
   if (clientId) revalidatePath(`/traders/${clientId}`)
 }
 
+/**
+ * 단일 물건의 단일 필드 즉시 저장 (PR #126).
+ * 종류(property_type) / 세금 구분(tax_category) 같은 드롭다운에서 사용.
+ *
+ * - revalidatePath 호출하지 않음 (PR #95 race 회피, 클라이언트 낙관적 업데이트로 갱신)
+ * - tax_category 컬럼 미존재(v38 미실행) 시 42703 → 친화 메시지 변환 (PR #114)
+ */
+export async function updatePropertyField(
+  propertyId: string,
+  field: 'property_type' | 'tax_category',
+  value: string | null,
+): Promise<void> {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('trader_properties')
+    .update({ [field]: value, updated_at: new Date().toISOString() })
+    .eq('id', propertyId)
+  if (error) {
+    if (error.code === '42703' || /column .* does not exist/i.test(error.message)) {
+      throw new Error(
+        `DB 마이그레이션이 필요합니다 — Supabase SQL 에디터에서 최신 migrations/v*.sql 을 실행해 주세요. (원본 에러: ${error.message})`,
+      )
+    }
+    throw new Error(`${field} 저장 실패: ${error.message}`)
+  }
+}
+
 export interface PriorAmounts {
   priorTransferIncome: number
   priorPrepaidIncomeTax: number
