@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, useTransition } from 'react'
-import * as XLSX from 'xlsx'
 import { X, Upload } from 'lucide-react'
 import type { Client, ClientInsert } from '@/types/database'
 import { saveClientsBatchAction } from '@/app/(dashboard)/clients/actions'
@@ -26,10 +25,11 @@ export default function ClientExcelImportModal({ existingClients, onClose, onImp
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setError('')
     const file = e.target.files?.[0]
     if (!file) return
+    const XLSX = await import('xlsx')
     const reader = new FileReader()
     reader.onload = (ev) => {
       try {

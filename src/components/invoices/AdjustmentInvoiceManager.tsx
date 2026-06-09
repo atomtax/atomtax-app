@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import * as XLSX from 'xlsx'
 import { Save, Plus, Download, Upload, Printer, RefreshCw, Trash2, Search } from 'lucide-react'
 import type { Client, AdjustmentInvoice } from '@/types/database'
 import {
@@ -519,7 +518,8 @@ export default function AdjustmentInvoiceManager({
     }
   }
 
-  function handleExcelDownload() {
+  async function handleExcelDownload() {
+    const XLSX = await import('xlsx')
     const data = visibleRows.map((r) => ({
       고객사명: r.clientName,
       사업자번호: r.businessNumber,

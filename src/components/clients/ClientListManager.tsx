@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useMemo, useTransition } from 'react'
-import * as XLSX from 'xlsx'
 import { Plus, Upload, Download, FileSpreadsheet, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, CalendarPlus, Factory } from 'lucide-react'
 import type { Client, ClientInsert } from '@/types/database'
 import { deleteClientAction } from '@/app/(dashboard)/clients/actions'
@@ -185,14 +184,16 @@ export default function ClientListManager({ initialClients, isTerminated = false
     }
   }
 
-  const handleTemplateDownload = () => {
+  const handleTemplateDownload = async () => {
+    const XLSX = await import('xlsx')
     const ws = XLSX.utils.aoa_to_sheet([EXCEL_HEADERS])
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, '고객사 템플릿')
     XLSX.writeFile(wb, '아톰세무회계_고객사_템플릿.xlsx')
   }
 
-  const handleExcelDownload = () => {
+  const handleExcelDownload = async () => {
+    const XLSX = await import('xlsx')
     const data = filtered.map((c): Record<string, string | number | null> => ({
       번호: c.number,
       거래처명: c.company_name,
