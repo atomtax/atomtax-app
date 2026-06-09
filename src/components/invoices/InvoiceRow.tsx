@@ -1,5 +1,6 @@
 'use client'
 
+import { memo } from 'react'
 import { Printer, RotateCcw, Trash2 } from 'lucide-react'
 import { isMaemaeBusinessCode } from '@/lib/calculators/fee-schedule'
 import { formatCurrency, parseNumberInput } from '@/lib/utils/format'
@@ -21,7 +22,7 @@ type Props = {
   onResetMaemaeDiscount: (rowId: string) => void
 }
 
-export default function InvoiceRow({
+function InvoiceRow({
   row,
   managers,
   onChangeCell,
@@ -181,6 +182,10 @@ export default function InvoiceRow({
     </tr>
   )
 }
+
+// PR #130 memo + 부모의 useCallback과 짝지어 조정료 50~100행 리렌더 비용 절감.
+// managers 배열은 부모에서 useMemo로 안정화되어 있어 얕은 비교만으로 충분.
+export default memo(InvoiceRow)
 
 function NumberCell({
   value,

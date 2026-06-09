@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, useTransition } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Save, Plus, Download, Upload, Printer, RefreshCw, Trash2, Search } from 'lucide-react'
 import type { Client, AdjustmentInvoice } from '@/types/database'
@@ -178,35 +178,46 @@ export default function AdjustmentInvoiceManager({
     }
   }
 
-  function updateCell(rowId: string, field: keyof RowState, value: RowState[keyof RowState]) {
-    setRows((prev) =>
-      prev.map((r) => {
-        if (r.rowId !== rowId) return r
-        const next = { ...r, [field]: value, isDirty: field !== 'selected' ? true : r.isDirty }
-        // 사용자가 매매업 할인을 직접 수정하면 수동 모드 ON
-        if (field === 'maemaeDiscount') {
-          next.isMaemaeDiscountManual = true
-        }
-        const calc = calculateInvoiceRow({
-          revenue: next.revenue,
-          businessType: initialBusinessType,
-          taxCreditAdditional: next.taxCreditAdditional,
-          faithfulReportFee: next.faithfulReportFee,
-          discount: next.discount,
-          isMaemaeClient: isMaemaeBusinessCode(next.businessCategoryCode),
-          isMaemaeDiscountManual: next.isMaemaeDiscountManual,
-          currentMaemaeDiscount: next.maemaeDiscount,
+  // PR #130 dispatcher 패턴 — InvoiceRow memo 안정화를 위해 rows 클로저 의존 제거.
+  // setRows의 functional 형식만 쓰는 핸들러는 자유롭게 memoize 가능하고,
+  // 읽기 전용 접근(target 찾기 등)은 rowsRef로 우회.
+  const rowsRef = useRef(rows)
+  useEffect(() => {
+    rowsRef.current = rows
+  }, [rows])
+
+  const updateCell = useCallback(
+    (rowId: string, field: keyof RowState, value: RowState[keyof RowState]) => {
+      setRows((prev) =>
+        prev.map((r) => {
+          if (r.rowId !== rowId) return r
+          const next = { ...r, [field]: value, isDirty: field !== 'selected' ? true : r.isDirty }
+          // 사용자가 매매업 할인을 직접 수정하면 수동 모드 ON
+          if (field === 'maemaeDiscount') {
+            next.isMaemaeDiscountManual = true
+          }
+          const calc = calculateInvoiceRow({
+            revenue: next.revenue,
+            businessType: initialBusinessType,
+            taxCreditAdditional: next.taxCreditAdditional,
+            faithfulReportFee: next.faithfulReportFee,
+            discount: next.discount,
+            isMaemaeClient: isMaemaeBusinessCode(next.businessCategoryCode),
+            isMaemaeDiscountManual: next.isMaemaeDiscountManual,
+            currentMaemaeDiscount: next.maemaeDiscount,
+          })
+          next.settlementFee = calc.settlementFee
+          next.adjustmentFee = calc.adjustmentFee
+          next.maemaeDiscount = calc.maemaeDiscount
+          next.supplyAmount = calc.supplyAmount
+          next.vatAmount = calc.vatAmount
+          next.totalAmount = calc.totalAmount
+          return next
         })
-        next.settlementFee = calc.settlementFee
-        next.adjustmentFee = calc.adjustmentFee
-        next.maemaeDiscount = calc.maemaeDiscount
-        next.supplyAmount = calc.supplyAmount
-        next.vatAmount = calc.vatAmount
-        next.totalAmount = calc.totalAmount
-        return next
-      })
-    )
-  }
+      )
+    },
+    [initialBusinessType],
+  )
 
   /**
    * 단일 필드 즉시 저장 (PR #119) — 납부방법/발송/납부 토글 시 호출.
@@ -218,66 +229,72 @@ export default function AdjustmentInvoiceManager({
    *  2. updateInvoiceField 서버 액션 호출
    *  3. 실패 시 이전 값으로 롤백 + 에러 토스트
    */
-  async function immediateSaveField(
-    rowId: string,
-    field: 'paymentMethod' | 'isSent' | 'isPaid',
-    value: RowState['paymentMethod'] | boolean,
-  ) {
-    const target = rows.find((r) => r.rowId === rowId)
-    if (!target || !target.dbId) {
-      // 새 행(dbId 없음) — 일반 updateCell 흐름 사용 (저장 버튼 시 INSERT)
-      updateCell(rowId, field, value)
-      return
-    }
-    const previous = target[field]
+  const immediateSaveField = useCallback(
+    async (
+      rowId: string,
+      field: 'paymentMethod' | 'isSent' | 'isPaid',
+      value: RowState['paymentMethod'] | boolean,
+    ) => {
+      const target = rowsRef.current.find((r) => r.rowId === rowId)
+      if (!target || !target.dbId) {
+        // 새 행(dbId 없음) — 일반 updateCell 흐름 사용 (저장 버튼 시 INSERT)
+        updateCell(rowId, field, value)
+        return
+      }
+      const previous = target[field]
 
-    // 1. 낙관적 업데이트 (isDirty 켜지 않음 — 즉시 저장되므로)
-    setRows((prev) =>
-      prev.map((r) => (r.rowId === rowId ? { ...r, [field]: value } : r)),
-    )
-
-    // 2. 서버 액션
-    const dbField =
-      field === 'paymentMethod' ? 'payment_method'
-      : field === 'isSent' ? 'is_sent'
-      : 'is_paid'
-    try {
-      await updateInvoiceField(target.dbId, dbField, value)
-    } catch (e) {
-      // 3. 실패 시 롤백
+      // 1. 낙관적 업데이트 (isDirty 켜지 않음 — 즉시 저장되므로)
       setRows((prev) =>
-        prev.map((r) => (r.rowId === rowId ? { ...r, [field]: previous } : r)),
+        prev.map((r) => (r.rowId === rowId ? { ...r, [field]: value } : r)),
       )
-      setToast({
-        message: `저장 실패: ${e instanceof Error ? e.message : String(e)}`,
-        type: 'error',
-      })
-    }
-  }
 
-  function resetMaemaeDiscount(rowId: string) {
-    setRows((prev) =>
-      prev.map((r) => {
-        if (r.rowId !== rowId) return r
-        const next = { ...r, isMaemaeDiscountManual: false, isDirty: true }
-        const calc = calculateInvoiceRow({
-          revenue: next.revenue,
-          businessType: initialBusinessType,
-          taxCreditAdditional: next.taxCreditAdditional,
-          faithfulReportFee: next.faithfulReportFee,
-          discount: next.discount,
-          isMaemaeClient: isMaemaeBusinessCode(next.businessCategoryCode),
-          isMaemaeDiscountManual: false,
-          currentMaemaeDiscount: 0,
+      // 2. 서버 액션
+      const dbField =
+        field === 'paymentMethod' ? 'payment_method'
+        : field === 'isSent' ? 'is_sent'
+        : 'is_paid'
+      try {
+        await updateInvoiceField(target.dbId, dbField, value)
+      } catch (e) {
+        // 3. 실패 시 롤백
+        setRows((prev) =>
+          prev.map((r) => (r.rowId === rowId ? { ...r, [field]: previous } : r)),
+        )
+        setToast({
+          message: `저장 실패: ${e instanceof Error ? e.message : String(e)}`,
+          type: 'error',
         })
-        next.maemaeDiscount = calc.maemaeDiscount
-        next.supplyAmount = calc.supplyAmount
-        next.vatAmount = calc.vatAmount
-        next.totalAmount = calc.totalAmount
-        return next
-      })
-    )
-  }
+      }
+    },
+    [updateCell],
+  )
+
+  const resetMaemaeDiscount = useCallback(
+    (rowId: string) => {
+      setRows((prev) =>
+        prev.map((r) => {
+          if (r.rowId !== rowId) return r
+          const next = { ...r, isMaemaeDiscountManual: false, isDirty: true }
+          const calc = calculateInvoiceRow({
+            revenue: next.revenue,
+            businessType: initialBusinessType,
+            taxCreditAdditional: next.taxCreditAdditional,
+            faithfulReportFee: next.faithfulReportFee,
+            discount: next.discount,
+            isMaemaeClient: isMaemaeBusinessCode(next.businessCategoryCode),
+            isMaemaeDiscountManual: false,
+            currentMaemaeDiscount: 0,
+          })
+          next.maemaeDiscount = calc.maemaeDiscount
+          next.supplyAmount = calc.supplyAmount
+          next.vatAmount = calc.vatAmount
+          next.totalAmount = calc.totalAmount
+          return next
+        })
+      )
+    },
+    [initialBusinessType],
+  )
 
   function handleLoadClients() {
     const existingBNs = new Set(
@@ -411,12 +428,12 @@ export default function AdjustmentInvoiceManager({
     })
   }
 
-  function handleDeleteRow(rowId: string) {
+  const handleDeleteRow = useCallback((rowId: string) => {
     if (!confirm('이 행을 삭제하시겠습니까? (저장 버튼을 눌러야 DB에 반영됩니다)')) return
     setRows((prev) =>
       prev.map((r) => (r.rowId === rowId ? { ...r, isDeleted: true } : r))
     )
-  }
+  }, [])
 
   function handleBatchDelete() {
     const selectedRows = rows.filter((r) => r.selected && !r.isDeleted)
@@ -434,15 +451,15 @@ export default function AdjustmentInvoiceManager({
     )
   }
 
-  function handlePrintPreview(rowId: string) {
-    const row = rows.find((r) => r.rowId === rowId)
+  const handlePrintPreview = useCallback((rowId: string) => {
+    const row = rowsRef.current.find((r) => r.rowId === rowId)
     if (!row) return
     if (!row.dbId) {
       alert('먼저 저장한 후에 인쇄할 수 있습니다.')
       return
     }
     setPreviewRowId(rowId)
-  }
+  }, [])
 
   async function handleDownloadSinglePDF(rowId: string) {
     const row = rows.find((r) => r.rowId === rowId)
