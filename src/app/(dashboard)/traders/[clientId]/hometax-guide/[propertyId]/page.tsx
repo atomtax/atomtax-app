@@ -137,8 +137,8 @@ export default async function HometaxGuidePage({ params }: Props) {
         </div>
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 mt-3 leading-relaxed">
           ⚠️ 본 화면은 <strong>읽기 전용 참고용</strong>입니다. 홈택스에 자동
-          입력하지 않습니다. 직원이 홈택스 화면과 나란히 놓고 1페이지 → 2페이지
-          순서대로 직접 입력합니다.
+          입력하지 않습니다. 직원이 홈택스 화면과 나란히 놓고{' '}
+          <strong>1페이지 → 2페이지 → 3페이지</strong> 순서대로 직접 입력합니다.
         </p>
       </header>
 
