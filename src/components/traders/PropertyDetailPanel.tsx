@@ -779,8 +779,8 @@ export function PropertyDetailPanel({
           </div>
 
           <div className="flex flex-col gap-1 items-end">
-            {/* 1행: 부동산 폴더 | 입력참고용 | 세금계산 */}
-            <div className="flex items-center gap-1">
+            {/* 1행: 자료성 — 부동산 폴더 / 입력참고용 / 홈택스 입력 참고 (PR #128) */}
+            <div className="flex items-center gap-1 flex-nowrap">
               <button
                 type="button"
                 onClick={handleOpenFolder}
@@ -790,30 +790,33 @@ export function PropertyDetailPanel({
                     ? '부동산 폴더 새 탭으로 열기'
                     : '고객 정보에 부동산 폴더 URL을 먼저 등록하세요'
                 }
-                className="px-3 py-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 text-xs rounded flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 text-xs rounded flex items-center gap-1 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FolderOpen size={11} /> 부동산 폴더
               </button>
               <button
                 type="button"
                 onClick={() => setShowReference(true)}
-                className="px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs rounded flex items-center gap-1"
+                className="px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 text-xs rounded flex items-center gap-1 whitespace-nowrap"
               >
                 <FileSearch size={11} /> 입력참고용
               </button>
               {/* 홈택스 입력 참고 — 토지등 매매차익 예정신고 (PR #127) */}
-              {/* 양도소득세 건은 예정신고 대상 아님 → 버튼 숨김 */}
               {property.tax_category !== '양도소득세' && (
                 <a
                   href={`/traders/${property.client_id}/hometax-guide/${property.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="px-3 py-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 text-xs rounded flex items-center gap-1"
+                  className="px-3 py-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 text-xs rounded flex items-center gap-1 whitespace-nowrap"
                   title="새 탭으로 홈택스 입력 참고 화면 열기 (읽기 전용, 자동 입력 X)"
                 >
                   <ExternalLink size={11} /> 홈택스 입력 참고
                 </a>
               )}
+            </div>
+
+            {/* 2행: 액션 — 세금계산 / 부가세 계산기 / 고객 보고서 / 삭제 */}
+            <div className="flex items-center gap-1 flex-nowrap">
               <button
                 type="button"
                 onClick={handleCalculateTax}
@@ -823,28 +826,24 @@ export function PropertyDetailPanel({
                     ? '양도소득세 건은 종소세 계산 대상이 아닙니다 — 체크리스트 진행관리만'
                     : '종소세 산출세액 계산'
                 }
-                className="px-3 py-1 bg-purple-600 text-white hover:bg-purple-700 text-xs rounded flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 py-1 bg-purple-600 text-white hover:bg-purple-700 text-xs rounded flex items-center gap-1 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Calculator size={11} /> 세금계산
               </button>
-            </div>
-
-            {/* 2행: 부가세 계산기 | 고객 보고서 | 삭제 */}
-            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() =>
                   window.open('/calculator/vat/calc', '_blank', 'noopener,noreferrer')
                 }
                 title="부가세 계산기를 새 탭에서 열기"
-                className="px-3 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300 text-xs rounded flex items-center gap-1"
+                className="px-3 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300 text-xs rounded flex items-center gap-1 whitespace-nowrap"
               >
                 <Receipt size={11} /> 부가세 계산기
               </button>
               <button
                 type="button"
                 onClick={() => setShowReport(true)}
-                className="px-3 py-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-300 text-xs rounded flex items-center gap-1"
+                className="px-3 py-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-300 text-xs rounded flex items-center gap-1 whitespace-nowrap"
               >
                 <FileText size={11} /> 고객 보고서
               </button>
@@ -852,7 +851,7 @@ export function PropertyDetailPanel({
                 type="button"
                 onClick={handleDelete}
                 disabled={isPending}
-                className="px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 text-xs rounded flex items-center gap-1 disabled:opacity-50"
+                className="px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 text-xs rounded flex items-center gap-1 whitespace-nowrap disabled:opacity-50"
               >
                 <Trash2 size={11} /> 삭제
               </button>
