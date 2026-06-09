@@ -152,47 +152,59 @@ export default async function HometaxGuidePage({ params }: Props) {
       </div>
 
       {/* 🟦 1페이지 — 기본정보(납세자) */}
-      <SectionHeader title="1페이지 · 기본정보(납세자)" tone="page1" />
-      <FieldRow
-        label="주민등록번호"
-        value={fmtResidentNumber(client.resident_number)}
-      />
-      <FieldRow label="성함" value={fullName} />
-      <FieldRow label="전화번호" value={client.phone ?? '-'} />
-      <FieldRow label="세무대리인 전화번호" value={TAX_AGENT_PHONE} fixed />
+      <section className="mb-2 border border-blue-200 rounded-lg overflow-hidden bg-white shadow-sm">
+        <SectionHeader title="1페이지 · 기본정보(납세자)" tone="page1" />
+        <div className="divide-y divide-gray-100">
+          <FieldRow
+            label="주민등록번호"
+            value={fmtResidentNumber(client.resident_number)}
+          />
+          <FieldRow label="성함" value={fullName} />
+          <FieldRow label="전화번호" value={client.phone ?? '-'} />
+          <FieldRow
+            label="세무대리인 전화번호"
+            value={TAX_AGENT_PHONE}
+            fixed
+          />
+        </div>
+      </section>
 
       {/* 🟩 2페이지 — 토지등 매매차익 계산명세 */}
-      <SectionHeader
-        title="2페이지 · 토지등 매매차익 계산명세"
-        tone="page2"
-      />
-      <FieldRow
-        label="사업자등록번호"
-        value={fmtBizNumber(client.business_number)}
-      />
-      <FieldRow
-        label="세율구분"
-        value="(기본세율) 2년이상 보유 토지ㆍ건물 등, 국외자산, 기타자산 (10)"
-        fixed
-      />
-      <FieldRow label="자산종류" value="일반주택 (3)" fixed />
-      <FieldRow
-        label="부동산소재지"
-        value={property.location ?? '-'}
-        note="※ 홈택스에서는 [주소검색] 버튼으로 입력하세요"
-      />
-      <FieldRow label="양도일" value={property.transfer_date ?? '-'} />
-      <FieldRow label="양도면적(토지)" value={`${fmtArea(landArea)} m²`} />
-      <FieldRow label="양도면적(건물)" value={`${fmtArea(buildingArea)} m²`} />
-      <FieldRow label="양도가액" value={`${fmt(transferAmount)} 원`} />
-      <FieldRow label="취득가액" value={`${fmt(acquisition)} 원`} />
-      <FieldRow label="양도비" value={`${fmt(otherExpenses)} 원`} />
-      <FieldRow
-        label="양도차익"
-        value={`${fmt(gainLoss)} 원`}
-        check
-        note="확인용 — 홈택스가 양도가액·취득가액·양도비 등으로 자동 산출"
-      />
+      <section className="mt-6 border border-emerald-200 rounded-lg overflow-hidden bg-white shadow-sm">
+        <SectionHeader
+          title="2페이지 · 토지등 매매차익 계산명세"
+          tone="page2"
+        />
+        <div className="divide-y divide-gray-100">
+          <FieldRow
+            label="사업자등록번호"
+            value={fmtBizNumber(client.business_number)}
+          />
+          <FieldRow
+            label="세율구분"
+            value="(기본세율) 2년이상 보유 토지ㆍ건물 등, 국외자산, 기타자산 (10)"
+            fixed
+          />
+          <FieldRow label="자산종류" value="일반주택 (3)" fixed />
+          <FieldRow
+            label="부동산소재지"
+            value={property.location ?? '-'}
+            note="※ 홈택스에서는 [주소검색] 버튼으로 입력하세요"
+          />
+          <FieldRow label="양도일" value={property.transfer_date ?? '-'} />
+          <FieldRow label="양도면적(토지)" value={`${fmtArea(landArea)} m²`} />
+          <FieldRow label="양도면적(건물)" value={`${fmtArea(buildingArea)} m²`} />
+          <FieldRow label="양도가액" value={`${fmt(transferAmount)} 원`} />
+          <FieldRow label="취득가액" value={`${fmt(acquisition)} 원`} />
+          <FieldRow label="양도비" value={`${fmt(otherExpenses)} 원`} />
+          <FieldRow
+            label="양도차익"
+            value={`${fmt(gainLoss)} 원`}
+            check
+            note="확인용 — 홈택스가 양도가액·취득가액·양도비 등으로 자동 산출"
+          />
+        </div>
+      </section>
 
       <div className="mt-6 flex justify-end gap-2 no-print">
         <HometaxGuidePrintButton />
@@ -226,11 +238,11 @@ function SectionHeader({
 }) {
   const styles =
     tone === 'page1'
-      ? 'text-blue-700 border-blue-500 bg-blue-50'
-      : 'text-emerald-700 border-emerald-500 bg-emerald-50'
+      ? 'text-blue-700 border-blue-200 bg-blue-50'
+      : 'text-emerald-700 border-emerald-200 bg-emerald-50'
   return (
     <h2
-      className={`text-sm font-bold mt-6 mb-0 px-3 py-2 rounded-t border-b-2 ${styles}`}
+      className={`text-sm font-bold px-4 py-2.5 border-b ${styles}`}
       style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
     >
       {title}
@@ -252,7 +264,7 @@ function FieldRow({
   note?: string
 }) {
   return (
-    <div className="grid grid-cols-[180px_1fr] gap-3 px-3 py-2.5 border-b border-gray-200 items-start">
+    <div className="grid grid-cols-[180px_1fr] gap-3 px-4 py-2.5 items-start">
       <div className="text-sm text-gray-700 font-medium">{label}</div>
       <div className="text-sm">
         <div className="flex items-baseline gap-2 flex-wrap">
