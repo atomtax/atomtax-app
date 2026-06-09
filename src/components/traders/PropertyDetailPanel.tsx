@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   ChevronUp,
   Calculator,
+  ExternalLink,
   FileSearch,
   FileText,
   FolderOpen,
@@ -800,6 +801,19 @@ export function PropertyDetailPanel({
               >
                 <FileSearch size={11} /> 입력참고용
               </button>
+              {/* 홈택스 입력 참고 — 토지등 매매차익 예정신고 (PR #127) */}
+              {/* 양도소득세 건은 예정신고 대상 아님 → 버튼 숨김 */}
+              {property.tax_category !== '양도소득세' && (
+                <a
+                  href={`/traders/${property.client_id}/hometax-guide/${property.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-200 text-xs rounded flex items-center gap-1"
+                  title="새 탭으로 홈택스 입력 참고 화면 열기 (읽기 전용, 자동 입력 X)"
+                >
+                  <ExternalLink size={11} /> 홈택스 입력 참고
+                </a>
+              )}
               <button
                 type="button"
                 onClick={handleCalculateTax}
