@@ -736,6 +736,30 @@ export function PropertyDetailPanel({
               </div>
               <span className="text-xs text-gray-500">원</span>
             </div>
+
+            {/* 세금 구분 드롭다운 (PR #124) — 양도소득세 선택 시 계산/합산/보고서 제외 */}
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-600 whitespace-nowrap">
+                세금 구분
+              </label>
+              <select
+                value={property.tax_category ?? '매매사업자'}
+                onChange={(e) =>
+                  onChange({
+                    tax_category: e.target.value as TraderProperty['tax_category'],
+                  })
+                }
+                className={`px-2 py-1 border rounded text-sm focus:border-indigo-500 focus:outline-none ${
+                  property.tax_category === '양도소득세'
+                    ? 'border-amber-300 bg-amber-50 text-amber-800'
+                    : 'border-gray-200 bg-white'
+                }`}
+                title="양도소득세 선택 시 종소세 합산/결산참고/보고서에서 제외 (체크리스트는 유지)"
+              >
+                <option value="매매사업자">매매사업자</option>
+                <option value="양도소득세">양도소득세</option>
+              </select>
+            </div>
           </div>
 
           <div className="flex flex-col gap-1 items-end">
@@ -764,7 +788,13 @@ export function PropertyDetailPanel({
               <button
                 type="button"
                 onClick={handleCalculateTax}
-                className="px-3 py-1 bg-purple-600 text-white hover:bg-purple-700 text-xs rounded flex items-center gap-1"
+                disabled={property.tax_category === '양도소득세'}
+                title={
+                  property.tax_category === '양도소득세'
+                    ? '양도소득세 건은 종소세 계산 대상이 아닙니다 — 체크리스트 진행관리만'
+                    : '종소세 산출세액 계산'
+                }
+                className="px-3 py-1 bg-purple-600 text-white hover:bg-purple-700 text-xs rounded flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Calculator size={11} /> 세금계산
               </button>

@@ -13,6 +13,14 @@ export type TraderProgressStatus =
   | '고객안내'
   | '신고완료'
 
+/** v38: 매매사업자 물건 세금 구분 (PR #124) */
+export type TraderTaxCategory = '매매사업자' | '양도소득세'
+
+export const TRADER_TAX_CATEGORY_OPTIONS: TraderTaxCategory[] = [
+  '매매사업자',
+  '양도소득세',
+]
+
 export const TRADER_PROGRESS_STATUS_OPTIONS: TraderProgressStatus[] = [
   '미확인',
   '확인',
@@ -219,6 +227,8 @@ export interface TraderProperty {
   is_85_over: boolean
   comparison_taxation: boolean
   progress_status: TraderProgressStatus
+  /** v38: 세금 구분. '매매사업자'(기본, 종소세 합산) / '양도소득세'(합산 제외, 체크리스트만) */
+  tax_category: TraderTaxCategory
   land_area: number
   building_area: number
   prior_transfer_income_override: number | null

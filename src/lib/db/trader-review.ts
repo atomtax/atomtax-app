@@ -111,6 +111,8 @@ export async function getTraderReviewData(params: {
 
   const clientIds = (clients as ClientRow[]).map((c) => c.id)
 
+  // 결산참고 합산은 종소세 합산 대상 매매사업자 건만 (PR #124).
+  // 양도소득세 건은 별도 세무 흐름이라 결산참고에서 제외.
   const { data: properties, error: propsError } = await supabase
     .from('trader_properties')
     .select(
@@ -119,6 +121,7 @@ export async function getTraderReviewData(params: {
        trader_property_expenses(amount, category, predeclaration_allowed)`,
     )
     .in('client_id', clientIds)
+    .eq('tax_category', '매매사업자')
     .order('acquisition_date', { ascending: true, nullsFirst: false })
 
   if (propsError) {

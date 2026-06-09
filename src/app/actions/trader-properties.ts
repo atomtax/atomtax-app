@@ -28,6 +28,7 @@ export interface UpdatePropertyInput {
   is_85_over?: boolean
   comparison_taxation?: boolean
   progress_status?: TraderProperty['progress_status']
+  tax_category?: TraderProperty['tax_category']
 }
 
 /** 새 물건 추가 — 자동으로 "물건N" 이름과 display_order 설정 */
@@ -97,7 +98,15 @@ export async function updateProperty(
     })
     .eq('id', propertyId)
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    // PR #114 회고: 42703 친화적 에러 (PR #124 신규 컬럼 tax_category 대비)
+    if (error.code === '42703' || /column .* does not exist/i.test(error.message)) {
+      throw new Error(
+        `DB 마이그레이션이 필요합니다 — Supabase SQL 에디터에서 최신 migrations/v*.sql 을 실행해 주세요. (원본 에러: ${error.message})`,
+      )
+    }
+    throw new Error(error.message)
+  }
 
   revalidatePath(`/traders/${current.client_id}`)
 }
@@ -209,6 +218,7 @@ export interface SavePropertyMeta {
   is_85_over?: boolean
   comparison_taxation?: boolean
   progress_status?: TraderProperty['progress_status']
+  tax_category?: TraderProperty['tax_category']
   transfer_amount?: number
   vat_amount?: number
   acquisition_date?: string | null
@@ -398,10 +408,13 @@ export async function calculatePriorAmounts(
   const yearStart = `${transferYear}-01-01`
   const yearEnd = `${transferYear}-12-31`
 
+  // tax_category='양도소득세'인 물건은 종소세 합산 대상 아니므로 제외 (PR #124).
+  // 매매사업자 건만 SELECT. 단방향 원칙(SELECT only) 유지.
   const { data: priorProperties, error: priorError } = await supabase
     .from('trader_properties')
     .select('id, property_name, transfer_income, prepaid_income_tax, prepaid_local_tax')
     .eq('client_id', current.client_id)
+    .eq('tax_category', '매매사업자')
     .neq('id', propertyId)
     .gte('transfer_date', yearStart)
     .lte('transfer_date', yearEnd)
