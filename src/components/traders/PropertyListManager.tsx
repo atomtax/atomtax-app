@@ -156,10 +156,10 @@ export function PropertyListManager({
                 {/* 매매사업자 섹션 (PR #124) — 종소세 합산 대상. 물건 없으면 섹션 자체 숨김 */}
                 {tradeProperties.length > 0 && (
                   <>
-                    <tr className="bg-purple-50 border-y border-purple-200">
+                    <tr className="bg-purple-50 border-y-2 border-purple-300">
                       <td
                         colSpan={9}
-                        className="px-3 py-1.5 text-xs font-extrabold tracking-wider text-brand"
+                        className="px-3 py-2 text-xs font-extrabold tracking-wider text-brand"
                       >
                         매매사업자 · {tradeProperties.length}건 (종소세 합산 대상)
                       </td>
@@ -180,10 +180,16 @@ export function PropertyListManager({
                 {/* 양도소득세 섹션 (PR #124) — 합산 제외, 체크리스트만 */}
                 {transferTaxProperties.length > 0 && (
                   <>
-                    <tr className="bg-amber-50 border-y border-amber-200">
+                    {/* 두 섹션 동시 표시 시 큰 수직 여백 (PR #125) — 시각적 분리 명확화 */}
+                    {tradeProperties.length > 0 && (
+                      <tr aria-hidden="true">
+                        <td colSpan={9} className="h-10 bg-white p-0" />
+                      </tr>
+                    )}
+                    <tr className="bg-amber-50 border-y-2 border-amber-300">
                       <td
                         colSpan={9}
-                        className="px-3 py-1.5 text-xs font-extrabold tracking-wider text-amber-700"
+                        className="px-3 py-2 text-xs font-extrabold tracking-wider text-amber-700"
                       >
                         양도소득세 · {transferTaxProperties.length}건 (합산 제외 · 체크리스트만)
                       </td>
