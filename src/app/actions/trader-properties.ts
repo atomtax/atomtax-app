@@ -408,10 +408,13 @@ export async function calculatePriorAmounts(
   const yearStart = `${transferYear}-01-01`
   const yearEnd = `${transferYear}-12-31`
 
+  // tax_category='양도소득세'인 물건은 종소세 합산 대상 아니므로 제외 (PR #124).
+  // 매매사업자 건만 SELECT. 단방향 원칙(SELECT only) 유지.
   const { data: priorProperties, error: priorError } = await supabase
     .from('trader_properties')
     .select('id, property_name, transfer_income, prepaid_income_tax, prepaid_local_tax')
     .eq('client_id', current.client_id)
+    .eq('tax_category', '매매사업자')
     .neq('id', propertyId)
     .gte('transfer_date', yearStart)
     .lte('transfer_date', yearEnd)
