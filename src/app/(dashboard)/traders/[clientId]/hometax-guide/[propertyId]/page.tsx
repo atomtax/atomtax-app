@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { formatNumberWithCommas } from '@/lib/utils/format-number'
+import { HometaxGuidePrintButton } from '@/components/traders/HometaxGuidePrintButton'
 
 export const metadata: Metadata = {
   title: '홈택스 입력 참고 — 토지등 매매차익 예정신고',
@@ -84,31 +85,48 @@ export default async function HometaxGuidePage({ params }: Props) {
   const buildingArea = Number(property.building_area) || 0
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-6 max-w-3xl mx-auto print:p-4 print:max-w-none">
       <Link
         href={`/traders/${clientId}`}
-        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-indigo-600 mb-4"
+        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-indigo-600 mb-4 no-print"
       >
         <ArrowLeft size={14} /> 매매사업자로 돌아가기
       </Link>
 
-      <header className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">
-          홈택스 입력 참고 — 토지등 매매차익 예정신고
-        </h1>
-        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 mt-2 inline-block">
-          ⚠️ 본 화면은 읽기 전용 참고용입니다. 홈택스에 자동 입력하지 않습니다.
-          항목 순서대로 직접 입력해 주세요.
+      <header className="mb-5">
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+          <h1 className="text-xl font-bold text-gray-900">
+            홈택스 입력 참고
+          </h1>
+          <span className="text-xs text-gray-500">
+            토지등 매매차익 예정신고
+          </span>
+        </div>
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2 mt-3 leading-relaxed">
+          ⚠️ 본 화면은 <strong>읽기 전용 참고용</strong>입니다. 홈택스에 자동
+          입력하지 않습니다. 직원이 홈택스 화면과 나란히 놓고 항목 순서대로
+          직접 입력합니다.
         </p>
       </header>
 
-      {/* 식별 헤더 — Commit 3에서 강조 */}
-      <div className="border border-gray-200 rounded-lg p-4 mb-6 bg-gray-50 text-sm">
+      {/* 식별 헤더 — 어느 건인지 즉시 식별 */}
+      <div
+        className="rounded-lg p-4 mb-6 text-white"
+        style={{ background: 'var(--brand-grad)' }}
+      >
         <div className="grid grid-cols-3 gap-3">
           <Identity label="거래처" value={client.company_name} />
           <Identity label="물건" value={property.property_name} />
-          <Identity label="신고기한" value={property.filing_deadline ?? '-'} />
+          <Identity
+            label="신고기한"
+            value={property.filing_deadline ?? '-'}
+          />
         </div>
+        {client.business_number && (
+          <div className="mt-3 pt-3 border-t border-white/20 text-xs text-white/90">
+            사업자등록번호: {client.business_number}
+          </div>
+        )}
       </div>
 
       <SectionHeader title="A. 양도자산명세 정보" />
@@ -164,9 +182,13 @@ export default async function HometaxGuidePage({ params }: Props) {
         highlight
       />
 
-      <footer className="mt-8 text-xs text-gray-500 border-t pt-4">
+      <div className="mt-6 flex justify-end gap-2 no-print">
+        <HometaxGuidePrintButton />
+      </div>
+
+      <footer className="mt-6 text-xs text-gray-500 border-t pt-4">
         본 자료는 직원이 홈택스 입력 시 참고용으로만 사용됩니다.
-        실제 신고 전 항목별로 한번 더 확인해 주세요.
+        실제 신고 전 항목별로 한 번 더 확인해 주세요.
       </footer>
     </div>
   )
@@ -174,9 +196,11 @@ export default async function HometaxGuidePage({ params }: Props) {
 
 function Identity({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <div className="text-xs text-gray-500">{label}</div>
-      <div className="font-semibold text-gray-900 truncate">{value}</div>
+    <div className="min-w-0">
+      <div className="text-[10px] text-white/80 tracking-wider font-bold">
+        {label}
+      </div>
+      <div className="font-semibold truncate text-sm mt-0.5">{value}</div>
     </div>
   )
 }
@@ -184,8 +208,8 @@ function Identity({ label, value }: { label: string; value: string }) {
 function SectionHeader({ title }: { title: string }) {
   return (
     <h2
-      className="text-sm font-bold mt-6 mb-2 px-3 py-2 rounded text-white"
-      style={{ background: 'var(--brand-grad)' }}
+      className="text-sm font-bold mt-5 mb-0 px-3 py-2 rounded-t border-b-2 border-brand text-brand bg-brand/5"
+      style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}
     >
       {title}
     </h2>
