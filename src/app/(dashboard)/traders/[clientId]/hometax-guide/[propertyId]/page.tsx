@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
+import { calculatePriorAmounts } from '@/app/actions/trader-properties'
 import { formatNumberWithCommas } from '@/lib/utils/format-number'
 import { HometaxGuidePrintButton } from '@/components/traders/HometaxGuidePrintButton'
 
@@ -113,6 +114,11 @@ export default async function HometaxGuidePage({ params }: Props) {
   // 성함 — 개인 매매사업자는 대표자명, 없으면 상호로 폴백
   const fullName = client.representative || client.company_name
 
+  // 종전·기납부 (3페이지 섹션, PR #129) — calculatePriorAmounts는 SELECT only
+  // (단방향 원칙 유지: 다른 물건 UPDATE 절대 X). override 우선, NULL이면 자동 집계.
+  const prior = await calculatePriorAmounts(propertyId)
+  const prepaidIncomeTaxOfThis = Number(property.prepaid_income_tax) || 0
+
   return (
     <div className="p-6 max-w-3xl mx-auto print:p-4 print:max-w-none">
       <Link
@@ -206,6 +212,43 @@ export default async function HometaxGuidePage({ params }: Props) {
         </div>
       </section>
 
+      {/* 🟨 3페이지 — 세액의 계산(종전·기납부) */}
+      <section className="mt-6 border border-amber-200 rounded-lg overflow-hidden bg-white shadow-sm">
+        <SectionHeader
+          title="3페이지 · 세액의 계산 (종전·기납부)"
+          tone="page3"
+        />
+        <div className="divide-y divide-gray-100">
+          <FieldRow
+            label="종전 양도차익 (동일년도)"
+            value={`${fmt(prior.effectivePriorTransferIncome)} 원`}
+            note={
+              prior.isOverridden
+                ? '수동 입력값 (override)'
+                : prior.priorPropertiesCount > 0
+                  ? `자동 집계 — ${prior.priorPropertiesCount}건: ${prior.priorPropertyNames.join(', ')}`
+                  : '동일년도 이전 양도 건 없음 (0원)'
+            }
+          />
+          <FieldRow
+            label="종전 기납부 종소세"
+            value={`${fmt(prior.effectivePriorPrepaidIncomeTax)} 원`}
+            note={
+              prior.isPrepaidIncomeOverridden
+                ? '수동 입력값 (override)'
+                : prior.priorPropertiesCount > 0
+                  ? '자동 집계 — 이전 물건들의 prepaid_income_tax 합산'
+                  : '동일년도 이전 양도 건 없음 (0원)'
+            }
+          />
+          <FieldRow
+            label="기납부 종소세 (이 물건 계산값)"
+            value={`${fmt(prepaidIncomeTaxOfThis)} 원`}
+            note="물건 목록 [세금계산]으로 산출·저장된 값"
+          />
+        </div>
+      </section>
+
       <div className="mt-6 flex justify-end gap-2 no-print">
         <HometaxGuidePrintButton />
       </div>
@@ -234,12 +277,14 @@ function SectionHeader({
   tone,
 }: {
   title: string
-  tone: 'page1' | 'page2'
+  tone: 'page1' | 'page2' | 'page3'
 }) {
   const styles =
     tone === 'page1'
       ? 'text-blue-700 border-blue-200 bg-blue-50'
-      : 'text-emerald-700 border-emerald-200 bg-emerald-50'
+      : tone === 'page2'
+        ? 'text-emerald-700 border-emerald-200 bg-emerald-50'
+        : 'text-amber-700 border-amber-200 bg-amber-50'
   return (
     <h2
       className={`text-sm font-bold px-4 py-2.5 border-b ${styles}`}
