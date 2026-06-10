@@ -63,7 +63,13 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  // PR #130 진단: getUser() 1회는 보호 라우트 보안에 필요하므로 유지.
+  // matcher에서 정적 자원/봇 메타파일을 추가 제외 (인증 영향 없음, 미들웨어 오버헤드만 제거).
+  //  - _next/static, _next/image : Next.js 빌드 자산
+  //  - robots.txt, sitemap.xml, manifest.json|webmanifest : 검색엔진/PWA 메타
+  //  - 이미지: svg/png/jpg/jpeg/gif/webp/avif/ico (favicon.ico 포함)
+  //  - 폰트: woff/woff2/ttf/otf (자체 호스팅 추가 대비)
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|robots\\.txt|sitemap\\.xml|manifest\\.(?:json|webmanifest)|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|woff|woff2|ttf|otf)$).*)',
   ],
 }
