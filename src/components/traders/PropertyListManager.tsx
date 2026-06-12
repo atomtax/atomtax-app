@@ -144,10 +144,18 @@ export function PropertyListManager({
         </h2>
         <div className="flex items-center gap-2">
           <button
-            disabled
             type="button"
-            className="px-3 py-1.5 bg-yellow-100 text-yellow-800 text-sm rounded opacity-50 cursor-not-allowed flex items-center gap-1"
-            title="v20d에서 활성화"
+            onClick={() => {
+              if (clientFolder)
+                window.open(clientFolder, '_blank', 'noopener,noreferrer')
+            }}
+            disabled={!clientFolder}
+            className="px-3 py-1.5 bg-emerald-600 text-white text-sm rounded hover:bg-emerald-700 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed flex items-center gap-1"
+            title={
+              clientFolder
+                ? '거래처의 부동산 폴더 열기 (새 탭)'
+                : '이 거래처는 부동산 폴더 URL이 등록되지 않았습니다. 고객 관리에서 등록 후 다시 시도하세요.'
+            }
           >
             <FolderOpen size={14} /> 부동산 폴더
           </button>
