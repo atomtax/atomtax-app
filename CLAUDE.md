@@ -218,6 +218,34 @@ ATOM BASE
 
 ### 5-8~5-11. 기타: income_tax_review_notes (v22), trader_review_notes (v23), report_share_links (v27), industry_codes_master (v31, 1,611건)
 
+### 5-12. 위하고 수집 (v40, Phase 7 / 1단계) ⭐
+
+더존 위하고T Smart A 10 화면 응답(JSON)을 수집해 검산하는 파이프라인.
+
+**wehago_companies** — 위하고 회사코드 ↔ 아톰베이스 거래처 매핑
+- `ccode` (UNIQUE), `business_number`(숫자만), `company_name`, `client_id`(clients FK, 미매칭이면 NULL), `gisu`, `acc_begin`, `acc_end`
+
+**wehago_snapshots** — 화면코드별 응답 스냅샷
+- `ccode`, `screen_code`, `gisu`, `period_from`/`period_to`('YYYYMM'), `content_hash`(sha256), `payload`(jsonb, 마스킹 후), `source`('manual'|'extension')
+- dedupe UNIQUE: `(ccode, screen_code, gisu, COALESCE(period_to,''), content_hash)` — 같은 데이터 재저장 시 23505 → "변경 없음"
+
+**확정 화면코드 5종** (`https://api.wehago.com/smarta/{코드}/...` GET):
+| 코드 | 내용 | 핵심 |
+|---|---|---|
+| `sabc0102` | 수임처 기본정보 | `no_biz`, `cd_com`(=ccode), `nm_krcom`, `danggi_gisu`, `da_accbegin`/`da_accend` |
+| `sacl0106` | 손익계산서 | 섹션행 `cd_acctit="0"`(`mn_total2`/`mn_btotal2`), 계정행(`mn_total1`/`mn_btotal1`), `mn_variation_amount` |
+| `swsa0105` | 급여대장 | `total_ji`(연간 지급), `no_social` ⚠️마스킹 |
+| `saas0106` | 고정자산 | `{g_data:[]}`, `subhap`('0'자산/'1'소계/'2'합계), `mn_cdep`(당기상각) |
+| `swbu0111` | 사업소득(3.3%) | `grp_1[].am_pay`, `no_social`/`no_corpor` ⚠️마스킹 |
+
+**민감정보 마스킹 원칙** (`src/lib/wehago/sanitize.ts`): `no_social`/`no_ceosoc`/`no_mainsoc`는 항상, `no_corpor`는 13자리일 때만 → 7자리+ 숫자면 앞 6자리(생년월일) 외 `*`. **마스킹을 content_hash보다 먼저** 적용.
+
+**검산 룰** (`src/lib/wehago/rules.ts`, 실데이터 1원까지 검증):
+- 인건비: 급여 `total_ji` 합 = 손익 `cd_acctit` 802/803/805 `mn_total1` 합
+- 감가상각: 고정자산 `subhap="2"` `mn_cdep` = 손익 [818] `mn_total1`, A>0 & B=0 → 🔴 미계상
+
+코어: `src/lib/wehago/{parse-url,sanitize,hash,ingest,rules}.ts` (폼+API 양쪽 재사용), 픽스처 `src/lib/wehago/__fixtures__/`, 화면 `/atom-lab/wehago`.
+
 ### 마이그레이션 이력
 - v27 (PR #62): 공유 링크
 - v28 (PR #63): 농어촌특별세
@@ -228,6 +256,7 @@ ATOM BASE
 - **v35 (PR #94)**: filing_deadline 백필
 - **v36 (PR #113)**: adjustment_invoices.is_sent
 - **v37 (PR #114)**: income_tax_reports.income_local_tax_override
+- **v40 (Phase 7 / 1단계)**: wehago_companies + wehago_snapshots (위하고 수집 저장소)
 
 ---
 
@@ -251,6 +280,13 @@ ATOM BASE
 - 조정료 발송 체크박스 + 필터 (#113): v36
 - 종소세 지방세 override (#114): v37 + 친화적 에러 메시지
 - 행 담당자 드롭다운 (#116): clients.manager distinct 공유
+
+### Phase 7 — 위하고 데이터 수집 (진행 중)
+> 위하고T 화면 데이터를 받아 아톰베이스에 쌓고 결재 검토 시 원클릭 확인. 4단계 로드맵.
+- [x] **1단계** ✅: 스냅샷 저장소(v40) + 수동 붙여넣기 수집 + 아톰랩 검토 화면 (인건비·감가상각 룰)
+- [ ] 2단계: 크롬 확장프로그램 — 위하고 응답 자동 가로채 변경분만 전송 (외부 수신 API 별도 설계)
+- [ ] 3단계: 검토 화면·룰 고도화 (제조원가 계정, 사업소득 대조 등)
+- [ ] 4단계: 아톰랩 → 정식 메뉴 이전
 
 ### Phase 5 — 진행 예정
 - [ ] 5-1: 부가가치세 보고서 (8~10h)
@@ -633,7 +669,7 @@ DB 스키마 변경: Supabase SQL 에디터에서 `migrations/v*.sql` 직접 실
 
 ---
 
-*최종 수정일: 2026-05-19*
-*Phase 4 + 후속 패치 (PR #88~#116) 완료*
-*다음 Phase 5: 부가가치세 보고서 + 결산보고서 + 세금계산서 + 결산참고 부가/법인세 + 체크리스트 서류업로드*
+*최종 수정일: 2026-06-12*
+*Phase 4 + 후속 패치 (PR #88~#116) 완료 / Phase 7 위하고 수집 1단계 완료 (v40)*
+*다음: Phase 7 2단계(크롬 확장프로그램) + Phase 5(부가세 보고서/결산보고서/세금계산서/결산참고/체크리스트 업로드)*
 *진행 중 작업지시서 6건 대기*
