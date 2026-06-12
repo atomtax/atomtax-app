@@ -1,0 +1,11 @@
+{
+  "g_gubun": "save",
+  "g_data": [
+    { "subhap": "0", "cd_fixast": "000001", "nm_fixast": "IMAC 24\" SLV/8C CPU/8C GPU", "nm_acctit": "비품", "cd_acctit": "212",
+      "da_acquire": "20250310", "mn_ctincre": 2081818.0, "mn_cdep": 782416.0, "mn_misangkak": 1299402.0, "mn_gimal": 2081818.0, "cd_gr": "12020" },
+    { "subhap": "0", "cd_fixast": "000002", "nm_fixast": "MBA 13.6 SPG/10C GPU/16GB/512GB-KOR", "nm_acctit": "비품", "cd_acctit": "212",
+      "da_acquire": "20250307", "mn_ctincre": 4881819.0, "mn_cdep": 1834750.0, "mn_misangkak": 3047069.0, "mn_gimal": 4881819.0, "cd_gr": "12020" },
+    { "subhap": "1", "nmcd_fixast": "[비품(212)] 소계", "mn_ctincre": 6963637, "mn_cdep": 2617166, "mn_misangkak": 4346471, "mn_gimal": 6963637 },
+    { "subhap": "2", "nmcd_fixast": "[800번대] 경비 합계", "mn_ctincre": 6963637, "mn_cdep": 2617166, "mn_misangkak": 4346471, "mn_gimal": 6963637 }
+  ]
+}

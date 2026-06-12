@@ -415,3 +415,34 @@ export interface TraderReviewNote {
   created_at: string
   updated_at: string
 }
+
+// ============================================================
+// 위하고 수집 (v40, Phase 7 / 1단계)
+// 더존 위하고T Smart A 10 화면 응답 스냅샷 + 거래처 매핑.
+// payload는 민감정보(주민번호) 마스킹 후 저장.
+// ============================================================
+export interface WehagoCompany {
+  id: string
+  ccode: string // 위하고 회사코드
+  business_number: string | null // 숫자만 저장
+  company_name: string | null
+  client_id: string | null // 매칭된 clients.id (없으면 NULL)
+  gisu: number | null
+  acc_begin: string | null
+  acc_end: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface WehagoSnapshot {
+  id: string
+  ccode: string
+  screen_code: string // sacl0106 / swsa0105 / saas0106 / swbu0111
+  gisu: number | null
+  period_from: string | null // 'YYYYMM'
+  period_to: string | null // 'YYYYMM'
+  content_hash: string
+  payload: unknown // 마스킹된 원본 응답 (jsonb)
+  source: string // 'manual' | 'extension'
+  collected_at: string
+}
