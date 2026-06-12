@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useMemo, useTransition } from 'react'
-import { Plus, Upload, Download, FileSpreadsheet, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, CalendarPlus, Factory } from 'lucide-react'
+import { useCallback, useMemo, useState, useTransition } from 'react'
+import { Plus, Upload, Download, FileSpreadsheet, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, CalendarPlus, Factory, Pencil } from 'lucide-react'
 import type { Client, ClientInsert } from '@/types/database'
-import { deleteClientAction } from '@/app/(dashboard)/clients/actions'
+import { bulkUpdateClientManagerAction, deleteClientAction } from '@/app/(dashboard)/clients/actions'
 import ClientRow from './ClientRow'
 import ClientDetailModal from './ClientDetailModal'
 import ClientFormModal from './ClientFormModal'
 import ClientExcelImportModal from './ClientExcelImportModal'
+import BulkEditManagerModal from './BulkEditManagerModal'
 import { BulkOpeningDateUpload } from './BulkOpeningDateUpload'
 import { BulkIndustryCodeUpload } from './BulkIndustryCodeUpload'
+import Toast, { type ToastType } from '@/components/ui/Toast'
 
 type SortKey = 'number' | 'company_name' | 'manager'
 type SortDir = 'asc' | 'desc'
@@ -48,6 +50,11 @@ export default function ClientListManager({ initialClients, isTerminated = false
   const [showExcelUpload, setShowExcelUpload] = useState(false)
   const [showOpeningDateUpload, setShowOpeningDateUpload] = useState(false)
   const [showIndustryCodeUpload, setShowIndustryCodeUpload] = useState(false)
+
+  // PR #131 일괄수정 선택 state (기장고객 페이지에서만 노출)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showBulkEdit, setShowBulkEdit] = useState(false)
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
 
   const managers = useMemo(
     () => [...new Set(clients.map((c) => c.manager).filter((m): m is string => !!m))].sort(),
@@ -93,6 +100,62 @@ export default function ClientListManager({ initialClients, isTerminated = false
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize)
+
+  // 일괄수정 선택 (PR #131) — 기장고객(!isTerminated)에서만 노출
+  const bulkEditEnabled = !isTerminated
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+  const allCurrentSelected =
+    paginated.length > 0 && paginated.every((c) => selectedIds.has(c.id))
+  const someCurrentSelected =
+    paginated.some((c) => selectedIds.has(c.id)) && !allCurrentSelected
+  const toggleSelectAllCurrent = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (allCurrentSelected) {
+        // 현재 페이지 모두 선택 상태 → 현재 페이지만 해제
+        paginated.forEach((c) => next.delete(c.id))
+      } else {
+        // 일부/전혀 선택 안 됨 → 현재 페이지 모두 선택
+        paginated.forEach((c) => next.add(c.id))
+      }
+      return next
+    })
+  }
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), [])
+
+  // PR #131 일괄수정 적용 — 단일 UPDATE `.in()` 후 로컬 state 동기화 + 토스트
+  const handleBulkApply = async (newManager: string | null) => {
+    const ids = Array.from(selectedIds)
+    if (ids.length === 0) return
+    try {
+      await bulkUpdateClientManagerAction(ids, newManager)
+      // 낙관적이 아닌 보수적 갱신: 서버 호출 성공 후 로컬 state에 반영
+      const idSet = new Set(ids)
+      setClients((prev) =>
+        prev.map((c) =>
+          idSet.has(c.id) ? { ...c, manager: newManager } : c,
+        ),
+      )
+      setSelectedIds(new Set())
+      setShowBulkEdit(false)
+      setToast({
+        message: `${ids.length}명의 담당자가 변경되었습니다.`,
+        type: 'success',
+      })
+    } catch (e) {
+      setToast({
+        message: `일괄수정 실패: ${e instanceof Error ? e.message : String(e)}`,
+        type: 'error',
+      })
+    }
+  }
 
   const PaginationBar = () => {
     if (totalPages <= 1) return null
@@ -261,8 +324,38 @@ export default function ClientListManager({ initialClients, isTerminated = false
           className="px-3 py-2 text-sm border border-gray-300 rounded-md w-48 focus:outline-none focus:border-indigo-500"
         />
 
+        {/* 선택 개수 표시 (PR #131) */}
+        {bulkEditEnabled && selectedIds.size > 0 && (
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-md text-sm">
+            <span className="font-semibold">{selectedIds.size}명 선택됨</span>
+            <button
+              type="button"
+              onClick={clearSelection}
+              className="text-xs text-indigo-500 hover:text-indigo-700 underline"
+            >
+              선택 해제
+            </button>
+          </div>
+        )}
+
         {/* 우측 버튼 */}
         <div className="ml-auto flex flex-wrap gap-2">
+          {bulkEditEnabled && (
+            <button
+              type="button"
+              onClick={() => setShowBulkEdit(true)}
+              disabled={selectedIds.size === 0}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-brand text-white rounded-md hover:bg-brand-dark disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+              title={
+                selectedIds.size === 0
+                  ? '체크박스로 고객을 먼저 선택하세요'
+                  : `${selectedIds.size}명의 담당자를 일괄수정`
+              }
+            >
+              <Pencil size={14} />
+              일괄수정
+            </button>
+          )}
           {!isTerminated && (
             <>
               <button
@@ -322,6 +415,21 @@ export default function ClientListManager({ initialClients, isTerminated = false
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-500">
             <tr>
+              {bulkEditEnabled && (
+                <th className="px-2 py-2.5 text-center whitespace-nowrap w-10">
+                  <input
+                    type="checkbox"
+                    checked={allCurrentSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someCurrentSelected
+                    }}
+                    onChange={toggleSelectAllCurrent}
+                    className="cursor-pointer accent-indigo-600"
+                    aria-label="현재 페이지 전체 선택"
+                    title="현재 페이지 전체 선택 / 해제"
+                  />
+                </th>
+              )}
               <th
                 className="px-3 py-2.5 text-center cursor-pointer hover:text-gray-900 whitespace-nowrap"
                 onClick={() => toggleSort('number')}
@@ -354,7 +462,7 @@ export default function ClientListManager({ initialClients, isTerminated = false
           <tbody>
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={12} className="px-4 py-12 text-center text-sm text-gray-400">
+                <td colSpan={bulkEditEnabled ? 13 : 12} className="px-4 py-12 text-center text-sm text-gray-400">
                   {search || managerFilter !== 'all' ? '검색 결과가 없습니다.' : '등록된 고객이 없습니다.'}
                 </td>
               </tr>
@@ -366,6 +474,8 @@ export default function ClientListManager({ initialClients, isTerminated = false
                   onDetail={setDetailClient}
                   onEdit={setEditClient}
                   onDelete={handleDelete}
+                  selected={bulkEditEnabled ? selectedIds.has(client.id) : undefined}
+                  onToggleSelect={bulkEditEnabled ? toggleSelect : undefined}
                 />
               ))
             )}
@@ -430,6 +540,22 @@ export default function ClientListManager({ initialClients, isTerminated = false
           onClose={() => setShowIndustryCodeUpload(false)}
           onDone={() => setShowIndustryCodeUpload(false)}
         />
+      )}
+
+      {/* PR #131 담당자 일괄수정 모달 */}
+      {bulkEditEnabled && (
+        <BulkEditManagerModal
+          isOpen={showBulkEdit}
+          onClose={() => setShowBulkEdit(false)}
+          count={selectedIds.size}
+          managers={managers}
+          onApply={handleBulkApply}
+        />
+      )}
+
+      {/* 토스트 */}
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
     </div>
   )

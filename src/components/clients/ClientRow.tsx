@@ -9,13 +9,40 @@ type Props = {
   onDetail: (client: Client) => void
   onEdit: (client: Client) => void
   onDelete: (client: Client) => void
+  /** 일괄수정 선택 체크박스 (PR #131). selected/onToggleSelect 동시에 undefined면 체크박스 숨김. */
+  selected?: boolean
+  onToggleSelect?: (id: string) => void
 }
 
-export default function ClientRow({ client, onDetail, onEdit, onDelete }: Props) {
+export default function ClientRow({
+  client,
+  onDetail,
+  onEdit,
+  onDelete,
+  selected,
+  onToggleSelect,
+}: Props) {
   const isCorpBadge = client.business_type_category === '법인'
+  const showCheckbox = onToggleSelect !== undefined
 
   return (
-    <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+    <tr
+      className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
+        selected ? 'bg-indigo-50/40' : ''
+      }`}
+    >
+      {/* 일괄수정 체크박스 (PR #131) */}
+      {showCheckbox && (
+        <td className="px-2 py-2.5 text-center">
+          <input
+            type="checkbox"
+            checked={!!selected}
+            onChange={() => onToggleSelect?.(client.id)}
+            className="cursor-pointer accent-indigo-600"
+            aria-label={`${client.company_name} 선택`}
+          />
+        </td>
+      )}
       {/* 번호 */}
       <td className="px-3 py-2.5 text-sm text-gray-500 text-center">{client.number ?? '—'}</td>
 
