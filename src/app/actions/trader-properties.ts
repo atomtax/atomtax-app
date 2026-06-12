@@ -31,8 +31,11 @@ export interface UpdatePropertyInput {
   tax_category?: TraderProperty['tax_category']
 }
 
-/** 새 물건 추가 — 자동으로 "물건N" 이름과 display_order 설정 */
-export async function addProperty(clientId: string): Promise<{ id: string }> {
+/**
+ * 새 물건 추가 — 자동으로 "물건N" 이름과 display_order 설정.
+ * PR #130: 삽입된 전체 row를 반환 → 클라이언트가 router.refresh() 없이 로컬 state에 push 가능.
+ */
+export async function addProperty(clientId: string): Promise<TraderProperty> {
   const supabase = await createClient()
 
   const { data: existing, error: fetchError } = await supabase
@@ -54,20 +57,23 @@ export async function addProperty(clientId: string): Promise<{ id: string }> {
       property_name: nextName,
       display_order: nextOrder,
     })
-    .select('id')
+    .select('*')
     .single()
 
   if (error) throw new Error(error.message)
 
   revalidatePath(`/traders/${clientId}`)
-  return { id: data.id }
+  return data as TraderProperty
 }
 
-/** 물건 정보 수정 (양도소득/신고기한 자동 계산 포함) */
+/**
+ * 물건 정보 수정 (양도소득/신고기한 자동 계산 포함).
+ * PR #130: 갱신된 전체 row를 반환 → 클라이언트가 router.refresh() 없이 로컬 state 동기화 가능.
+ */
 export async function updateProperty(
   propertyId: string,
   input: UpdatePropertyInput,
-): Promise<void> {
+): Promise<TraderProperty> {
   const supabase = await createClient()
 
   const { data: current, error: fetchError } = await supabase
@@ -88,7 +94,7 @@ export async function updateProperty(
   )
   const filing_deadline = calculateFilingDeadline(merged.transfer_date)
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('trader_properties')
     .update({
       ...input,
@@ -97,6 +103,8 @@ export async function updateProperty(
       updated_at: new Date().toISOString(),
     })
     .eq('id', propertyId)
+    .select('*')
+    .single()
 
   if (error) {
     // PR #114 회고: 42703 친화적 에러 (PR #124 신규 컬럼 tax_category 대비)
@@ -109,6 +117,7 @@ export async function updateProperty(
   }
 
   revalidatePath(`/traders/${current.client_id}`)
+  return updated as TraderProperty
 }
 
 /** 필요경비 10행 조회 (Client Component에서 호출용 래퍼) */

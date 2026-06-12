@@ -144,6 +144,35 @@ export async function restoreClientAction(id: string): Promise<{ number: string 
   return { number: newNumber }
 }
 
+/**
+ * 담당자 일괄수정 (PR #131).
+ * - 선택된 client id 배열에 한 번의 UPDATE로 manager 적용. `.in('id', ids)` 사용.
+ * - 빈 문자열은 null로 처리 (담당자 해제 의도).
+ * - revalidatePath 는 마지막 1회만 (CLAUDE.md PR #95).
+ */
+export async function bulkUpdateClientManagerAction(
+  ids: string[],
+  manager: string | null,
+): Promise<{ count: number }> {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    throw new Error('선택된 고객이 없습니다.')
+  }
+
+  const normalized = manager && manager.trim() !== '' ? manager.trim() : null
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('clients')
+    .update({ manager: normalized, updated_at: new Date().toISOString() })
+    .in('id', ids)
+    .select('id')
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/clients')
+  return { count: data?.length ?? 0 }
+}
+
 /** 엑셀 업로드 — 사업자번호 기준 upsert */
 export async function saveClientsBatchAction(
   rows: Array<Partial<ClientInsert> & { id?: string }>

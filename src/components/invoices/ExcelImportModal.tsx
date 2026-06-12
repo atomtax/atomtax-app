@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import * as XLSX from 'xlsx'
 import { X } from 'lucide-react'
 import type { Client } from '@/types/database'
 import { calculateInvoiceRow } from '@/lib/calculators/fee-schedule'
@@ -32,6 +31,7 @@ export default function ExcelImportModal({
     setParsing(true)
     setError(null)
     try {
+      const XLSX = await import('xlsx')
       const buffer = await file.arrayBuffer()
       const wb = XLSX.read(buffer)
       const ws = wb.Sheets[wb.SheetNames[0]]

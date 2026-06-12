@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
-import { useRouter } from 'next/navigation'
 import { Plus, Save, Building, FileText, FolderOpen } from 'lucide-react'
 import { addProperty, updateProperty, updatePropertyField } from '@/app/actions/trader-properties'
 import { PropertyRow } from './PropertyRow'
@@ -20,7 +19,6 @@ export function PropertyListManager({
   clientFolder,
   initialProperties,
 }: Props) {
-  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [properties, setProperties] = useState<TraderProperty[]>(initialProperties)
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
@@ -42,11 +40,13 @@ export function PropertyListManager({
     [properties],
   )
 
+  // PR #130: addProperty가 전체 row를 반환 → 로컬 state push만 하면 즉시 화면 반영.
+  // router.refresh() 제거로 RSC refetch round-trip 한 번 절감.
   function handleAddRow() {
     startTransition(async () => {
       try {
-        await addProperty(clientId)
-        router.refresh()
+        const newProperty = await addProperty(clientId)
+        setProperties((prev) => [...prev, newProperty])
       } catch (e) {
         alert(`행 추가 실패: ${e instanceof Error ? e.message : String(e)}`)
       }
@@ -106,11 +106,12 @@ export function PropertyListManager({
     [properties],
   )
 
+  // PR #130: updateProperty가 서버에서 transfer_income/filing_deadline 재계산 후 갱신된 row를
+  // 반환하므로, 클라이언트는 그 row를 받아 로컬 state를 정확히 동기화. router.refresh() 불필요.
   function handleSaveAll() {
     startTransition(async () => {
       try {
-        // 직렬 await → 병렬 Promise.all (11개 물건이면 round-trip 11번 → 1번 분량)
-        await Promise.all(
+        const updatedRows = await Promise.all(
           properties.map((p) =>
             updateProperty(p.id, {
               transfer_amount: Number(p.transfer_amount) || 0,
@@ -125,8 +126,9 @@ export function PropertyListManager({
             }),
           ),
         )
+        const byId = new Map(updatedRows.map((p) => [p.id, p]))
+        setProperties((prev) => prev.map((p) => byId.get(p.id) ?? p))
         alert('저장되었습니다.')
-        router.refresh()
       } catch (e) {
         alert(`저장 실패: ${e instanceof Error ? e.message : String(e)}`)
       }
