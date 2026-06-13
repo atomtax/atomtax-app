@@ -32,9 +32,11 @@ async function addLog(screen, result) {
 
 // ── 메시지 수신 ─────────────────────────────────────────
 chrome.runtime.onMessage.addListener(function (msg) {
-  if (!msg || msg.source !== 'wehago-collector') return;
-  // 비동기 처리 (응답 필요 없음)
+  if (!msg || msg.source !== 'wehago-collector') return false;
+  // fire-and-forget: 비동기로 처리하되 sendResponse를 쓰지 않으므로 return true 금지.
+  // (true를 반환하면 채널이 열린 채로 남아 "message channel closed" 에러 발생)
   handle(msg.url, msg.body);
+  return false;
 });
 
 async function handle(url, body) {
