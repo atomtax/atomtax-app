@@ -8,9 +8,11 @@ import {
   type WehagoCompanyWithClient,
   type SnapshotMeta,
 } from '@/lib/db/wehago'
+import { fetchWehagoTokens } from '@/lib/db/wehago-tokens'
 import { WEHAGO_SCREEN } from '@/lib/wehago/types'
 import WehagoCollectForm from './WehagoCollectForm'
 import WehagoReviewPanel from './WehagoReviewPanel'
+import WehagoTokenManager from './WehagoTokenManager'
 
 export const metadata: Metadata = {
   title: '아톰랩 · 위하고 수집',
@@ -55,9 +57,10 @@ export default async function WehagoPage({
   searchParams: Promise<{ ccode?: string }>
 }) {
   const { ccode } = await searchParams
-  const [companies, meta] = await Promise.all([
+  const [companies, meta, tokens] = await Promise.all([
     fetchWehagoCompanies(),
     fetchSnapshotMeta(),
+    fetchWehagoTokens(),
   ])
   const latestMap = buildLatestMap(meta)
 
@@ -165,6 +168,11 @@ export default async function WehagoPage({
             </div>
           )}
         </div>
+      </div>
+
+      {/* 수집 토큰 관리 (확장 수신용) */}
+      <div className="mt-6">
+        <WehagoTokenManager tokens={tokens} />
       </div>
     </div>
   )

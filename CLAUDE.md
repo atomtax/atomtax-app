@@ -142,6 +142,7 @@ CRON_SECRET=
 /share/[token]                              공유 링크 (30일 만료)
 /api/cron/cleanup-share-links               Vercel Cron
 /api/calculator/*                           부가세 계산기 API (공개, 미들웨어 우회)
+/api/wehago/ingest                          위하고 확장 수신 API (토큰 인증, 미들웨어 우회)
 ```
 
 ### 사이드바 메뉴 순서
@@ -246,6 +247,11 @@ ATOM BASE
 
 코어: `src/lib/wehago/{parse-url,sanitize,hash,ingest,rules}.ts` (폼+API 양쪽 재사용), 픽스처 `src/lib/wehago/__fixtures__/`, 화면 `/atom-lab/wehago`.
 
+**2단계-A 확장 수신 (v41)**: 크롬 확장 → 아톰베이스 수신 창구.
+- 수신 API `POST /api/wehago/ingest` — 헤더 `x-wehago-token`, body `{ url, payload }`. ingest 코어 재사용(`source='extension'`, `ingestLabel`). 본문 2MB 상한(413), CORS Origin은 `WEHAGO_EXTENSION_ORIGIN` 환경변수로만 허용(`*` 금지).
+- 인증: 직원별 고정 토큰. `wehago_ingest_tokens`에 sha256 해시만 저장(원문은 발급 시 1회 노출). `token_hash` 단일조건 조회 후 `is_active` 확인 → 실패 시 401. 비활성화는 삭제 아님(이력 보존).
+- 미들웨어 우회: `/api/wehago/ingest` 1줄 추가(쓰기 API라 토큰 인증 필수). 토큰 lib `src/lib/wehago/token.ts`, 발급/관리 `/atom-lab/wehago` 토큰 섹션.
+
 ### 마이그레이션 이력
 - v27 (PR #62): 공유 링크
 - v28 (PR #63): 농어촌특별세
@@ -257,6 +263,7 @@ ATOM BASE
 - **v36 (PR #113)**: adjustment_invoices.is_sent
 - **v37 (PR #114)**: income_tax_reports.income_local_tax_override
 - **v40 (Phase 7 / 1단계)**: wehago_companies + wehago_snapshots (위하고 수집 저장소)
+- **v41 (Phase 7 / 2단계-A)**: wehago_ingest_tokens (확장 수신 토큰) + wehago_snapshots.ingest_label
 
 ---
 
@@ -284,7 +291,8 @@ ATOM BASE
 ### Phase 7 — 위하고 데이터 수집 (진행 중)
 > 위하고T 화면 데이터를 받아 아톰베이스에 쌓고 결재 검토 시 원클릭 확인. 4단계 로드맵.
 - [x] **1단계** ✅: 스냅샷 저장소(v40) + 수동 붙여넣기 수집 + 아톰랩 검토 화면 (인건비·감가상각 룰)
-- [ ] 2단계: 크롬 확장프로그램 — 위하고 응답 자동 가로채 변경분만 전송 (외부 수신 API 별도 설계)
+- [x] **2단계-A** ✅: 확장 수신 API(`/api/wehago/ingest`) + 직원별 토큰 인증(v41) + 토큰 관리 화면
+- [ ] 2단계-B: 크롬 확장프로그램 본체 (위하고 응답 자동 가로채 변경분만 전송) — 별도 저장소/문서
 - [ ] 3단계: 검토 화면·룰 고도화 (제조원가 계정, 사업소득 대조 등)
 - [ ] 4단계: 아톰랩 → 정식 메뉴 이전
 
@@ -460,7 +468,8 @@ if (
   pathname.startsWith('/calculator') ||
   pathname.startsWith('/api/calculator/') ||  // ⭐ API도 우회
   pathname.startsWith('/share/') ||
-  pathname.startsWith('/api/cron/')
+  pathname.startsWith('/api/cron/') ||
+  pathname.startsWith('/api/wehago/ingest')   // 2단계-A: 확장 수신(토큰 인증)
 ) {
   return NextResponse.next();
 }
@@ -670,6 +679,6 @@ DB 스키마 변경: Supabase SQL 에디터에서 `migrations/v*.sql` 직접 실
 ---
 
 *최종 수정일: 2026-06-12*
-*Phase 4 + 후속 패치 (PR #88~#116) 완료 / Phase 7 위하고 수집 1단계 완료 (v40)*
-*다음: Phase 7 2단계(크롬 확장프로그램) + Phase 5(부가세 보고서/결산보고서/세금계산서/결산참고/체크리스트 업로드)*
+*Phase 4 + 후속 패치 (PR #88~#116) 완료 / Phase 7 위하고 수집 1단계(v40) + 2단계-A 수신 API·토큰(v41) 완료*
+*다음: Phase 7 2단계-B(크롬 확장프로그램 본체) + Phase 5(부가세 보고서/결산보고서/세금계산서/결산참고/체크리스트 업로드)*
 *진행 중 작업지시서 6건 대기*
