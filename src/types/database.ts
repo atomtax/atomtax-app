@@ -444,5 +444,19 @@ export interface WehagoSnapshot {
   content_hash: string
   payload: unknown // 마스킹된 원본 응답 (jsonb)
   source: string // 'manual' | 'extension'
+  ingest_label: string | null // v41: 확장 수신 출처 토큰 라벨
   collected_at: string
+}
+
+// ============================================================
+// 위하고 확장 수신 토큰 (v41, Phase 7 / 2단계-A)
+// 직원별 고정 토큰. 원문은 저장 안 함 — sha256 해시만.
+// ============================================================
+export interface WehagoIngestToken {
+  id: string
+  label: string
+  token_hash: string
+  is_active: boolean
+  last_used_at: string | null
+  created_at: string
 }
