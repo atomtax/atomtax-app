@@ -17,7 +17,14 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>
 
 export interface IngestInput {
   url: string
-  jsonText: string
+  /** 폼 경로: 붙여넣은 Response 문자열 */
+  jsonText?: string
+  /** API(확장) 경로: 이미 파싱된 Response 객체/배열 */
+  payload?: Json
+  /** 수집 출처 — 기본 'manual'(폼), 확장 수신은 'extension' */
+  source?: 'manual' | 'extension'
+  /** 확장 수신 시 출처 토큰 라벨 (어느 직원 PC에서 왔는지 추적) */
+  ingestLabel?: string
 }
 
 export interface IngestResult {
@@ -65,15 +72,21 @@ export async function ingestWehagoData(
     }
   }
 
-  // 2. JSON 파싱
+  // 2. JSON 확보 — payload(객체) 우선, 없으면 jsonText(문자열) 파싱
   let parsed: Json
-  try {
-    parsed = JSON.parse(input.jsonText) as Json
-  } catch {
-    return {
-      ok: false,
-      error: 'JSON 형식이 아닙니다. Response 탭 내용을 그대로 복사해 주세요',
+  if (input.payload !== undefined) {
+    parsed = input.payload
+  } else if (input.jsonText !== undefined) {
+    try {
+      parsed = JSON.parse(input.jsonText) as Json
+    } catch {
+      return {
+        ok: false,
+        error: 'JSON 형식이 아닙니다. Response 탭 내용을 그대로 복사해 주세요',
+      }
     }
+  } else {
+    return { ok: false, error: 'payload 또는 jsonText가 필요합니다' }
   }
 
   // 3. 마스킹 → 4. 정규화 해시
@@ -94,7 +107,8 @@ export async function ingestWehagoData(
     period_to: urlInfo.periodTo,
     content_hash: hash,
     payload,
-    source: 'manual',
+    source: input.source ?? 'manual',
+    ingest_label: input.ingestLabel ?? null,
   })
 
   if (error) {
