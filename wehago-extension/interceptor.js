@@ -11,6 +11,10 @@
   'use strict';
   const DEBUG = true;
 
+  // 중복 주입 방지 + 진단 표시 (페이지 콘솔에서 window.__wehagoCollectorInstalled 확인)
+  if (window.__wehagoCollectorInstalled) return;
+  window.__wehagoCollectorInstalled = true;
+
   const HOST = 'api.wehago.com'; // 진단(seen) 대상: 위하고 API 전체
   const TARGET = 'api.wehago.com/smarta/'; // 실제 수집 대상: smarta 화면
 
@@ -119,7 +123,7 @@
 
   if (DEBUG) {
     try {
-      console.debug('[wehago-collector] interceptor installed @', window.location.href);
+      console.debug('[wehago-collector] interceptor installed in MAIN @', window.location.href);
     } catch (e) {
       /* 무시 */
     }
