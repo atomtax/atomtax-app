@@ -4,6 +4,10 @@
 const CONFIG = {
   INGEST_URL: 'https://atomtax-app.vercel.app/api/wehago/ingest',
   SCREEN_WHITELIST: ['sabc0102', 'sacl0106', 'swsa0105', 'saas0106', 'swbu0111'],
+  // 진단용 한시 플래그 — 검증 후 false로 되돌린다.
+  // ⚠️ interceptor.js(MAIN world)는 config.js를 import할 수 없어 자체 DEBUG 상수를
+  //    별도로 가진다. 둘의 값을 항상 같이 바꿔야 한다.
+  DEBUG: true,
 };
 
 // 화면코드 → 한글명 (팝업 로그 표시용)

@@ -21,6 +21,7 @@
       "matches": ["https://*.wehago.com/*"],
       "js": ["content.js"],
       "run_at": "document_start",
+      "world": "ISOLATED",
       "all_frames": true
     }
   ],
