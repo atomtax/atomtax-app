@@ -40,7 +40,13 @@ chrome.runtime.onMessage.addListener(function (msg) {
 async function handle(url, body) {
   // 1. 화이트리스트 화면코드만
   const screen = screenCodeFromUrl(url);
-  if (!screen || CONFIG.SCREEN_WHITELIST.indexOf(screen) === -1) return;
+  if (!screen || CONFIG.SCREEN_WHITELIST.indexOf(screen) === -1) {
+    if (CONFIG.DEBUG && screen) {
+      console.debug('[wehago-collector] ignored (not whitelisted):', screen);
+    }
+    return;
+  }
+  if (CONFIG.DEBUG) console.debug('[wehago-collector] received:', screen);
 
   // 2. on/off + 토큰
   const { enabled = true, token } = await chrome.storage.local.get(['enabled', 'token']);
@@ -90,5 +96,6 @@ async function handle(url, body) {
     result = '전송실패';
   }
 
+  if (CONFIG.DEBUG) console.debug('[wehago-collector] sent:', screen, result);
   await addLog(screen, result);
 }
