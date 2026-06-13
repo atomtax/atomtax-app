@@ -9,7 +9,7 @@
 -- 중복 저장 방지: (ccode, screen_code, gisu, period_to, content_hash) UNIQUE.
 -- 같은 데이터를 다시 붙여넣으면 23505 충돌 → "변경 없음"으로 처리.
 
-CREATE TABLE wehago_companies (
+CREATE TABLE IF NOT EXISTS wehago_companies (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   ccode text NOT NULL UNIQUE,                     -- 위하고 회사코드 (예: biz202511270023469)
   business_number text,                           -- no_biz (숫자만 저장)
@@ -22,7 +22,7 @@ CREATE TABLE wehago_companies (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE wehago_snapshots (
+CREATE TABLE IF NOT EXISTS wehago_snapshots (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   ccode text NOT NULL,
   screen_code text NOT NULL,                      -- sacl0106 / swsa0105 / saas0106 / swbu0111
@@ -35,14 +35,17 @@ CREATE TABLE wehago_snapshots (
   collected_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX uq_wehago_snapshots_dedupe
+CREATE UNIQUE INDEX IF NOT EXISTS uq_wehago_snapshots_dedupe
   ON wehago_snapshots (ccode, screen_code, gisu, COALESCE(period_to, ''), content_hash);
 
 ALTER TABLE wehago_companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wehago_snapshots ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "authenticated_all_wehago_companies" ON wehago_companies;
 CREATE POLICY "authenticated_all_wehago_companies" ON wehago_companies
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "authenticated_all_wehago_snapshots" ON wehago_snapshots;
 CREATE POLICY "authenticated_all_wehago_snapshots" ON wehago_snapshots
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
