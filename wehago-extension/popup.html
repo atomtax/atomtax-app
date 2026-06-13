@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --brand: #6927ff;
+        --brand-dark: #5118e0;
+      }
+      * { box-sizing: border-box; }
+      body {
+        width: 320px;
+        margin: 0;
+        font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+        color: #1f2937;
+        background: #fff;
+      }
+      header {
+        background: linear-gradient(135deg, #6927ff 0%, #5118e0 100%);
+        color: #fff;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      header .dot {
+        width: 18px; height: 18px; border-radius: 50%;
+        border: 3px solid #fff; position: relative;
+      }
+      header .dot::after {
+        content: ""; position: absolute; inset: 3px; border-radius: 50%; background: #fff;
+      }
+      header h1 { font-size: 14px; margin: 0; font-weight: 800; letter-spacing: 0.02em; }
+      .body { padding: 14px 16px; }
+      .row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+      .label { font-size: 13px; font-weight: 700; }
+      .muted { font-size: 11px; color: #6b7280; }
+      /* 토글 */
+      .switch { position: relative; width: 42px; height: 24px; }
+      .switch input { opacity: 0; width: 0; height: 0; }
+      .slider {
+        position: absolute; cursor: pointer; inset: 0;
+        background: #d1d5db; border-radius: 24px; transition: 0.2s;
+      }
+      .slider::before {
+        content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px;
+        background: #fff; border-radius: 50%; transition: 0.2s;
+      }
+      input:checked + .slider { background: var(--brand); }
+      input:checked + .slider::before { transform: translateX(18px); }
+      /* 토큰 */
+      .token-box { display: flex; gap: 6px; margin-top: 4px; }
+      .token-box input {
+        flex: 1; padding: 7px 9px; font-size: 12px; border: 1px solid #d1d5db;
+        border-radius: 7px; font-family: monospace;
+      }
+      .token-box button, .btn {
+        padding: 7px 11px; font-size: 12px; font-weight: 700; color: #fff;
+        background: var(--brand); border: none; border-radius: 7px; cursor: pointer;
+      }
+      .token-box button:hover, .btn:hover { background: var(--brand-dark); }
+      .token-saved { font-size: 12px; color: #059669; font-weight: 700; }
+      hr { border: none; border-top: 1px solid #f0f0f0; margin: 14px 0; }
+      .logs { list-style: none; margin: 0; padding: 0; }
+      .logs li {
+        display: flex; align-items: center; gap: 8px; font-size: 12px;
+        padding: 5px 0; border-bottom: 1px solid #f6f6f6;
+      }
+      .logs .time { color: #9ca3af; font-variant-numeric: tabular-nums; width: 42px; }
+      .logs .scr { font-weight: 600; flex: 1; }
+      .logs .res { font-size: 11px; }
+      .empty { font-size: 12px; color: #9ca3af; text-align: center; padding: 10px 0; }
+      .server { font-size: 11px; color: #6b7280; margin-top: 10px; }
+      .server b { color: var(--brand); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <span class="dot"></span>
+      <h1>아톰베이스 위하고 수집기</h1>
+    </header>
+    <div class="body">
+      <div class="row">
+        <span class="label">수집 켜기</span>
+        <label class="switch">
+          <input type="checkbox" id="toggle" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div>
+        <div class="label">직원 토큰</div>
+        <div class="muted">아톰베이스에서 발급받은 토큰을 붙여넣으세요.</div>
+        <div class="token-box">
+          <input type="password" id="token" placeholder="토큰 붙여넣기" autocomplete="off" />
+          <button id="save">저장</button>
+        </div>
+        <div id="tokenStatus" class="muted" style="margin-top: 6px"></div>
+      </div>
+
+      <hr />
+
+      <div class="label" style="margin-bottom: 6px">최근 수집</div>
+      <ul class="logs" id="logs"></ul>
+      <div id="logsEmpty" class="empty">아직 수집된 내역이 없습니다.</div>
+
+      <div class="server">전송 대상: <b id="server"></b></div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -252,6 +252,11 @@ ATOM BASE
 - 인증: 직원별 고정 토큰. `wehago_ingest_tokens`에 sha256 해시만 저장(원문은 발급 시 1회 노출). `token_hash` 단일조건 조회 후 `is_active` 확인 → 실패 시 401. 비활성화는 삭제 아님(이력 보존).
 - 미들웨어 우회: `/api/wehago/ingest` 1줄 추가(쓰기 API라 토큰 인증 필수). 토큰 lib `src/lib/wehago/token.ts`, 발급/관리 `/atom-lab/wehago` 토큰 섹션.
 
+**2단계-B 크롬 확장 (`wehago-extension/`, MV3)**: Vercel 빌드와 무관(`.vercelignore`), 직원 PC에 개발자모드로 직접 설치.
+- 읽기 전용: `interceptor.js`(MAIN world)가 위하고 응답 fetch/XHR만 복제해 읽음 → 위하고로 신규 요청 절대 안 보냄. `content.js`(ISOLATED)가 중계 → `background.js`가 화이트리스트(5종) 필터 + 로컬 해시 dedupe(2차 방어) 후 수신 API로 POST.
+- 인증: 팝업에서 직원 토큰 입력(`x-wehago-token`). on/off 토글, 최근 수집 로그(금액/결과만, 토큰·민감정보 미저장).
+- 고정 확장 ID(manifest `key`): `goecaigfmlcbomcdhdbglpfiejolhdbi` → CORS용 `WEHAGO_EXTENSION_ORIGIN=chrome-extension://<ID>`(선택, 보강).
+
 ### 마이그레이션 이력
 - v27 (PR #62): 공유 링크
 - v28 (PR #63): 농어촌특별세
@@ -292,7 +297,8 @@ ATOM BASE
 > 위하고T 화면 데이터를 받아 아톰베이스에 쌓고 결재 검토 시 원클릭 확인. 4단계 로드맵.
 - [x] **1단계** ✅: 스냅샷 저장소(v40) + 수동 붙여넣기 수집 + 아톰랩 검토 화면 (인건비·감가상각 룰)
 - [x] **2단계-A** ✅: 확장 수신 API(`/api/wehago/ingest`) + 직원별 토큰 인증(v41) + 토큰 관리 화면
-- [ ] 2단계-B: 크롬 확장프로그램 본체 (위하고 응답 자동 가로채 변경분만 전송) — 별도 저장소/문서
+- [x] **2단계-B** ✅: 크롬 확장프로그램 본체 `wehago-extension/` (MV3, 읽기 전용 가로채기 → 변경분만 전송)
+- [ ] 2단계-C: 확장 설치 안내서(스크린샷 포함) + 전 직원 배포
 - [ ] 3단계: 검토 화면·룰 고도화 (제조원가 계정, 사업소득 대조 등)
 - [ ] 4단계: 아톰랩 → 정식 메뉴 이전
 
@@ -679,6 +685,6 @@ DB 스키마 변경: Supabase SQL 에디터에서 `migrations/v*.sql` 직접 실
 ---
 
 *최종 수정일: 2026-06-12*
-*Phase 4 + 후속 패치 (PR #88~#116) 완료 / Phase 7 위하고 수집 1단계(v40) + 2단계-A 수신 API·토큰(v41) 완료*
-*다음: Phase 7 2단계-B(크롬 확장프로그램 본체) + Phase 5(부가세 보고서/결산보고서/세금계산서/결산참고/체크리스트 업로드)*
+*Phase 4 + 후속 패치 (PR #88~#116) 완료 / Phase 7 위하고 수집 1단계(v40) + 2단계-A 수신 API·토큰(v41) + 2단계-B 크롬 확장(`wehago-extension/`) 완료*
+*다음: Phase 7 2단계-C(확장 설치 안내·배포) + 3단계(룰 고도화) + Phase 5(부가세 보고서/결산보고서/세금계산서/결산참고/체크리스트 업로드)*
 *진행 중 작업지시서 6건 대기*
