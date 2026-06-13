@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "아톰베이스 위하고 수집기",
+  "version": "1.0.0",
+  "description": "위하고 화면 데이터를 아톰베이스로 안전하게 동기화 (읽기 전용)",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://*.wehago.com/*",
+    "https://atomtax-app.vercel.app/*"
+  ],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://*.wehago.com/*"],
+      "js": ["interceptor.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    },
+    {
+      "matches": ["https://*.wehago.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "action": { "default_popup": "popup.html" },
+  "icons": { "16": "icons/16.png", "48": "icons/48.png", "128": "icons/128.png" },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAscIq7sB4jV17CzM7CsrzNp7n+zm2B5TqQgt8JQARQO8YyV+uAAzVKbsObDOrGP2y0RRYEqmraZAxvduUL/ht3AMeLLGBMi5FiPjqmj1zDxj6KBB5YZDJW4HYTv4wPtx5MZkFBPaSMdDYFpYlFV3Rq+3obCSaXsXMrETeetk3bweg/Y3LTcc0A/L2Mjj7CEQR0L7Ts6XsMmUegSRVjEYIl750kvzl0Hc0vbW5CyCyg6Pra+DkNU+OiyDlVfX2ml/knV3mB3BiWNMOoDwKdgBox8f+Z54DlH1CGIR948lfUqy3eNgfAFQIqte+mBN+TA6DxvS6dJYlEogcYXBXL3o5pwIDAQAB"
+}
