@@ -1,0 +1,12 @@
+[
+  { "cd_emp": "0001", "nm_krname": "양소열", "no_social": "990623*******", "yn_for": "0", "total_ji": 47366662.0, "total_gong": 4036830.0,
+    "mon_01_ji": 3733333.0, "mon_02_ji": 3533333.0, "mon_03_ji": 3533333.0, "mon_04_ji": 4033333.0, "mon_05_ji": 4033333.0, "mon_06_ji": 4033333.0,
+    "mon_07_ji": 4033333.0, "mon_08_ji": 4033333.0, "mon_09_ji": 4033333.0, "mon_10_ji": 4033333.0, "mon_11_ji": 4166666.0, "mon_12_ji": 4166666.0,
+    "retire_color": 0 },
+  { "cd_emp": "0004", "nm_krname": "이채정", "no_social": "971120*******", "yn_for": "0", "total_ji": 42599996.0, "retire_color": 0 },
+  { "cd_emp": "0006", "nm_krname": "김이영", "no_social": "961217*******", "yn_for": "0", "total_ji": 42139599.0, "retire_color": 0 },
+  { "cd_emp": "0008", "nm_krname": "조성우", "no_social": "930908*******", "yn_for": "0", "total_ji": 0.0, "retire_color": 1 },
+  { "cd_emp": "0009", "nm_krname": "김태훈", "no_social": "970804*******", "yn_for": "0", "total_ji": 28237219.0, "retire_color": 0 },
+  { "cd_emp": "0010", "nm_krname": "원동현", "no_social": "971122*******", "yn_for": "0", "total_ji": 29912219.0, "retire_color": 1 },
+  { "cd_emp": "0011", "nm_krname": "정윤수", "no_social": "990423*******", "yn_for": "0", "total_ji": 9540000.0, "retire_color": 0 }
+]

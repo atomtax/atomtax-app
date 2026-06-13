@@ -1,0 +1,13 @@
+{
+  "grp_4": [ { "yn_magam": "1" } ],
+  "grp_2": [
+    { "str_sum": "연간소득계 : [1]", "am_pay": 350000.0, "am_income": 10500.0, "am_inhabit": 1050.0, "sum_income": 11550.0, "cnt_buemp": 1.0, "cnt_pay": 1.0 },
+    { "str_sum": "소액징수계 : [0]", "am_pay": 0.0, "am_income": 0.0, "am_inhabit": 0.0, "sum_income": 0.0, "cnt_buemp": 0.0, "cnt_pay": 0.0 }
+  ],
+  "grp_3": [
+    { "no_biz": "4932901371", "nm_krcom": "비더에그", "nm_ceo": "성규동", "no_corpor": "961216*******", "yn_private": 1, "nm_taxoff": "김포", "cd_taxoffcom": "234", "ty_incom": 40 }
+  ],
+  "grp_1": [
+    { "cd_buemp": "000001", "nm_krname": "정예은", "no_social": "930720*******", "cd_income": "940909", "am_pay": 350000.0, "am_income": 10500.0, "am_inhabit": 1050.0, "sum_income": 11550.0, "rt_pay": "3.000", "ym_pay": "2025", "gunsu": 1 }
+  ]
+}
