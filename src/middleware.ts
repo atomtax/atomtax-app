@@ -11,7 +11,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/calculator') ||
     pathname.startsWith('/api/calculator/') ||
     pathname.startsWith('/share/') ||
-    pathname.startsWith('/api/cron/')
+    pathname.startsWith('/api/cron/') ||
+    pathname.startsWith('/api/wehago/ingest') // 2단계-A: 확장 수신 — 토큰 인증으로 별도 보호
   ) {
     return NextResponse.next()
   }
