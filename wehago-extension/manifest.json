@@ -12,17 +12,16 @@
   "content_scripts": [
     {
       "matches": ["https://*.wehago.com/*"],
-      "js": ["interceptor.js"],
-      "run_at": "document_start",
-      "world": "MAIN",
-      "all_frames": true
-    },
-    {
-      "matches": ["https://*.wehago.com/*"],
       "js": ["content.js"],
       "run_at": "document_start",
       "world": "ISOLATED",
       "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["interceptor.js"],
+      "matches": ["https://*.wehago.com/*"]
     }
   ],
   "action": { "default_popup": "popup.html" },
