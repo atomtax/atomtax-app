@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ArrowRight, Database } from 'lucide-react'
+import { ArrowRight, Database, CheckSquare } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: '아톰랩',
@@ -37,6 +37,25 @@ export default function AtomLabPage() {
         <h2 className="text-lg font-semibold text-gray-900 mt-4">위하고 데이터 수집</h2>
         <p className="text-sm text-gray-500 mt-1">
           더존 위하고T 화면 데이터를 붙여넣어 인건비·감가상각 자동 검산 (수동 수집 1단계)
+        </p>
+      </Link>
+
+      <Link
+        href="/atom-lab/closing"
+        className="group block bg-white border border-gray-200 rounded-xl p-6 hover:border-brand hover:shadow-md transition-all mt-4"
+      >
+        <div className="flex items-center justify-between">
+          <div className="p-3 bg-brand/10 rounded-lg text-brand">
+            <CheckSquare size={24} />
+          </div>
+          <ArrowRight
+            size={18}
+            className="text-gray-400 group-hover:text-brand transition-colors"
+          />
+        </div>
+        <h2 className="text-lg font-semibold text-gray-900 mt-4">마감감지 + 매출대조</h2>
+        <p className="text-sm text-gray-500 mt-1">
+          위하고 마감현황 변화(신규/재마감) 감지 + 홈택스 TP 신고매출 집계
         </p>
       </Link>
     </div>

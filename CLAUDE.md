@@ -143,6 +143,9 @@ CRON_SECRET=
 /api/cron/cleanup-share-links               Vercel Cron
 /api/calculator/*                           부가세 계산기 API (공개, 미들웨어 우회)
 /api/wehago/ingest                          위하고 확장 수신 API (토큰 인증, 미들웨어 우회)
+
+/atom-lab/wehago                            위하고 수집 1단계 (붙여넣기 검산)
+/atom-lab/closing                           마감감지 + TP 매출대조 (Phase 7 재설계)
 ```
 
 ### 사이드바 메뉴 순서
@@ -257,6 +260,20 @@ ATOM BASE
 - 인증: 팝업에서 직원 토큰 입력(`x-wehago-token`). on/off 토글, 최근 수집 로그(금액/결과만, 토큰·민감정보 미저장).
 - 고정 확장 ID(manifest `key`): `goecaigfmlcbomcdhdbglpfiejolhdbi` → CORS용 `WEHAGO_EXTENSION_ORIGIN=chrome-extension://<ID>`(선택, 보강).
 
+### 5-13. 마감감지 + TP 매출 (v42, Phase 7 재설계) ⭐
+
+확장 가로채기 폐기 후, 위하고 마감현황(`common/make/master`) 응답을 붙여넣어 마감 변화를 감지하는 방식.
+
+**위하고 마감현황 응답** `{ result_data:[], cno_list:[] }` — `result_data[]` 핵심: `no_biz`(매칭키), `nm_krcom`, `cno`, `da_period`, **`str_3`**(마감 플래그 1/0), **`str_6`**(마감일시 YYYYMMDDHHMMSS, 마감 판정 1차 기준), `str_7`(담당자). 변화 감지키=`no_biz`+기간, 값=`str_6`: 이전 없던 회사가 str_6 보유→신규마감, str_6 변경→재마감.
+
+**closing_snapshots** — 회사×세목×기간 관측 이력 (`business_number`, `tax_type`'income'|'vat', `period`, `is_closed`, `closed_at_raw`=str_6, `client_id`)
+**closing_changes** — 감지 이벤트 (`change_type`'new_closed'|'re_closed', `prev/curr_closed_at`, `is_reviewed`)
+**tp_sales_snapshots** — 홈택스 부가세 합계표 집계 (`sales_*` 6종 + `sales_total`=신고매출, `purchase_tax_invoice` 참고)
+
+**TP 합계표** 헤더: 귀속|사이트|상점ID|구분|건수|공급가액|부가세|합계|조회일. 신고매출=같은 귀속 (매출)세금계산서+계산서+현금영수증+신용카드+수출실적+제로페이 공급가액 합. ⚠️ `구분` 매칭은 **세금계산서를 계산서보다 먼저** 판정(부분문자열). 파일에 사업자번호 없음 → 업로드 시 거래처 드롭다운 선택.
+
+코어: `src/lib/closing/{detect,tp-parse,types}.ts`(detect는 기장거래처 한정·N+1 방지 배치 조회), `src/lib/db/closing.ts`, 화면 `/atom-lab/closing`. clients 전체 1회 조회 후 숫자만 키 맵으로 매칭(.or()/.in() 형식 이슈 회피). xlsx 정적 import.
+
 ### 마이그레이션 이력
 - v27 (PR #62): 공유 링크
 - v28 (PR #63): 농어촌특별세
@@ -269,6 +286,7 @@ ATOM BASE
 - **v37 (PR #114)**: income_tax_reports.income_local_tax_override
 - **v40 (Phase 7 / 1단계)**: wehago_companies + wehago_snapshots (위하고 수집 저장소)
 - **v41 (Phase 7 / 2단계-A)**: wehago_ingest_tokens (확장 수신 토큰) + wehago_snapshots.ingest_label
+- **v42 (Phase 7 재설계)**: closing_snapshots + closing_changes + tp_sales_snapshots (마감감지 + TP 매출)
 
 ---
 
@@ -297,10 +315,12 @@ ATOM BASE
 > 위하고T 화면 데이터를 받아 아톰베이스에 쌓고 결재 검토 시 원클릭 확인. 4단계 로드맵.
 - [x] **1단계** ✅: 스냅샷 저장소(v40) + 수동 붙여넣기 수집 + 아톰랩 검토 화면 (인건비·감가상각 룰)
 - [x] **2단계-A** ✅: 확장 수신 API(`/api/wehago/ingest`) + 직원별 토큰 인증(v41) + 토큰 관리 화면
-- [x] **2단계-B** ✅: 크롬 확장프로그램 본체 `wehago-extension/` (MV3, 읽기 전용 가로채기 → 변경분만 전송)
-- [ ] 2단계-C: 확장 설치 안내서(스크린샷 포함) + 전 직원 배포
-- [ ] 3단계: 검토 화면·룰 고도화 (제조원가 계정, 사업소득 대조 등)
-- [ ] 4단계: 아톰랩 → 정식 메뉴 이전
+- [~] **2단계-B** ⚠️ 폐기: 크롬 확장 응답 가로채기(`wehago-extension/`). 위하고가 fetch/XHR이 아닌 자체 통신 모듈(luna-ufo)을 써서 `window.fetch`/`XMLHttpRequest` 래핑·MAIN world 주입(PR #133~135) 모두 무효 → **가로채기 방식 공식 폐기**. 폴더는 삭제 안 하고 "마감현황 동기화 버튼"용으로 재활용 예정.
+
+> **재설계 (PR 이후)**: 전체 폴링 대신 **세무사가 마감현황을 1회 조회 → 응답 붙여넣기 → 마감 상태 변화 감지**(차단 위험↓). 1단계 룰 + TP 매출대조 재사용. → 5-13 / `/atom-lab/closing` 참조.
+- [x] **재설계 1단계** ✅: 마감감지(`closing_snapshots`/`closing_changes`) + TP 매출(`tp_sales_snapshots`) 붙여넣기/업로드 화면 (v42, 종소세/법인세 세목)
+- [ ] 재설계 2단계: 부가세 마감현황 정찰 → `tax_type='vat'` + TP vs 위하고 과세표준 자동 대조
+- [ ] 재설계 3단계: 마감현황 붙여넣기를 확장 버튼 1클릭 자동화(wehago-extension 개조)
 
 ### Phase 5 — 진행 예정
 - [ ] 5-1: 부가가치세 보고서 (8~10h)
@@ -685,6 +705,6 @@ DB 스키마 변경: Supabase SQL 에디터에서 `migrations/v*.sql` 직접 실
 ---
 
 *최종 수정일: 2026-06-12*
-*Phase 4 + 후속 패치 (PR #88~#116) 완료 / Phase 7 위하고 수집 1단계(v40) + 2단계-A 수신 API·토큰(v41) + 2단계-B 크롬 확장(`wehago-extension/`) 완료*
-*다음: Phase 7 2단계-C(확장 설치 안내·배포) + 3단계(룰 고도화) + Phase 5(부가세 보고서/결산보고서/세금계산서/결산참고/체크리스트 업로드)*
+*Phase 4 + 후속 패치 (PR #88~#116) 완료 / Phase 7: 위하고 수집 1단계(v40) + 2단계-A 수신 API·토큰(v41) / 2단계-B 확장 가로채기 ⚠️폐기(luna-ufo) → 재설계: 마감감지+TP 매출(v42, `/atom-lab/closing`)*
+*다음: 부가세 마감현황 정찰 → TP vs 위하고 과세표준 자동대조 + Phase 5(부가세 보고서/결산보고서/세금계산서/결산참고/체크리스트 업로드)*
 *진행 중 작업지시서 6건 대기*
