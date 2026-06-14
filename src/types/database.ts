@@ -460,3 +460,53 @@ export interface WehagoIngestToken {
   last_used_at: string | null
   created_at: string
 }
+
+// ============================================================
+// 마감감지 + TP 매출 (v42, Phase 7 재설계)
+// ============================================================
+export interface ClosingSnapshot {
+  id: string
+  business_number: string
+  company_name: string | null
+  cno: string | null
+  tax_type: string // 'income' | 'vat'
+  period: string | null
+  is_closed: boolean
+  closed_at_raw: string | null
+  manager: string | null
+  client_id: string | null
+  observed_at: string
+}
+
+export interface ClosingChange {
+  id: string
+  business_number: string
+  company_name: string | null
+  tax_type: string
+  period: string | null
+  change_type: string // 'new_closed' | 're_closed'
+  prev_closed_at: string | null
+  curr_closed_at: string | null
+  client_id: string | null
+  is_reviewed: boolean
+  detected_at: string
+}
+
+export interface TpSalesSnapshot {
+  id: string
+  business_number: string | null
+  company_name: string | null
+  period_from: string | null
+  period_to: string | null
+  sales_tax_invoice: number
+  sales_invoice: number
+  sales_cash_receipt: number
+  sales_card: number
+  sales_export: number
+  sales_zeropay: number
+  sales_total: number
+  purchase_tax_invoice: number
+  raw_rows: unknown
+  client_id: string | null
+  uploaded_at: string
+}
